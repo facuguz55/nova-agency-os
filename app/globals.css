@@ -1,34 +1,120 @@
 @import "tailwindcss";
 
+/* ─── TOKENS ─────────────────────────────────────────── */
 :root {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
-  --sidebar: #1e293b;
-  --card: #1e293b;
-  --border: #334155;
-  --accent-orange: #ff8c42;
-  --accent-purple: #a855f7;
-  --muted: #475569;
+  --bg:        #080f1e;
+  --surface:   #0e1a2e;
+  --card:      #111e33;
+  --border:    #1e2f4a;
+  --border-hi: #2a4166;
+  --orange:    #ff8c42;
+  --orange-hi: #ffaa66;
+  --purple:    #a855f7;
+  --purple-hi: #c084fc;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --dim:       #334155;
+
+  --glow-orange: 0 0 20px rgba(255,140,66,.25), 0 0 40px rgba(255,140,66,.08);
+  --glow-purple: 0 0 20px rgba(168,85,247,.25), 0 0 40px rgba(168,85,247,.08);
+  --glow-green:  0 0 20px rgba(34,197,94,.2),   0 0 40px rgba(34,197,94,.06);
 }
+
+/* ─── BASE ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-  background-color: #0f172a;
-  color: #e2e8f0;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
+/* ─── SCROLLBAR ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+::-webkit-scrollbar-thumb { background: #1e2f4a; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #2a4166; }
 
-/* Chat markdown */
-.prose-chat p { margin-bottom: 0.5rem; }
-.prose-chat ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-.prose-chat ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-.prose-chat code { background: #334155; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
-.prose-chat pre { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 0.75rem; overflow-x: auto; margin: 0.5rem 0; }
-.prose-chat pre code { background: transparent; padding: 0; }
-.prose-chat strong { color: #ff8c42; }
-.prose-chat h3 { font-weight: 600; color: #e2e8f0; margin-bottom: 0.25rem; }
+/* ─── GLOWS ────────────────────────────────────────────── */
+.glow-orange { box-shadow: var(--glow-orange); }
+.glow-purple { box-shadow: var(--glow-purple); }
+.glow-green  { box-shadow: var(--glow-green); }
+
+/* ─── GRADIENT BORDERS ─────────────────────────────────── */
+.card-glow {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.card-glow:hover {
+  border-color: var(--border-hi);
+  box-shadow: 0 0 0 1px rgba(255,140,66,.08), 0 8px 32px rgba(0,0,0,.3);
+}
+
+/* ─── ACTIVE NAV GLOW ──────────────────────────────────── */
+.nav-active {
+  background: rgba(255,140,66,.08);
+  border: 1px solid rgba(255,140,66,.2);
+  box-shadow: 0 0 12px rgba(255,140,66,.12), inset 0 0 12px rgba(255,140,66,.04);
+}
+
+/* ─── GRID NOISE BACKGROUND ────────────────────────────── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255,140,66,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,140,66,.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── SHIMMER ANIMATION ────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--card) 0%, var(--border) 50%, var(--card) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* ─── PULSE DOT ────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(.8); }
+}
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* ─── CHAT PROSE ───────────────────────────────────────── */
+.prose-chat p                { margin-bottom: .5rem; line-height: 1.65; }
+.prose-chat ul               { list-style: disc; padding-left: 1.25rem; margin-bottom: .5rem; }
+.prose-chat ol               { list-style: decimal; padding-left: 1.25rem; margin-bottom: .5rem; }
+.prose-chat li               { margin-bottom: .2rem; }
+.prose-chat code             { background: rgba(255,140,66,.08); border: 1px solid rgba(255,140,66,.15); padding: .1rem .35rem; border-radius: 4px; font-size: .8em; color: var(--orange-hi); }
+.prose-chat pre              { background: #070d1a; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; overflow-x: auto; margin: .5rem 0; }
+.prose-chat pre code         { background: transparent; border: none; padding: 0; color: #94a3b8; font-size: .82em; }
+.prose-chat strong           { color: var(--orange); font-weight: 600; }
+.prose-chat em               { color: var(--purple-hi); }
+.prose-chat h3               { font-weight: 700; color: #fff; margin-bottom: .35rem; font-size: .95em; letter-spacing: .02em; }
+.prose-chat blockquote       { border-left: 2px solid var(--orange); padding-left: .75rem; color: var(--muted); margin: .5rem 0; }
+
+/* ─── BUTTON GLOW ──────────────────────────────────────── */
+.btn-primary {
+  background: linear-gradient(135deg, #ff8c42, #ff6b1a);
+  box-shadow: 0 0 16px rgba(255,140,66,.3);
+  transition: box-shadow .2s, transform .1s;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 24px rgba(255,140,66,.5);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: translateY(0); }
+
+/* ─── STAT CARD ACCENT ─────────────────────────────────── */
+.stat-accent-orange { box-shadow: inset 0 0 0 1px rgba(255,140,66,.15), 0 0 24px rgba(255,140,66,.06); }
+.stat-accent-purple { box-shadow: inset 0 0 0 1px rgba(168,85,247,.15), 0 0 24px rgba(168,85,247,.06); }
+.stat-accent-green  { box-shadow: inset 0 0 0 1px rgba(34,197,94,.15),  0 0 24px rgba(34,197,94,.06); }
+.stat-accent-blue   { box-shadow: inset 0 0 0 1px rgba(59,130,246,.15), 0 0 24px rgba(59,130,246,.06); }

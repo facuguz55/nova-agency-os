@@ -64,6 +64,12 @@ export default function AutomationsPage() {
     load()
   }
 
+  async function deleteAutomation(a: Automation) {
+    if (!confirm(`¿Eliminar "${a.name}"?`)) return
+    await fetch(`/api/automations/${a.id}`, { method: 'DELETE' })
+    load()
+  }
+
   const TRIGGER_ICONS = { email: '✉', webhook: '⚡', schedule: '⏱', manual: '▶' }
 
   return (
@@ -99,7 +105,7 @@ export default function AutomationsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#334155]">
-                  {['Nombre', 'Trigger', 'Cliente', 'Estado', 'Creada', 'Acción'].map(h => (
+                  {['Nombre', 'Trigger', 'Cliente', 'Estado', 'Creada', 'Acciones'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs text-[#475569] uppercase tracking-wider font-medium">{h}</th>
                   ))}
                 </tr>
@@ -121,12 +127,20 @@ export default function AutomationsPage() {
                     <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
                     <td className="px-4 py-3 text-xs text-[#475569]">{formatRelative(a.created_at)}</td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleStatus(a)}
-                        className="text-xs px-2 py-1 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
-                      >
-                        {a.status === 'active' ? 'Pausar' : 'Activar'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleStatus(a)}
+                          className="text-xs px-2 py-1 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
+                        >
+                          {a.status === 'active' ? 'Pausar' : 'Activar'}
+                        </button>
+                        <button
+                          onClick={() => deleteAutomation(a)}
+                          className="text-xs px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

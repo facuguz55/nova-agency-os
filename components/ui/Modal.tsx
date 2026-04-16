@@ -2,20 +2,18 @@
 
 import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { X } from 'lucide-react'
 
 interface ModalProps {
-  open: boolean
-  onClose: () => void
-  title: string
-  children: React.ReactNode
-  size?: 'sm' | 'md' | 'lg'
+  open: boolean; onClose: () => void; title: string
+  children: React.ReactNode; size?: 'sm' | 'md' | 'lg'
 }
 
 export default function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    if (open) document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    if (open) document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
   }, [open, onClose])
 
   if (!open) return null
@@ -24,15 +22,26 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={cn('relative w-full bg-[#1e293b] border border-[#334155] rounded-2xl shadow-2xl', sizeMap[size])}>
-        <div className="flex items-center justify-between p-6 border-b border-[#334155]">
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <button onClick={onClose} className="text-[#475569] hover:text-white transition-colors text-xl leading-none">
-            ✕
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
+      <div className={cn(
+        'relative w-full bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl shadow-[0_0_60px_rgba(0,0,0,.6),0_0_0_1px_rgba(255,140,66,.06)]',
+        'animate-in fade-in zoom-in-95 duration-200',
+        sizeMap[size],
+      )}>
+        {/* Top glow */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#ff8c42]/30 to-transparent rounded-t-2xl" />
+
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#1e2f4a]">
+          <h3 className="text-base font-bold text-white">{title}</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-[#334155] hover:text-white hover:bg-white/[.05] transition-all"
+          >
+            <X size={16} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+
+        <div className="px-6 py-5">{children}</div>
       </div>
     </div>
   )

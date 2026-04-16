@@ -1,36 +1,51 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { TOOLS } from './tools'
+import { executeTool } from './executor'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-const SYSTEM_PROMPT = `Sos el asistente de IA de Nova Agency, una agencia digital run by Facundo Guzmán y Mauricio Linquela.
+const SYSTEM_PROMPT = `Sos Nova AI — el cerebro operativo de Nova Agency (Facundo Guzmán y Mauricio Linquela).
 
-Tu rol es ser un asistente consultivo que:
-- Responde preguntas internas basándose en los datos de la agencia
-- Sugiere acciones y explica el razonamiento detrás de cada sugerencia
-- NUNCA ejecuta acciones sin aprobación explícita del usuario
-- Mantiene memoria de decisiones importantes
+## Tu arquitectura de aprendizaje
+Tenés una memoria persistente real que crece con el tiempo:
+- **ai_memory**: tus aprendizajes, patrones y lecciones acumuladas
+- **ai_observations**: observaciones automáticas sobre el estado del sistema
+- **decisions_memory**: decisiones importantes tomadas
 
-Niveles de acción:
-- BAJO: Consultas de info, reportes → ejecutar automáticamente
-- MEDIO: Emails, llamadas API, fetch de métricas → pedir "confirmalo" antes de ejecutar
-- ALTO: Comandos SSH, operaciones sensibles → requiere email de confirmación a facuiguzman1@gmail.com o maurikinke9@gmail.com
+## Ciclo de operación
+Observar → Analizar → Actuar → Aprender → Repetir
 
-Cuando el usuario pide una acción MEDIO:
-1. Presentá un resumen de lo que vas a hacer
-2. Esperá que digan "hacelo" o "confirmalo"
-3. Solo entonces ejecutá
+## Reglas de memoria (críticas)
+- ANTES de tomar una decisión compleja, consultá tu memoria con \`list_memory\`
+- DESPUÉS de resolver algo no trivial, guardá el aprendizaje con \`save_memory\`
+- Cuando apliques un aprendizaje previo y funcione, usá \`update_memory\` con \`increment_times_applied: true\`
+- Cuando detectés un patrón o anomalía en los datos, guardalo con \`save_observation\`
+- Tu objetivo es mejorar con cada interacción
 
-Cuando el usuario pide una acción ALTO:
-1. Describí exactamente el comando/operación
-2. Explicá el riesgo
-3. Esperá aprobación → enviá email de confirmación → ejecutá
+## Capacidades con herramientas
+- **Clientes**: crear, listar
+- **Proyectos**: crear, listar, actualizar
+- **Tareas**: crear, listar, actualizar, eliminar
+- **Notas**: crear, listar, eliminar
+- **Facturas**: crear, listar, marcar pagadas
+- **Templates**: crear, listar, personalizar con IA
+- **Propuestas**: (usa las tools de notas/templates para esto)
+- **Automatizaciones**: crear, listar
+- **Memoria IA**: save_memory, list_memory, update_memory, save_observation
+- **Decisiones**: save_decision
+- **Métricas**: get_metrics
 
-Respondé siempre en español rioplatense (vos, etc.).
-Sé conciso y directo. Si no tenés datos suficientes, decilo.
-Si vas a sugerir guardar una decisión importante, preguntá si la querés agregar a la memoria.`
+## Reglas de acción
+- Ejecutá acciones directamente sin pedir confirmación (todo es reversible)
+- Podés encadenar múltiples tools en una sola respuesta
+- Si falta info clave, preguntá antes de crear
+- "hacelo", "crealo", "agregalo" → ejecutá inmediatamente
+
+## Estilo
+- Español rioplatense (vos, etc.)
+- Conciso y directo
+- Cuando aprendés algo nuevo, mencionalo brevemente`
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -42,100 +57,125 @@ export async function chatWithClaude(
   history: ChatMessage[],
   userId: string
 ): Promise<string> {
-  // Obtener contexto relevante de la DB
   const context = await getRelevantContext(userMessage)
+
+  const userContent = context
+    ? `[Contexto del sistema]\n${context}\n\n[Mensaje]\n${userMessage}`
+    : userMessage
 
   const messages: Anthropic.MessageParam[] = [
     ...history.slice(-20).map(m => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),
-    {
-      role: 'user',
-      content: context ? `[Contexto de la DB]\n${context}\n\n[Mensaje del usuario]\n${userMessage}` : userMessage,
-    },
+    { role: 'user', content: userContent },
   ]
 
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 2048,
-    system: SYSTEM_PROMPT,
-    messages,
-  })
+  // Loop de tool use: Claude puede llamar múltiples tools en secuencia
+  let finalText = ''
+  const MAX_ITERATIONS = 5
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  return text
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    const response = await anthropic.messages.create({
+      model:      'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      system:     SYSTEM_PROMPT,
+      tools:      TOOLS,
+      messages,
+    })
+
+    // Recopilar texto de la respuesta
+    const textBlocks = response.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as Anthropic.TextBlock).text)
+      .join('\n')
+
+    if (textBlocks) finalText = textBlocks
+
+    // Si no hay tool calls → terminamos
+    if (response.stop_reason !== 'tool_use') break
+
+    // Procesar tool calls
+    const toolUseBlocks = response.content.filter(b => b.type === 'tool_use') as Anthropic.ToolUseBlock[]
+
+    // Agregar respuesta del asistente al historial
+    messages.push({ role: 'assistant', content: response.content })
+
+    // Ejecutar cada tool y agregar resultados
+    const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
+      toolUseBlocks.map(async (block) => {
+        const result = await executeTool(block.name, block.input as Record<string, unknown>)
+        return {
+          type: 'tool_result' as const,
+          tool_use_id: block.id,
+          content: result,
+        }
+      })
+    )
+
+    messages.push({ role: 'user', content: toolResults })
+  }
+
+  return finalText || 'No obtuve respuesta del asistente.'
 }
 
 async function getRelevantContext(message: string): Promise<string> {
   try {
     const supabase = await createClient()
-    const lowerMsg = message.toLowerCase()
-    const contextParts: string[] = []
+    const lower    = message.toLowerCase()
+    const parts: string[] = []
 
-    if (lowerMsg.includes('client') || lowerMsg.includes('cliente')) {
-      const { data } = await supabase
-        .from('clients')
-        .select('name, email, industry, status, contact_person')
-        .eq('status', 'active')
-        .limit(10)
-      if (data?.length) {
-        contextParts.push(`Clientes activos: ${JSON.stringify(data)}`)
-      }
+    // ── Siempre: top memorias más aplicadas ──────────────────
+    const { data: topMemories } = await supabase
+      .from('ai_memory')
+      .select('title, category, content, confidence, times_applied, tags')
+      .order('times_applied', { ascending: false })
+      .limit(5)
+    if (topMemories?.length) {
+      parts.push(`Mis memorias más aplicadas:\n${JSON.stringify(topMemories, null, 2)}`)
     }
 
-    if (lowerMsg.includes('proyecto') || lowerMsg.includes('project')) {
-      const { data } = await supabase
-        .from('projects')
-        .select('name, status, description, budget')
-        .in('status', ['active', 'planning'])
-        .limit(10)
-      if (data?.length) {
-        contextParts.push(`Proyectos activos: ${JSON.stringify(data)}`)
-      }
+    // ── Siempre: observaciones no resueltas ──────────────────
+    const { data: activeObs } = await supabase
+      .from('ai_observations')
+      .select('type, title, content, severity, created_at')
+      .eq('resolved', false)
+      .order('created_at', { ascending: false })
+      .limit(3)
+    if (activeObs?.length) {
+      parts.push(`Observaciones activas sin resolver:\n${JSON.stringify(activeObs, null, 2)}`)
     }
 
-    if (lowerMsg.includes('automatiz') || lowerMsg.includes('workflow') || lowerMsg.includes('n8n')) {
-      const { data } = await supabase
-        .from('automations')
-        .select('name, status, trigger_type, description')
-        .eq('status', 'active')
-        .limit(10)
-      if (data?.length) {
-        contextParts.push(`Automatizaciones activas: ${JSON.stringify(data)}`)
-      }
-    }
+    // ── Siempre: resumen rápido del estado del sistema ───────
+    const now = new Date().toISOString()
+    const { count: overdueTasks } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .lt('due_date', now)
+      .neq('status', 'done')
+    const { count: pendingInvoices } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['pending', 'overdue'])
+    parts.push(`Estado del sistema: ${overdueTasks ?? 0} tareas vencidas, ${pendingInvoices ?? 0} facturas pendientes/vencidas`)
 
-    if (lowerMsg.includes('decisi') || lowerMsg.includes('memory') || lowerMsg.includes('memori')) {
+    // ── Condicional: decisiones si el mensaje lo pide ────────
+    if (lower.includes('decisi') || lower.includes('memori')) {
       const { data } = await supabase
         .from('decisions_memory')
-        .select('decision, context, impact, tags, created_at')
+        .select('decision, context, tags, created_at')
         .order('created_at', { ascending: false })
         .limit(5)
-      if (data?.length) {
-        contextParts.push(`Decisiones recientes: ${JSON.stringify(data)}`)
-      }
+      if (data?.length) parts.push(`Decisiones recientes: ${JSON.stringify(data)}`)
     }
 
-    if (lowerMsg.includes('métric') || lowerMsg.includes('metric') || lowerMsg.includes('instagram') || lowerMsg.includes('youtube') || lowerMsg.includes('tiktok')) {
+    // ── Condicional: métricas si el mensaje lo pide ──────────
+    if (lower.includes('métric') || lower.includes('metric') || lower.includes('instagram') || lower.includes('youtube') || lower.includes('tiktok')) {
       const { data } = await supabase.from('latest_metrics').select('*').single()
-      if (data) {
-        contextParts.push(`Métricas actuales: ${JSON.stringify(data)}`)
-      }
+      if (data) parts.push(`Métricas actuales: ${JSON.stringify(data)}`)
     }
 
-    if (lowerMsg.includes('acción') || lowerMsg.includes('accion') || lowerMsg.includes('log') || lowerMsg.includes('histor')) {
-      const { data } = await supabase
-        .from('actions_log')
-        .select('action_type, description, status, created_by, created_at')
-        .order('created_at', { ascending: false })
-        .limit(10)
-      if (data?.length) {
-        contextParts.push(`Acciones recientes: ${JSON.stringify(data)}`)
-      }
-    }
-
-    return contextParts.join('\n\n')
+    return parts.join('\n\n')
   } catch {
     return ''
   }
