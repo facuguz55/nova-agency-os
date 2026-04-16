@@ -22,7 +22,8 @@ export async function GET(req: Request) {
 
   const results = [
     ...(clients.data || []).map(r => ({ type: 'client', label: r.name, sub: r.email || r.status, href: `/clients/${r.id}` })),
-    ...(projects.data || []).map((r: { id: string; name: string; status: string; clients: { name: string } | null }) => ({ type: 'project', label: r.name, sub: r.clients?.name || r.status, href: `/projects/${r.id}` })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(projects.data || []).map((r: any) => ({ type: 'project', label: r.name, sub: (Array.isArray(r.clients) ? r.clients[0]?.name : r.clients?.name) || r.status, href: `/projects/${r.id}` })),
     ...(automations.data || []).map(r => ({ type: 'automation', label: r.name, sub: r.trigger_type, href: '/automations' })),
     ...(tasks.data || []).map(r => ({ type: 'task', label: r.title, sub: `${r.priority} · ${r.status}`, href: '/tasks' })),
     ...(notes.data || []).map(r => ({ type: 'note', label: r.title, sub: (r.content || '').slice(0, 60), href: '/notes' })),
