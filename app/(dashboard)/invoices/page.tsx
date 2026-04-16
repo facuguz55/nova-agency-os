@@ -107,7 +107,7 @@ export default function InvoicesPage() {
               <YAxis tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${formatNumber(v)}`} />
               <Tooltip
                 contentStyle={{ background: '#0e1a2e', border: '1px solid #1e2f4a', borderRadius: 10, color: '#e2e8f0', fontSize: 12 }}
-                formatter={(v: number) => [`$${v.toLocaleString()}`, 'Cobrado']}
+                formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Cobrado']}
               />
               <Bar dataKey="total" radius={[6, 6, 0, 0]} maxBarSize={40}>
                 {chartData.map((_, i) => (
