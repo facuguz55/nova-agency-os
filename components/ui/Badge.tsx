@@ -15,7 +15,12 @@ const STATUS_STYLES: Record<string, string> = {
   canceled:   'bg-[#1e2f4a]    text-[#475569]  border-[#1e2f4a]',
   online:     'bg-green-500/10  text-green-400  border-green-500/25  shadow-[0_0_8px_rgba(34,197,94,.15)]',
   offline:    'bg-red-500/10   text-red-400    border-red-500/25    shadow-[0_0_8px_rgba(239,68,68,.15)]',
-  unreachable:'bg-orange-500/10 text-orange-400 border-orange-500/25',
+  unreachable: 'bg-orange-500/10 text-orange-400 border-orange-500/25',
+  enviado:     'bg-[#1e2f4a]    text-[#64748b]  border-[#1e2f4a]',
+  'respondió': 'bg-blue-500/10  text-blue-400   border-blue-500/25   shadow-[0_0_8px_rgba(59,130,246,.15)]',
+  interesado:  'bg-green-500/10 text-green-400  border-green-500/25  shadow-[0_0_8px_rgba(34,197,94,.15)]',
+  no_interesa: 'bg-red-500/10   text-red-400    border-red-500/25    shadow-[0_0_8px_rgba(239,68,68,.15)]',
+  cerrado:     'bg-[#a855f7]/10 text-[#c084fc]  border-[#a855f7]/25  shadow-[0_0_8px_rgba(168,85,247,.15)]',
 }
 
 interface BadgeProps { status: string; className?: string }

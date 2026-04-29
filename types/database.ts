@@ -83,6 +83,11 @@ export interface Database {
         Insert: { id?: string; service: string; encrypted_key: string }
         Update: { encrypted_key?: string; last_rotated?: string }
       }
+      prospectos_ig: {
+        Row: { id: string; username: string; nombre_marca: string | null; ig_profile_url: string | null; ig_thread_url: string | null; mensaje_enviado: string | null; fecha_envio: string; estado: 'enviado' | 'respondió' | 'interesado' | 'no_interesa' | 'cerrado'; notas: string | null; created_at: string }
+        Insert: { id?: string; username: string; nombre_marca?: string | null; ig_profile_url?: string | null; ig_thread_url?: string | null; mensaje_enviado?: string | null; fecha_envio?: string; estado?: 'enviado' | 'respondió' | 'interesado' | 'no_interesa' | 'cerrado'; notas?: string | null }
+        Update: { username?: string; nombre_marca?: string | null; ig_profile_url?: string | null; ig_thread_url?: string | null; mensaje_enviado?: string | null; estado?: 'enviado' | 'respondió' | 'interesado' | 'no_interesa' | 'cerrado'; notas?: string | null }
+      }
     }
     Views: {
       latest_metrics: {

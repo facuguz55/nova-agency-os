@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
   Zap, Terminal, BarChart3, Server, Settings, ScrollText, LogOut,
   CheckSquare, DollarSign, FileText, CalendarDays, Mail, TrendingUp,
-  FileSignature, Search, Brain,
+  FileSignature, Search, Brain, Target,
 } from 'lucide-react'
 import TaskAlerts from '@/components/layout/TaskAlerts'
 
@@ -35,7 +35,8 @@ const NAV_GROUPS = [
       { href: '/invoices',   label: 'Facturación', Icon: DollarSign },
       { href: '/notes',      label: 'Notas',       Icon: FileText },
       { href: '/templates',  label: 'Templates',   Icon: Mail },
-      { href: '/proposals',  label: 'Propuestas',  Icon: FileSignature },
+      { href: '/proposals',   label: 'Propuestas',  Icon: FileSignature },
+      { href: '/prospeccion', label: 'Prospección', Icon: Target },
     ],
   },
   {
