@@ -1,63 +1,13 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard, MessageSquareText, Users, FolderKanban,
-  Zap, Terminal, BarChart3, Server, Settings, ScrollText, LogOut,
-  CheckSquare, DollarSign, FileText, CalendarDays, Mail, TrendingUp,
-  FileSignature, Search, Brain, Target, ChevronRight,
-} from 'lucide-react'
+import { LogOut, Search, ChevronRight } from 'lucide-react'
 import TaskAlerts from '@/components/layout/TaskAlerts'
-
-const NAV_GROUPS = [
-  {
-    label: 'General',
-    items: [
-      { href: '/',     label: 'Dashboard', Icon: LayoutDashboard },
-      { href: '/chat', label: 'IA Chat',   Icon: MessageSquareText },
-    ],
-  },
-  {
-    label: 'Trabajo',
-    items: [
-      { href: '/clients',  label: 'Clientes',   Icon: Users },
-      { href: '/projects', label: 'Proyectos',  Icon: FolderKanban },
-      { href: '/tasks',    label: 'Tareas',     Icon: CheckSquare },
-      { href: '/calendar', label: 'Calendario', Icon: CalendarDays },
-    ],
-  },
-  {
-    label: 'Negocio',
-    items: [
-      { href: '/invoices',    label: 'Facturación', Icon: DollarSign },
-      { href: '/notes',       label: 'Notas',       Icon: FileText },
-      { href: '/templates',   label: 'Templates',   Icon: Mail },
-      { href: '/proposals',   label: 'Propuestas',  Icon: FileSignature },
-      { href: '/prospeccion', label: 'Prospección', Icon: Target },
-    ],
-  },
-  {
-    label: 'Automatización',
-    items: [
-      { href: '/automations', label: 'Automatizaciones', Icon: Zap },
-      { href: '/reports',     label: 'Reportes IA',      Icon: TrendingUp },
-      { href: '/brain',       label: 'IA Brain',         Icon: Brain },
-    ],
-  },
-  {
-    label: 'Sistema',
-    items: [
-      { href: '/n8n-logs', label: 'n8n Logs',     Icon: Terminal },
-      { href: '/metrics',  label: 'Métricas',      Icon: BarChart3 },
-      { href: '/servers',  label: 'Servidores',    Icon: Server },
-      { href: '/audit',    label: 'Audit Log',     Icon: ScrollText },
-      { href: '/config',   label: 'Configuración', Icon: Settings },
-    ],
-  },
-]
+import { getSidebarHidden, getVisibleGroups } from '@/lib/sidebar-config'
 
 interface SidebarProps { collapsed: boolean; onToggle: () => void }
 
@@ -65,11 +15,21 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
+  const [hidden, setHidden] = useState<string[]>([])
+
+  useEffect(() => {
+    setHidden(getSidebarHidden())
+    const handler = () => setHidden(getSidebarHidden())
+    window.addEventListener('nova-sidebar-config', handler)
+    return () => window.removeEventListener('nova-sidebar-config', handler)
+  }, [])
 
   async function logout() {
     await supabase.auth.signOut()
     router.push('/login')
   }
+
+  const groups = getVisibleGroups(hidden)
 
   return (
     <aside
@@ -115,7 +75,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.label}>
             {!collapsed && (
               <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#253f60]">
