@@ -77,54 +77,10 @@ function MdMessage({ text }: { text: string }) {
 }
 
 // Detecta el MIME type soportado (iOS usa mp4, Android/Chrome usa webm)
-function getSupportedMime(): string {
-  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
-  for (const t of types) {
-    try { if (MediaRecorder.isTypeSupported(t)) return t } catch {}
-  }
-  return ''
-}
-
-function mimeToExt(mime: string): string {
-  if (mime.includes('mp4')) return 'm4a'
-  if (mime.includes('ogg')) return 'ogg'
-  return 'webm'
-}
-
-function useAudioRecorder() {
-  const recorder = useRef<MediaRecorder | null>(null)
-  const chunks   = useRef<Blob[]>([])
-  const mimeRef  = useRef('')
-
-  async function start() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-    mimeRef.current = getSupportedMime()
-    recorder.current = mimeRef.current
-      ? new MediaRecorder(stream, { mimeType: mimeRef.current })
-      : new MediaRecorder(stream)
-    chunks.current = []
-    // Sin timeslice — iOS acumula todo y dispara ondataavailable al parar
-    recorder.current.ondataavailable = e => { if (e.data.size > 0) chunks.current.push(e.data) }
-    recorder.current.start()
-  }
-
-  function stop(): Promise<{ blob: Blob; ext: string }> {
-    return new Promise((resolve, reject) => {
-      if (!recorder.current) return reject(new Error('No hay grabación activa'))
-      recorder.current.onstop = () => {
-        const finalMime = recorder.current!.mimeType || mimeRef.current || 'audio/webm'
-        const blob = new Blob(chunks.current, { type: finalMime })
-        recorder.current!.stream.getTracks().forEach(t => t.stop())
-        resolve({ blob, ext: mimeToExt(finalMime) })
-      }
-      // requestData fuerza el último chunk antes de parar
-      try { recorder.current.requestData() } catch {}
-      recorder.current.stop()
-    })
-  }
-
-  return { start, stop }
-}
+// SpeechRecognition nativo del navegador — sin APIs externas
+type SR = typeof window extends { SpeechRecognition: infer T } ? T : typeof window extends { webkitSpeechRecognition: infer T } ? T : never
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getSR = (): any => (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null
 
 type MicState = 'idle' | 'recording' | 'processing'
 
@@ -134,11 +90,11 @@ export default function MobileChatPage() {
   const [loading, setLoading]   = useState(false)
   const [micState, setMicState] = useState<MicState>('idle')
   const [micError, setMicError] = useState('')
-  const [secs, setSecs]         = useState(0)
+  const [interim, setInterim]   = useState('') // texto en tiempo real
   const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null)
-  const { start, stop } = useAudioRecorder()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const srRef = useRef<any>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'instant' })
@@ -169,56 +125,57 @@ export default function MobileChatPage() {
     setLoading(false)
   }
 
-  async function toggleMic() {
+  function toggleMic() {
     if (micState === 'recording') {
-      // Parar y enviar
-      if (timerRef.current) clearInterval(timerRef.current)
-      setMicState('processing')
-      try {
-        const { blob, ext } = await stop()
-
-        if (blob.size < 500) {
-          setMicError('Audio muy corto — grabá por más tiempo')
-          setTimeout(() => setMicError(''), 3000)
-          setMicState('idle'); setSecs(0); return
-        }
-
-        const form = new FormData()
-        form.append('audio', blob, `audio.${ext}`)
-        const res  = await fetch('/api/transcribe', { method: 'POST', body: form })
-        const data = await res.json()
-
-        if (data.error) {
-          setMicError(data.error)
-          setTimeout(() => setMicError(''), 5000)
-        } else if (data.text) {
-          await send(data.text)
-        } else {
-          setMicError('No se detectó audio — hablá más cerca del micro')
-          setTimeout(() => setMicError(''), 3000)
-        }
-      } catch (e) {
-        setMicError('Error de red — revisá la conexión')
-        setTimeout(() => setMicError(''), 3000)
-      }
-      setMicState('idle')
-      setSecs(0)
-    } else if (micState === 'idle') {
-      // Empezar a grabar
-      setMicError('')
-      try {
-        await start()
-        setMicState('recording')
-        setSecs(0)
-        timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
-      } catch {
-        setMicError('Permitir acceso al micrófono en Safari → Configuración')
-        setTimeout(() => setMicError(''), 5000)
-      }
+      srRef.current?.stop()
+      return
     }
-  }
 
-  const fmtSecs = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
+    const SR = getSR()
+    if (!SR) {
+      setMicError('Tu navegador no soporta reconocimiento de voz')
+      setTimeout(() => setMicError(''), 4000)
+      return
+    }
+
+    setMicError('')
+    setInterim('')
+    const sr = new SR()
+    srRef.current = sr
+    sr.lang = 'es-AR'
+    sr.continuous = false
+    sr.interimResults = true
+
+    sr.onstart = () => setMicState('recording')
+
+    sr.onresult = (e: { results: { [key: number]: { [key: number]: { transcript: string }; isFinal: boolean } }; resultIndex: number }) => {
+      let interimText = ''
+      let finalText   = ''
+      for (let i = e.resultIndex; i < Object.keys(e.results).length; i++) {
+        const t = e.results[i][0].transcript
+        if (e.results[i].isFinal) finalText += t
+        else interimText += t
+      }
+      if (interimText) setInterim(interimText)
+      if (finalText)   { setInterim(''); send(finalText.trim()) }
+    }
+
+    sr.onerror = (e: { error: string }) => {
+      const msgs: Record<string, string> = {
+        'not-allowed': 'Permiso denegado — habilitá el micrófono en Configuración de Safari',
+        'no-speech':   'No se detectó voz — intentá de nuevo',
+        'network':     'Error de red',
+      }
+      setMicError(msgs[e.error] || `Error: ${e.error}`)
+      setTimeout(() => setMicError(''), 5000)
+      setMicState('idle')
+      setInterim('')
+    }
+
+    sr.onend = () => { setMicState('idle'); setInterim('') }
+
+    sr.start()
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -282,16 +239,13 @@ export default function MobileChatPage() {
       <div className="shrink-0 border-t border-[#1a2d45] bg-[#0c1628]">
 
         {/* Estado del mic */}
-        {(micState !== 'idle' || micError) && (
+        {(micState !== 'idle' || micError || interim) && (
           <div className={`px-4 py-2 flex items-center gap-2 text-xs ${micError ? 'text-red-400' : 'text-[#4a6080]'}`}>
-            {micState === 'recording' && (
+            {micState === 'recording' && !micError && (
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
             )}
-            {micState === 'processing' && (
-              <Loader2 size={12} className="animate-spin text-[#f97316] shrink-0" />
-            )}
-            <span>
-              {micError || (micState === 'recording' ? `Grabando ${fmtSecs(secs)} — tocá para enviar` : 'Procesando...')}
+            <span className="italic">
+              {micError || interim || 'Escuchando... tocá para enviar'}
             </span>
           </div>
         )}
