@@ -108,12 +108,20 @@ export default function MobileChatPage() {
   const [loading, setLoading]   = useState(false)
   const [recording, setRecording] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const bottomRef  = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { start, stop } = useAudioRecorder()
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [messages, loading])
+
+  function resizeTextarea() {
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = Math.min(ta.scrollHeight, 96) + 'px'
+  }
 
   async function send(text: string) {
     if (!text.trim() || loading) return
@@ -159,10 +167,11 @@ export default function MobileChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* Header — nunca se mueve */}
       <header
-        className="shrink-0 px-4 pt-safe flex items-center gap-3 border-b border-[#1a2d45] bg-[#0c1628]"
+        className="shrink-0 flex items-center gap-3 px-4 border-b border-[#1a2d45] bg-[#0c1628]"
         style={{ paddingTop: `calc(env(safe-area-inset-top) + 12px)`, paddingBottom: '12px' }}
       >
         <div className="w-8 h-8 rounded-lg bg-[#f97316] flex items-center justify-center shrink-0">
@@ -177,10 +186,10 @@ export default function MobileChatPage() {
         </div>
       </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* Mensajes — área scrollable contenida */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
+          <div className="flex flex-col items-center justify-center min-h-full gap-3 text-center px-6">
             <div className="w-14 h-14 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center">
               <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
                 <polygon points="10,1 19,18 1,18" fill="none" stroke="#f97316" strokeWidth="2" strokeLinejoin="round"/>
@@ -215,19 +224,19 @@ export default function MobileChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div
-        className="shrink-0 px-3 py-3 border-t border-[#1a2d45] bg-[#0c1628] flex items-end gap-2"
-      >
+      {/* Input — nunca se mueve */}
+      <div className="shrink-0 px-3 py-3 border-t border-[#1a2d45] bg-[#0c1628] flex items-end gap-2">
         <div className="flex-1 flex items-end bg-[#0f1d30] border border-[#1a2d45] rounded-2xl px-4 py-2.5 gap-2">
           <textarea
+            ref={textareaRef}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => { setInput(e.target.value); resizeTextarea() }}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
             placeholder="Mensaje..."
             rows={1}
-            className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none max-h-24"
-            style={{ fieldSizing: 'content' } as React.CSSProperties}
+            inputMode="text"
+            className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none"
+            style={{ height: '24px', maxHeight: '96px' }}
           />
           <button
             onClick={() => send(input)}
@@ -238,15 +247,12 @@ export default function MobileChatPage() {
           </button>
         </div>
 
-        {/* Mic button */}
         <button
           onPointerDown={handleMicStart}
           onPointerUp={handleMicStop}
           onPointerLeave={recording ? handleMicStop : undefined}
           className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
-            recording
-              ? 'bg-red-500 shadow-[0_0_20px_rgba(239,68,68,.4)]'
-              : 'bg-[#0f1d30] border border-[#1a2d45]'
+            recording ? 'bg-red-500' : 'bg-[#0f1d30] border border-[#1a2d45]'
           }`}
         >
           {recording ? <MicOff size={20} className="text-white" /> : <Mic size={20} className="text-[#64748b]" />}

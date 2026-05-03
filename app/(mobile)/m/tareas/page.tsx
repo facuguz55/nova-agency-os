@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckSquare, Square, Loader2, Plus } from 'lucide-react'
+import { CheckSquare, Square, Loader2 } from 'lucide-react'
 
 interface Task {
   id: string; title: string; status: string; priority: string
@@ -49,13 +49,10 @@ export default function TareasMobilePage() {
         className="shrink-0 px-4 border-b border-[#1a2d45] bg-[#0c1628] flex items-center justify-between"
         style={{ paddingTop: `calc(env(safe-area-inset-top) + 12px)`, paddingBottom: '12px' }}
       >
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-white">Tareas</p>
-          {pendingCount > 0 && (
-            <span className="text-[10px] bg-[#f97316] text-white font-bold px-1.5 py-0.5 rounded-full">{pendingCount}</span>
-          )}
-        </div>
-        <a href="/tasks" className="text-xs text-[#f97316]">Ver todas →</a>
+        <p className="text-sm font-semibold text-white">Tareas</p>
+        {pendingCount > 0 && (
+          <span className="text-[10px] bg-[#f97316] text-white font-bold px-1.5 py-0.5 rounded-full ml-2">{pendingCount}</span>
+        )}
       </header>
 
       {/* Filter tabs */}
@@ -87,9 +84,7 @@ export default function TareasMobilePage() {
               {filter === 'pending' ? 'Todo al día 🎉' : 'Sin completadas'}
             </p>
             {filter === 'pending' && (
-              <a href="/tasks" className="text-xs text-[#f97316] flex items-center gap-1">
-                <Plus size={12} /> Nueva tarea
-              </a>
+              <p className="text-xs text-[#334155]">Creá tareas desde la versión desktop</p>
             )}
           </div>
         ) : filtered.map(t => (
