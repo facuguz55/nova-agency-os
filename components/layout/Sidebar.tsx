@@ -8,7 +8,7 @@ import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
   Zap, Terminal, BarChart3, Server, Settings, ScrollText, LogOut,
   CheckSquare, DollarSign, FileText, CalendarDays, Mail, TrendingUp,
-  FileSignature, Search, Brain, Target,
+  FileSignature, Search, Brain, Target, ChevronRight,
 } from 'lucide-react'
 import TaskAlerts from '@/components/layout/TaskAlerts'
 
@@ -23,18 +23,18 @@ const NAV_GROUPS = [
   {
     label: 'Trabajo',
     items: [
-      { href: '/clients',  label: 'Clientes',  Icon: Users },
-      { href: '/projects', label: 'Proyectos', Icon: FolderKanban },
-      { href: '/tasks',    label: 'Tareas',    Icon: CheckSquare },
-      { href: '/calendar', label: 'Calendario',Icon: CalendarDays },
+      { href: '/clients',  label: 'Clientes',   Icon: Users },
+      { href: '/projects', label: 'Proyectos',  Icon: FolderKanban },
+      { href: '/tasks',    label: 'Tareas',     Icon: CheckSquare },
+      { href: '/calendar', label: 'Calendario', Icon: CalendarDays },
     ],
   },
   {
     label: 'Negocio',
     items: [
-      { href: '/invoices',   label: 'Facturación', Icon: DollarSign },
-      { href: '/notes',      label: 'Notas',       Icon: FileText },
-      { href: '/templates',  label: 'Templates',   Icon: Mail },
+      { href: '/invoices',    label: 'Facturación', Icon: DollarSign },
+      { href: '/notes',       label: 'Notas',       Icon: FileText },
+      { href: '/templates',   label: 'Templates',   Icon: Mail },
       { href: '/proposals',   label: 'Propuestas',  Icon: FileSignature },
       { href: '/prospeccion', label: 'Prospección', Icon: Target },
     ],
@@ -50,11 +50,11 @@ const NAV_GROUPS = [
   {
     label: 'Sistema',
     items: [
-      { href: '/n8n-logs', label: 'n8n Logs',      Icon: Terminal },
-      { href: '/metrics',  label: 'Métricas',       Icon: BarChart3 },
-      { href: '/servers',  label: 'Servidores',     Icon: Server },
-      { href: '/audit',    label: 'Audit Log',      Icon: ScrollText },
-      { href: '/config',   label: 'Configuración',  Icon: Settings },
+      { href: '/n8n-logs', label: 'n8n Logs',     Icon: Terminal },
+      { href: '/metrics',  label: 'Métricas',      Icon: BarChart3 },
+      { href: '/servers',  label: 'Servidores',    Icon: Server },
+      { href: '/audit',    label: 'Audit Log',     Icon: ScrollText },
+      { href: '/config',   label: 'Configuración', Icon: Settings },
     ],
   },
 ]
@@ -74,71 +74,55 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'flex flex-col h-full border-r transition-all duration-300 relative',
-        'bg-[#0a1525] border-[#1e2f4a]',
-        collapsed ? 'w-[60px]' : 'w-[220px]',
+        'flex flex-col h-full border-r border-[#1a2d45] bg-[#0c1628] transition-all duration-300 shrink-0',
+        collapsed ? 'w-[56px]' : 'w-[216px]',
       )}
     >
-      {/* Ambient glow top */}
-      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#ff8c42]/5 to-transparent pointer-events-none" />
-
       {/* Logo */}
       <div className={cn(
-        'flex items-center h-16 px-4 border-b border-[#1e2f4a] shrink-0 gap-3',
+        'flex items-center h-14 px-4 border-b border-[#1a2d45] shrink-0 gap-2.5',
         collapsed && 'justify-center px-0',
       )}>
-        {/* Nova logo mark */}
-        <div className="relative shrink-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff8c42] to-[#ff5f1a] flex items-center justify-center shadow-[0_0_16px_rgba(255,140,66,.5)]">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-              <circle cx="10" cy="13" r="2.5" fill="white" opacity=".9"/>
-            </svg>
-          </div>
-        </div>
-
-        {!collapsed && (
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold text-white leading-tight">Nova OS</span>
-            <span className="text-[10px] text-[#ff8c42]/60 leading-tight tracking-widest uppercase">Agency</span>
-          </div>
-        )}
-
-        <button
-          onClick={onToggle}
-          className={cn(
-            'ml-auto text-[#334155] hover:text-[#ff8c42] transition-colors p-1 rounded-lg hover:bg-[#ff8c42]/10',
-            collapsed && 'ml-0 hidden',
-          )}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M15 18l-6-6 6-6"/>
+        <div className="w-7 h-7 rounded-lg bg-[#f97316] flex items-center justify-center shrink-0">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
+            <circle cx="10" cy="13" r="2.2" fill="white"/>
           </svg>
-        </button>
+        </div>
+        {!collapsed && (
+          <>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-sm font-semibold text-white leading-tight">Nova OS</span>
+              <span className="text-[10px] text-[#334155] leading-tight">Agency</span>
+            </div>
+            <button
+              onClick={onToggle}
+              className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md"
+            >
+              <ChevronRight size={14} className="rotate-180" />
+            </button>
+          </>
+        )}
+        {collapsed && (
+          <button
+            onClick={onToggle}
+            className="absolute -right-3 top-[52px] w-6 h-6 rounded-full bg-[#0c1628] border border-[#1a2d45] flex items-center justify-center text-[#64748b] hover:text-[#f97316] transition-colors z-10"
+          >
+            <ChevronRight size={11} />
+          </button>
+        )}
       </div>
 
-      {/* Collapse toggle when collapsed */}
-      {collapsed && (
-        <button
-          onClick={onToggle}
-          className="mx-auto mt-2 text-[#334155] hover:text-[#ff8c42] transition-colors p-1.5 rounded-lg hover:bg-[#ff8c42]/10"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
-        </button>
-      )}
-
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2">
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={group.label} className={gi > 0 ? 'mt-4' : ''}>
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label}>
             {!collapsed && (
-              <p className="px-3 mb-1 text-[9px] font-semibold uppercase tracking-widest text-[#1e3a5f]">
+              <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#253f60]">
                 {group.label}
               </p>
             )}
-            <div className="space-y-0.5">
+            <div className="space-y-px">
               {group.items.map(({ href, label, Icon }) => {
                 const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
                 return (
@@ -147,30 +131,15 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     href={href}
                     title={collapsed ? label : undefined}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl text-sm transition-all duration-150 group',
-                      collapsed ? 'px-0 py-3 justify-center' : 'px-3 py-2.5',
+                      'flex items-center gap-3 rounded-lg text-sm transition-all duration-100',
+                      collapsed ? 'justify-center py-2.5 px-0' : 'px-2 py-2',
                       active
-                        ? 'nav-active text-[#ff8c42]'
-                        : 'text-[#475569] hover:text-[#94a3b8] hover:bg-white/[.03] border border-transparent',
+                        ? 'nav-active text-[#f97316] pl-3'
+                        : 'text-[#4a6080] hover:text-[#94a3b8] hover:bg-white/[.03] border-l-2 border-transparent',
                     )}
                   >
-                    <Icon
-                      size={16}
-                      className={cn(
-                        'shrink-0 transition-all duration-150',
-                        active
-                          ? 'text-[#ff8c42] drop-shadow-[0_0_6px_rgba(255,140,66,.8)]'
-                          : 'text-[#334155] group-hover:text-[#64748b]',
-                      )}
-                    />
-                    {!collapsed && (
-                      <span className={cn('truncate font-medium', active ? 'text-[#ff8c42]' : '')}>
-                        {label}
-                      </span>
-                    )}
-                    {active && !collapsed && (
-                      <div className="ml-auto w-1 h-4 rounded-full bg-[#ff8c42] shadow-[0_0_8px_rgba(255,140,66,.8)]" />
-                    )}
+                    <Icon size={15} className="shrink-0" />
+                    {!collapsed && <span className="truncate font-medium">{label}</span>}
                   </Link>
                 )
               })}
@@ -180,19 +149,22 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="shrink-0 border-t border-[#1e2f4a] p-2 space-y-0.5">
+      <div className="shrink-0 border-t border-[#1a2d45] p-2 space-y-px">
         <button
           onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
           title={collapsed ? 'Buscar' : undefined}
           className={cn(
-            'flex items-center gap-3 rounded-xl text-sm text-[#334155]',
-            'hover:bg-[#ff8c42]/10 hover:text-[#ff8c42] transition-all w-full group',
-            collapsed ? 'px-0 py-3 justify-center' : 'px-3 py-2.5',
+            'flex items-center gap-3 rounded-lg text-sm text-[#4a6080] hover:text-[#94a3b8] hover:bg-white/[.03] transition-all w-full',
+            collapsed ? 'justify-center py-2.5 px-0' : 'px-2 py-2',
           )}
         >
           <Search size={15} className="shrink-0" />
-          {!collapsed && <span className="font-medium">Buscar</span>}
-          {!collapsed && <kbd className="ml-auto text-[9px] bg-[#080f1e] border border-[#1e2f4a] px-1.5 py-0.5 rounded text-[#1e3a5f]">Ctrl K</kbd>}
+          {!collapsed && (
+            <>
+              <span className="font-medium flex-1 text-left">Buscar</span>
+              <kbd className="text-[9px] bg-[#080f1e] border border-[#1a2d45] px-1.5 py-0.5 rounded text-[#334155]">⌘K</kbd>
+            </>
+          )}
         </button>
 
         <TaskAlerts collapsed={collapsed} />
@@ -201,12 +173,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           onClick={logout}
           title={collapsed ? 'Salir' : undefined}
           className={cn(
-            'flex items-center gap-3 rounded-xl text-sm text-[#334155]',
-            'hover:bg-red-500/10 hover:text-red-400 transition-all w-full group',
-            collapsed ? 'px-0 py-3 justify-center' : 'px-3 py-2.5',
+            'flex items-center gap-3 rounded-lg text-sm text-[#4a6080] hover:text-red-400 hover:bg-red-500/[.06] transition-all w-full',
+            collapsed ? 'justify-center py-2.5 px-0' : 'px-2 py-2',
           )}
         >
-          <LogOut size={15} className="shrink-0 group-hover:drop-shadow-[0_0_4px_rgba(239,68,68,.6)]" />
+          <LogOut size={15} className="shrink-0" />
           {!collapsed && <span className="font-medium">Salir</span>}
         </button>
       </div>
