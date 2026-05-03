@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { LogOut, Search, ChevronRight } from 'lucide-react'
 import TaskAlerts from '@/components/layout/TaskAlerts'
-import { getSidebarHidden, getVisibleGroups } from '@/lib/sidebar-config'
+import { getCachedItems, mergeConfig, setCacheItems, type SidebarItem } from '@/lib/sidebar-config'
 
 interface SidebarProps { collapsed: boolean; onToggle: () => void }
 
@@ -15,11 +15,21 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
-  const [hidden, setHidden] = useState<string[]>([])
+  const [items, setItems] = useState<SidebarItem[]>(getCachedItems)
 
   useEffect(() => {
-    setHidden(getSidebarHidden())
-    const handler = () => setHidden(getSidebarHidden())
+    // Fetch desde Supabase y actualizar cache
+    fetch('/api/sidebar-config')
+      .then(r => r.json())
+      .then(({ items: stored }) => {
+        if (!stored?.length) return
+        const merged = mergeConfig(stored)
+        setCacheItems(merged)
+        setItems(merged)
+      })
+      .catch(() => {})
+
+    const handler = () => setItems(getCachedItems())
     window.addEventListener('nova-sidebar-config', handler)
     return () => window.removeEventListener('nova-sidebar-config', handler)
   }, [])
@@ -29,12 +39,23 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     router.push('/login')
   }
 
-  const groups = getVisibleGroups(hidden)
+  const visible = items.filter(i => i.visible)
+
+  // Agrupar manteniendo orden del usuario, insertar label cuando cambia el grupo
+  const rendered: Array<{ type: 'label'; label: string } | { type: 'item'; item: SidebarItem }> = []
+  let lastGroup = ''
+  for (const item of visible) {
+    if (item.group !== lastGroup) {
+      rendered.push({ type: 'label', label: item.group })
+      lastGroup = item.group
+    }
+    rendered.push({ type: 'item', item })
+  }
 
   return (
     <aside
       className={cn(
-        'flex flex-col h-full border-r border-[#1a2d45] bg-[#0c1628] transition-all duration-300 shrink-0',
+        'flex flex-col h-full border-r border-[#1a2d45] bg-[#0c1628] transition-all duration-300 shrink-0 relative',
         collapsed ? 'w-[56px]' : 'w-[216px]',
       )}
     >
@@ -55,10 +76,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <span className="text-sm font-semibold text-white leading-tight">Nova OS</span>
               <span className="text-[10px] text-[#334155] leading-tight">Agency</span>
             </div>
-            <button
-              onClick={onToggle}
-              className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md"
-            >
+            <button onClick={onToggle} className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md">
               <ChevronRight size={14} className="rotate-180" />
             </button>
           </>
@@ -74,38 +92,38 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-        {groups.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#253f60]">
-                {group.label}
+      <nav className="flex-1 overflow-y-auto py-4 px-2">
+        {rendered.map((row, i) => {
+          if (row.type === 'label') {
+            return !collapsed ? (
+              <p key={`label-${i}`} className="px-2 mt-4 mb-1 first:mt-0 text-[10px] font-semibold uppercase tracking-widest text-[#253f60]">
+                {row.label}
               </p>
-            )}
-            <div className="space-y-px">
-              {group.items.map(({ href, label, Icon }) => {
-                const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    title={collapsed ? label : undefined}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg text-sm transition-all duration-100',
-                      collapsed ? 'justify-center py-2.5 px-0' : 'px-2 py-2',
-                      active
-                        ? 'nav-active text-[#f97316] pl-3'
-                        : 'text-[#4a6080] hover:text-[#94a3b8] hover:bg-white/[.03] border-l-2 border-transparent',
-                    )}
-                  >
-                    <Icon size={15} className="shrink-0" />
-                    {!collapsed && <span className="truncate font-medium">{label}</span>}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+            ) : (
+              <div key={`label-${i}`} className="mt-3 first:mt-0 border-t border-[#1a2d45]/50 mx-2" />
+            )
+          }
+
+          const { href, label, Icon } = row.item
+          const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
+          return (
+            <Link
+              key={href}
+              href={href}
+              title={collapsed ? label : undefined}
+              className={cn(
+                'flex items-center gap-3 rounded-lg text-sm transition-all duration-100 mb-px',
+                collapsed ? 'justify-center py-2.5 px-0' : 'px-2 py-2',
+                active
+                  ? 'nav-active text-[#f97316] pl-3'
+                  : 'text-[#4a6080] hover:text-[#94a3b8] hover:bg-white/[.03] border-l-2 border-transparent',
+              )}
+            >
+              <Icon size={15} className="shrink-0" />
+              {!collapsed && <span className="truncate font-medium">{label}</span>}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* Footer */}
@@ -126,9 +144,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </>
           )}
         </button>
-
         <TaskAlerts collapsed={collapsed} />
-
         <button
           onClick={logout}
           title={collapsed ? 'Salir' : undefined}

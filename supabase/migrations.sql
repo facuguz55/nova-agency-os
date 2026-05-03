@@ -131,6 +131,14 @@ create trigger ai_memory_updated_at
   before update on public.ai_memory
   for each row execute function public.set_updated_at();
 
+-- ── SIDEBAR CONFIG ──────────────────────────────────────────
+create table if not exists public.sidebar_config (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users(id) on delete cascade unique,
+  items      jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 -- ── AI OBSERVATIONS ─────────────────────────────────────────
 create table if not exists public.ai_observations (
   id          uuid primary key default gen_random_uuid(),
