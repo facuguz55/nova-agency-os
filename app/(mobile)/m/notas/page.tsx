@@ -5,24 +5,42 @@ import { Mic, Loader2, FileText, Trash2 } from 'lucide-react'
 
 interface Note { id: string; title: string; content: string; created_at: string }
 
+function getSupportedMime(): string {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+  for (const t of types) {
+    try { if (MediaRecorder.isTypeSupported(t)) return t } catch {}
+  }
+  return ''
+}
+function mimeToExt(mime: string) {
+  if (mime.includes('mp4')) return 'm4a'
+  if (mime.includes('ogg')) return 'ogg'
+  return 'webm'
+}
+
 function useAudioRecorder() {
   const recorder = useRef<MediaRecorder | null>(null)
   const chunks   = useRef<Blob[]>([])
+  const mime     = useRef('')
 
   async function start() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    recorder.current = new MediaRecorder(stream)
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    mime.current = getSupportedMime()
+    recorder.current = mime.current
+      ? new MediaRecorder(stream, { mimeType: mime.current })
+      : new MediaRecorder(stream)
     chunks.current = []
     recorder.current.ondataavailable = e => { if (e.data.size > 0) chunks.current.push(e.data) }
-    recorder.current.start()
+    recorder.current.start(100)
   }
 
-  function stop(): Promise<Blob> {
+  function stop(): Promise<{ blob: Blob; ext: string }> {
     return new Promise(resolve => {
       recorder.current!.onstop = () => {
-        const blob = new Blob(chunks.current, { type: recorder.current!.mimeType || 'audio/webm' })
+        const finalMime = recorder.current!.mimeType || mime.current || 'audio/webm'
+        const blob = new Blob(chunks.current, { type: finalMime })
         recorder.current!.stream.getTracks().forEach(t => t.stop())
-        resolve(blob)
+        resolve({ blob, ext: mimeToExt(finalMime) })
       }
       recorder.current!.stop()
     })
@@ -50,27 +68,33 @@ export default function NotasPage() {
     setNotes(data.notes || data || [])
   }
 
-  async function handleMicStart() {
+  async function toggleRecording() {
+    if (recording) {
+      // Parar
+      if (timerRef.current) clearInterval(timerRef.current)
+      setRecording(false)
+      setProcessing(true)
+      setStatus('Transcribiendo...')
+      await processAudio()
+      return
+    }
+    // Empezar
     try {
       await start()
       setRecording(true)
       setSecs(0)
       timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
     } catch {
-      alert('No se pudo acceder al micrófono')
+      setStatus('Permitir acceso al micrófono en Safari')
+      setTimeout(() => setStatus(''), 4000)
     }
   }
 
-  async function handleMicStop() {
-    if (timerRef.current) clearInterval(timerRef.current)
-    setRecording(false)
-    setProcessing(true)
-    setStatus('Transcribiendo...')
-
+  async function processAudio() {
     try {
-      const blob = await stop()
+      const { blob, ext } = await stop()
       const form = new FormData()
-      form.append('audio', blob, 'audio.webm')
+      form.append('audio', blob, `audio.${ext}`)
       const tres = await fetch('/api/transcribe', { method: 'POST', body: form })
       const { text } = await tres.json()
 
@@ -109,11 +133,10 @@ export default function NotasPage() {
 
       setStatus('')
       await loadNotes()
-    } catch (e) {
+    } catch {
       setStatus('Error — intentá de nuevo')
       setTimeout(() => setStatus(''), 3000)
     }
-
     setProcessing(false)
   }
 
@@ -137,9 +160,7 @@ export default function NotasPage() {
       {/* Record button */}
       <div className="shrink-0 flex flex-col items-center justify-center py-10 gap-4">
         <button
-          onPointerDown={handleMicStart}
-          onPointerUp={!processing ? handleMicStop : undefined}
-          onPointerLeave={recording ? handleMicStop : undefined}
+          onClick={!processing ? toggleRecording : undefined}
           disabled={processing}
           className={`w-24 h-24 rounded-full flex items-center justify-center transition-all select-none ${
             recording
@@ -157,10 +178,12 @@ export default function NotasPage() {
 
         <p className="text-sm text-[#4a6080]">
           {recording
-            ? <span className="text-red-400 font-mono">{fmtSecs(secs)} — soltá para guardar</span>
+            ? <span className="text-red-400 font-mono">{fmtSecs(secs)} — tocá para guardar</span>
             : processing
               ? <span className="text-[#f97316]">{status}</span>
-              : 'Mantené para grabar'}
+              : status
+                ? <span className="text-red-400">{status}</span>
+                : 'Tocá para grabar'}
         </p>
       </div>
 

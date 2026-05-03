@@ -76,24 +76,44 @@ function MdMessage({ text }: { text: string }) {
   return <div className="space-y-0.5 text-sm text-[#e2e8f0]">{nodes}</div>
 }
 
+// Detecta el MIME type soportado (iOS usa mp4, Android/Chrome usa webm)
+function getSupportedMime(): string {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+  for (const t of types) {
+    try { if (MediaRecorder.isTypeSupported(t)) return t } catch {}
+  }
+  return ''
+}
+
+function mimeToExt(mime: string): string {
+  if (mime.includes('mp4')) return 'm4a'
+  if (mime.includes('ogg')) return 'ogg'
+  return 'webm'
+}
+
 function useAudioRecorder() {
   const recorder = useRef<MediaRecorder | null>(null)
   const chunks   = useRef<Blob[]>([])
+  const mime     = useRef('')
 
   async function start() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    recorder.current = new MediaRecorder(stream)
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    mime.current = getSupportedMime()
+    recorder.current = mime.current
+      ? new MediaRecorder(stream, { mimeType: mime.current })
+      : new MediaRecorder(stream)
     chunks.current = []
     recorder.current.ondataavailable = e => { if (e.data.size > 0) chunks.current.push(e.data) }
-    recorder.current.start()
+    recorder.current.start(100) // chunk cada 100ms para iOS
   }
 
-  function stop(): Promise<Blob> {
+  function stop(): Promise<{ blob: Blob; ext: string }> {
     return new Promise(resolve => {
       recorder.current!.onstop = () => {
-        const blob = new Blob(chunks.current, { type: recorder.current!.mimeType || 'audio/webm' })
+        const finalMime = recorder.current!.mimeType || mime.current || 'audio/webm'
+        const blob = new Blob(chunks.current, { type: finalMime })
         recorder.current!.stream.getTracks().forEach(t => t.stop())
-        resolve(blob)
+        resolve({ blob, ext: mimeToExt(finalMime) })
       }
       recorder.current!.stop()
     })
@@ -102,14 +122,18 @@ function useAudioRecorder() {
   return { start, stop }
 }
 
+type MicState = 'idle' | 'recording' | 'processing'
+
 export default function MobileChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const [recording, setRecording] = useState(false)
-  const [transcribing, setTranscribing] = useState(false)
-  const bottomRef  = useRef<HTMLDivElement>(null)
+  const [micState, setMicState] = useState<MicState>('idle')
+  const [micError, setMicError] = useState('')
+  const [secs, setSecs]         = useState(0)
+  const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null)
   const { start, stop } = useAudioRecorder()
 
   useEffect(() => {
@@ -141,30 +165,45 @@ export default function MobileChatPage() {
     setLoading(false)
   }
 
-  async function handleMicStart() {
-    try {
-      await start()
-      setRecording(true)
-    } catch {
-      alert('No se pudo acceder al micrófono')
+  async function toggleMic() {
+    if (micState === 'recording') {
+      // Parar y enviar
+      if (timerRef.current) clearInterval(timerRef.current)
+      setMicState('processing')
+      try {
+        const { blob, ext } = await stop()
+        const form = new FormData()
+        form.append('audio', blob, `audio.${ext}`)
+        const res  = await fetch('/api/transcribe', { method: 'POST', body: form })
+        const data = await res.json()
+        if (data.text) {
+          await send(data.text)
+        } else {
+          setMicError('No se entendió — intentá de nuevo')
+          setTimeout(() => setMicError(''), 3000)
+        }
+      } catch {
+        setMicError('Error al procesar el audio')
+        setTimeout(() => setMicError(''), 3000)
+      }
+      setMicState('idle')
+      setSecs(0)
+    } else if (micState === 'idle') {
+      // Empezar a grabar
+      setMicError('')
+      try {
+        await start()
+        setMicState('recording')
+        setSecs(0)
+        timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
+      } catch {
+        setMicError('Permitir acceso al micrófono en Safari → Configuración')
+        setTimeout(() => setMicError(''), 5000)
+      }
     }
   }
 
-  async function handleMicStop() {
-    setRecording(false)
-    setTranscribing(true)
-    try {
-      const blob = await stop()
-      const form = new FormData()
-      form.append('audio', blob, 'audio.webm')
-      const res = await fetch('/api/transcribe', { method: 'POST', body: form })
-      const { text } = await res.json()
-      if (text) await send(text)
-    } catch {
-      alert('Error al transcribir el audio')
-    }
-    setTranscribing(false)
-  }
+  const fmtSecs = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -213,11 +252,11 @@ export default function MobileChatPage() {
           </div>
         ))}
 
-        {(loading || transcribing) && (
+        {loading && (
           <div className="flex justify-start">
             <div className="bg-[#0f1d30] border border-[#1a2d45] px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2">
               <Loader2 size={14} className="animate-spin text-[#f97316]" />
-              <span className="text-xs text-[#4a6080]">{transcribing ? 'Transcribiendo...' : 'Pensando...'}</span>
+              <span className="text-xs text-[#4a6080]">Pensando...</span>
             </div>
           </div>
         )}
@@ -225,38 +264,65 @@ export default function MobileChatPage() {
       </div>
 
       {/* Input — nunca se mueve */}
-      <div className="shrink-0 px-3 py-3 border-t border-[#1a2d45] bg-[#0c1628] flex items-end gap-2">
-        <div className="flex-1 flex items-end bg-[#0f1d30] border border-[#1a2d45] rounded-2xl px-4 py-2.5 gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={e => { setInput(e.target.value); resizeTextarea() }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
-            placeholder="Mensaje..."
-            rows={1}
-            inputMode="text"
-            className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none"
-            style={{ height: '24px', maxHeight: '96px' }}
-          />
+      <div className="shrink-0 border-t border-[#1a2d45] bg-[#0c1628]">
+
+        {/* Estado del mic */}
+        {(micState !== 'idle' || micError) && (
+          <div className={`px-4 py-2 flex items-center gap-2 text-xs ${micError ? 'text-red-400' : 'text-[#4a6080]'}`}>
+            {micState === 'recording' && (
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+            )}
+            {micState === 'processing' && (
+              <Loader2 size={12} className="animate-spin text-[#f97316] shrink-0" />
+            )}
+            <span>
+              {micError || (micState === 'recording' ? `Grabando ${fmtSecs(secs)} — tocá para enviar` : 'Procesando...')}
+            </span>
+          </div>
+        )}
+
+        <div className="px-3 py-3 flex items-end gap-2">
+          {/* Textarea + enviar */}
+          <div className="flex-1 flex items-end bg-[#0f1d30] border border-[#1a2d45] rounded-2xl px-4 py-2.5 gap-2">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={e => { setInput(e.target.value); resizeTextarea() }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
+              placeholder={micState === 'recording' ? 'Grabando...' : 'Mensaje...'}
+              rows={1}
+              inputMode="text"
+              disabled={micState !== 'idle'}
+              className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none disabled:opacity-40"
+              style={{ height: '24px', maxHeight: '96px' }}
+            />
+            <button
+              onClick={() => send(input)}
+              disabled={!input.trim() || loading || micState !== 'idle'}
+              className="shrink-0 w-8 h-8 rounded-xl bg-[#f97316] disabled:bg-[#1a2d45] flex items-center justify-center transition-colors"
+            >
+              <Send size={14} className="text-white" />
+            </button>
+          </div>
+
+          {/* Botón micrófono — tap to start / tap to stop */}
           <button
-            onClick={() => send(input)}
-            disabled={!input.trim() || loading}
-            className="shrink-0 w-8 h-8 rounded-xl bg-[#f97316] disabled:bg-[#1a2d45] flex items-center justify-center transition-colors"
+            onClick={toggleMic}
+            disabled={micState === 'processing' || loading}
+            className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 ${
+              micState === 'recording'
+                ? 'bg-red-500'
+                : 'bg-[#0f1d30] border border-[#1a2d45]'
+            }`}
           >
-            <Send size={14} className="text-white" />
+            {micState === 'processing'
+              ? <Loader2 size={20} className="text-[#f97316] animate-spin" />
+              : micState === 'recording'
+                ? <MicOff size={20} className="text-white" />
+                : <Mic size={20} className="text-[#64748b]" />
+            }
           </button>
         </div>
-
-        <button
-          onPointerDown={handleMicStart}
-          onPointerUp={handleMicStop}
-          onPointerLeave={recording ? handleMicStop : undefined}
-          className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
-            recording ? 'bg-red-500' : 'bg-[#0f1d30] border border-[#1a2d45]'
-          }`}
-        >
-          {recording ? <MicOff size={20} className="text-white" /> : <Mic size={20} className="text-[#64748b]" />}
-        </button>
       </div>
     </div>
   )
