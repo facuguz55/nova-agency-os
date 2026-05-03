@@ -5,6 +5,77 @@ import { Send, Mic, MicOff, Loader2 } from 'lucide-react'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
+function MdMessage({ text }: { text: string }) {
+  const lines = text.split('\n')
+  const nodes: React.ReactNode[] = []
+  let i = 0
+
+  const parseInline = (s: string): React.ReactNode => {
+    const parts = s.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g)
+    return parts.map((p, j) => {
+      if (p.startsWith('**') && p.endsWith('**')) return <strong key={j} className="font-semibold text-white">{p.slice(2, -2)}</strong>
+      if (p.startsWith('*')  && p.endsWith('*'))  return <em key={j} className="italic text-[#fb923c]">{p.slice(1, -1)}</em>
+      if (p.startsWith('`')  && p.endsWith('`'))  return <code key={j} className="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-[#fb923c]">{p.slice(1, -1)}</code>
+      return p
+    })
+  }
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    // Code block
+    if (line.startsWith('```')) {
+      const codeLines: string[] = []
+      i++
+      while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++ }
+      nodes.push(<pre key={i} className="bg-black/30 border border-white/10 rounded-xl p-3 my-2 overflow-x-auto"><code className="text-[12px] font-mono text-[#94a3b8] whitespace-pre">{codeLines.join('\n')}</code></pre>)
+      i++; continue
+    }
+
+    // Heading
+    if (line.startsWith('### ')) { nodes.push(<p key={i} className="font-bold text-white text-sm mt-2 mb-0.5">{parseInline(line.slice(4))}</p>); i++; continue }
+    if (line.startsWith('## '))  { nodes.push(<p key={i} className="font-bold text-white text-sm mt-2 mb-0.5">{parseInline(line.slice(3))}</p>); i++; continue }
+    if (line.startsWith('# '))   { nodes.push(<p key={i} className="font-bold text-white text-sm mt-2 mb-0.5">{parseInline(line.slice(2))}</p>); i++; continue }
+
+    // Bullet list block
+    if (line.match(/^[-•*] /)) {
+      const items: string[] = []
+      while (i < lines.length && lines[i].match(/^[-•*] /)) { items.push(lines[i].slice(2)); i++ }
+      nodes.push(
+        <ul key={i} className="my-1 space-y-0.5 pl-1">
+          {items.map((it, j) => (
+            <li key={j} className="flex gap-2"><span className="text-[#f97316] mt-1 shrink-0">•</span><span>{parseInline(it)}</span></li>
+          ))}
+        </ul>
+      )
+      continue
+    }
+
+    // Numbered list block
+    if (line.match(/^\d+\. /)) {
+      const items: string[] = []
+      while (i < lines.length && lines[i].match(/^\d+\. /)) { items.push(lines[i].replace(/^\d+\. /, '')); i++ }
+      nodes.push(
+        <ol key={i} className="my-1 space-y-0.5 pl-1">
+          {items.map((it, j) => (
+            <li key={j} className="flex gap-2"><span className="text-[#f97316] shrink-0 font-medium">{j + 1}.</span><span>{parseInline(it)}</span></li>
+          ))}
+        </ol>
+      )
+      continue
+    }
+
+    // Empty line → spacer
+    if (line.trim() === '') { nodes.push(<div key={i} className="h-1" />); i++; continue }
+
+    // Normal paragraph
+    nodes.push(<p key={i} className="leading-relaxed">{parseInline(line)}</p>)
+    i++
+  }
+
+  return <div className="space-y-0.5 text-sm text-[#e2e8f0]">{nodes}</div>
+}
+
 function useAudioRecorder() {
   const recorder = useRef<MediaRecorder | null>(null)
   const chunks   = useRef<Blob[]>([])
@@ -123,12 +194,12 @@ export default function MobileChatPage() {
 
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[82%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+            <div className={`max-w-[86%] px-4 py-3 rounded-2xl ${
               m.role === 'user'
-                ? 'bg-[#f97316] text-white rounded-br-sm'
-                : 'bg-[#0f1d30] border border-[#1a2d45] text-[#e2e8f0] rounded-bl-sm'
+                ? 'bg-[#f97316] text-white rounded-br-sm text-sm leading-relaxed'
+                : 'bg-[#0f1d30] border border-[#1a2d45] rounded-bl-sm'
             }`}>
-              {m.content}
+              {m.role === 'user' ? m.content : <MdMessage text={m.content} />}
             </div>
           </div>
         ))}
