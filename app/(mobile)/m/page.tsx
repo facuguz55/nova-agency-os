@@ -94,28 +94,32 @@ function mimeToExt(mime: string): string {
 function useAudioRecorder() {
   const recorder = useRef<MediaRecorder | null>(null)
   const chunks   = useRef<Blob[]>([])
-  const mime     = useRef('')
+  const mimeRef  = useRef('')
 
   async function start() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-    mime.current = getSupportedMime()
-    recorder.current = mime.current
-      ? new MediaRecorder(stream, { mimeType: mime.current })
+    mimeRef.current = getSupportedMime()
+    recorder.current = mimeRef.current
+      ? new MediaRecorder(stream, { mimeType: mimeRef.current })
       : new MediaRecorder(stream)
     chunks.current = []
+    // Sin timeslice — iOS acumula todo y dispara ondataavailable al parar
     recorder.current.ondataavailable = e => { if (e.data.size > 0) chunks.current.push(e.data) }
-    recorder.current.start(100) // chunk cada 100ms para iOS
+    recorder.current.start()
   }
 
   function stop(): Promise<{ blob: Blob; ext: string }> {
-    return new Promise(resolve => {
-      recorder.current!.onstop = () => {
-        const finalMime = recorder.current!.mimeType || mime.current || 'audio/webm'
+    return new Promise((resolve, reject) => {
+      if (!recorder.current) return reject(new Error('No hay grabación activa'))
+      recorder.current.onstop = () => {
+        const finalMime = recorder.current!.mimeType || mimeRef.current || 'audio/webm'
         const blob = new Blob(chunks.current, { type: finalMime })
         recorder.current!.stream.getTracks().forEach(t => t.stop())
         resolve({ blob, ext: mimeToExt(finalMime) })
       }
-      recorder.current!.stop()
+      // requestData fuerza el último chunk antes de parar
+      try { recorder.current.requestData() } catch {}
+      recorder.current.stop()
     })
   }
 
@@ -172,18 +176,29 @@ export default function MobileChatPage() {
       setMicState('processing')
       try {
         const { blob, ext } = await stop()
+
+        if (blob.size < 500) {
+          setMicError('Audio muy corto — grabá por más tiempo')
+          setTimeout(() => setMicError(''), 3000)
+          setMicState('idle'); setSecs(0); return
+        }
+
         const form = new FormData()
         form.append('audio', blob, `audio.${ext}`)
         const res  = await fetch('/api/transcribe', { method: 'POST', body: form })
         const data = await res.json()
-        if (data.text) {
+
+        if (data.error) {
+          setMicError(data.error)
+          setTimeout(() => setMicError(''), 5000)
+        } else if (data.text) {
           await send(data.text)
         } else {
-          setMicError('No se entendió — intentá de nuevo')
+          setMicError('No se detectó audio — hablá más cerca del micro')
           setTimeout(() => setMicError(''), 3000)
         }
-      } catch {
-        setMicError('Error al procesar el audio')
+      } catch (e) {
+        setMicError('Error de red — revisá la conexión')
         setTimeout(() => setMicError(''), 3000)
       }
       setMicState('idle')
