@@ -125,7 +125,7 @@ export default function ProjectsPage() {
             <option value="completed">Completado</option>
             <option value="paused">Pausado</option>
           </Select>
-          <Input label="Presupuesto (USD)" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} type="number" placeholder="5000" />
+          <Input label="Presupuesto (ARS)" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} type="number" placeholder="5000" />
           <Textarea label="Descripción" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
           <div className="flex gap-3 pt-2">
             <Button onClick={save} disabled={saving || !form.name || !form.client_id}>
