@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Send, Mic, MicOff, Loader2 } from 'lucide-react'
 
-interface Message { role: 'user' | 'assistant'; content: string }
+interface Message { role: 'user' | 'assistant'; content: string; isError?: boolean }
 
 function MdMessage({ text }: { text: string }) {
   const lines = text.split('\n')
@@ -121,7 +121,11 @@ export default function MobileChatPage() {
       body: JSON.stringify({ message: text.trim(), history }),
     })
     const data = await res.json()
-    setMessages(m => [...m, { role: 'assistant', content: data.response || data.error || 'Error' }])
+    setMessages(m => [...m, {
+      role: 'assistant',
+      content: data.response || data.error || 'Error desconocido',
+      isError: !!data.error,
+    }])
     setLoading(false)
   }
 
@@ -157,7 +161,11 @@ export default function MobileChatPage() {
         else interimText += t
       }
       if (interimText) setInterim(interimText)
-      if (finalText)   { setInterim(''); send(finalText.trim()) }
+      if (finalText) {
+        // Acumular en el input — el usuario elige cuándo enviar
+        setInput(prev => (prev + ' ' + finalText).trim())
+        setInterim('')
+      }
     }
 
     sr.onerror = (e: { error: string }) => {
@@ -217,9 +225,15 @@ export default function MobileChatPage() {
             <div className={`max-w-[86%] px-4 py-3 rounded-2xl ${
               m.role === 'user'
                 ? 'bg-[#f97316] text-white rounded-br-sm text-sm leading-relaxed'
-                : 'bg-[#0f1d30] border border-[#1a2d45] rounded-bl-sm'
+                : m.isError
+                  ? 'bg-red-950/50 border border-red-800/40 rounded-bl-sm'
+                  : 'bg-[#0f1d30] border border-[#1a2d45] rounded-bl-sm'
             }`}>
-              {m.role === 'user' ? m.content : <MdMessage text={m.content} />}
+              {m.role === 'user'
+                ? m.content
+                : m.isError
+                  ? <p className="text-xs text-red-400 font-mono">{m.content}</p>
+                  : <MdMessage text={m.content} />}
             </div>
           </div>
         ))}
@@ -245,7 +259,7 @@ export default function MobileChatPage() {
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
             )}
             <span className="italic">
-              {micError || interim || 'Escuchando... tocá para enviar'}
+              {micError || interim || 'Escuchando... tocá el mic para detener, luego enviá'}
             </span>
           </div>
         )}

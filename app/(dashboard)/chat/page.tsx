@@ -184,17 +184,10 @@ export default function ChatPage() {
 
     recognition.onend = () => {
       setInterim('')
-      // Auto-reiniciar mientras el usuario quiera seguir hablando
-      if (shouldRestartRef.current) {
-        const next = createRecognition()
-        if (next) {
-          recognitionRef.current = next
-          next.start()
-        }
-      } else {
-        setIsListening(false)
-        recognitionRef.current = null
-      }
+      // No reiniciar automáticamente — el usuario decide cuándo enviar
+      shouldRestartRef.current = false
+      setIsListening(false)
+      recognitionRef.current = null
     }
 
     return recognition
@@ -370,7 +363,7 @@ export default function ChatPage() {
                   }
                 }}
                 onKeyDown={onKey}
-                placeholder={isListening ? 'Hablá ahora...' : 'Escribí o usá el micrófono... (Enter para enviar)'}
+                placeholder={isListening ? 'Hablá... el mic para solo, después enviás vos' : 'Escribí o usá el micrófono... (Enter para enviar)'}
                 rows={1}
                 readOnly={isListening}
                 className="w-full bg-transparent text-white text-sm placeholder-[#334155] resize-none focus:outline-none max-h-40"
