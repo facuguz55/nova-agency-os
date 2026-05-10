@@ -187,7 +187,7 @@ export default function InvoicesPage() {
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Monto (USD) *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="1500" />
+            <Input label="Monto (ARS) *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="200.000k" />
             <Select label="Estado" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
               <option value="draft">Borrador</option>
               <option value="pending">Pendiente</option>
