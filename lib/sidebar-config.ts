@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
-  Zap, Terminal, BarChart3, Server, Settings, ScrollText,
+  Zap, Terminal, Server, Settings, ScrollText,
   CheckSquare, DollarSign, FileText, CalendarDays, Mail, TrendingUp,
   FileSignature, Brain, Target, type LucideIcon,
 } from 'lucide-react'
@@ -30,7 +30,6 @@ export const ALL_ITEMS: Omit<SidebarItem, 'visible'>[] = [
   { href: '/reports',      label: 'Reportes IA',      Icon: TrendingUp,        group: 'Automatización' },
   { href: '/brain',        label: 'IA Brain',         Icon: Brain,             group: 'Automatización' },
   { href: '/n8n-logs',     label: 'n8n Logs',         Icon: Terminal,          group: 'Sistema' },
-  { href: '/metrics',      label: 'Métricas',         Icon: BarChart3,         group: 'Sistema' },
   { href: '/servers',      label: 'Servidores',       Icon: Server,            group: 'Sistema' },
   { href: '/audit',        label: 'Audit Log',        Icon: ScrollText,        group: 'Sistema' },
   { href: '/config',       label: 'Configuración',    Icon: Settings,          group: 'Sistema' },

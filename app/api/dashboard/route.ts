@@ -9,15 +9,20 @@ export async function GET() {
     { count: activeProjects },
     { count: pendingActions },
     { data: recentActions },
-    { data: metrics },
     { data: workflowStats },
+    { data: urgentTasks },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('projects').select('*', { count: 'exact', head: true }).in('status', ['active', 'planning']),
     supabase.from('actions_log').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('recent_actions_view').select('*'),
-    supabase.from('latest_metrics').select('*').single(),
     supabase.from('workflow_logs').select('status').order('timestamp', { ascending: false }).limit(50),
+    supabase.from('tasks')
+      .select('id, title, priority, status, due_date, assigned_to')
+      .in('priority', ['urgent', 'high'])
+      .neq('status', 'done')
+      .order('priority', { ascending: true })
+      .limit(6),
   ])
 
   const wfSuccess = workflowStats?.filter(w => w.status === 'success').length || 0
@@ -31,6 +36,6 @@ export async function GET() {
       workflowSuccessRate: wfTotal > 0 ? Math.round((wfSuccess / wfTotal) * 100) : 0,
     },
     recentActions: recentActions || [],
-    metrics: metrics || null,
+    urgentTasks: urgentTasks || [],
   })
 }

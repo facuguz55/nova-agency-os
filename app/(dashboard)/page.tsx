@@ -1,19 +1,35 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import Header from '@/components/layout/Header'
 import { StatCard } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/Badge'
-import { formatRelative, formatNumber } from '@/lib/utils'
-import { Users, FolderKanban, Clock, CheckCircle2, RefreshCw } from 'lucide-react'
+import { formatRelative, cn } from '@/lib/utils'
+import { Users, FolderKanban, Clock, CheckCircle2, RefreshCw, Flag, ArrowRight, Calendar } from 'lucide-react'
+
+interface UrgentTask {
+  id: string; title: string; priority: 'urgent' | 'high'
+  status: string; due_date: string | null; assigned_to: string | null
+}
 
 interface DashboardData {
   stats: { totalClients: number; activeProjects: number; pendingActions: number; workflowSuccessRate: number }
   recentActions: Array<{ id: string; action_type: string; description: string; status: string; created_by: string; created_at: string }>
-  metrics: { instagram_followers: number | null; instagram_engagement: number | null; youtube_subscribers: number | null; youtube_views: number | null; tiktok_followers: number | null; tiktok_engagement: number | null } | null
+  urgentTasks: UrgentTask[]
 }
 
 const TYPE_ICONS: Record<string, string> = { email: '✉', api_call: '⚡', ssh: '💻', report: '📊', decision: '◈', other: '·' }
+
+const PRIORITY_RING: Record<string, string> = {
+  urgent: 'border-red-500/40 bg-red-500/5',
+  high:   'border-orange-500/30 bg-orange-500/5',
+}
+const PRIORITY_DOT: Record<string, string> = {
+  urgent: 'bg-red-500',
+  high:   'bg-orange-400',
+}
+const PRIORITY_LABEL: Record<string, string> = { urgent: 'Urgente', high: 'Alta' }
 
 export default function DashboardPage() {
   const [data, setData]       = useState<DashboardData | null>(null)
@@ -42,7 +58,7 @@ export default function DashboardPage() {
     </div>
   )
 
-  const { stats, recentActions, metrics } = data!
+  const { stats, recentActions, urgentTasks } = data!
 
   return (
     <>
@@ -61,92 +77,75 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <div className="flex-1 p-6 space-y-5 overflow-y-auto">
 
         {/* Stats */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard label="Clientes"   value={stats.totalClients}          icon={<Users size={15}/>}        color="orange" sub="activos" />
-          <StatCard label="Proyectos"  value={stats.activeProjects}         icon={<FolderKanban size={15}/>} color="purple" sub="en curso" />
-          <StatCard label="Pendientes" value={stats.pendingActions}         icon={<Clock size={15}/>}        color="blue"   sub="acciones" />
-          <StatCard label="Workflows"  value={`${stats.workflowSuccessRate}%`} icon={<CheckCircle2 size={15}/>} color="green"  sub="tasa de éxito" />
+          <StatCard label="Clientes"   value={stats.totalClients}               icon={<Users size={15}/>}        color="orange" sub="activos" />
+          <StatCard label="Proyectos"  value={stats.activeProjects}              icon={<FolderKanban size={15}/>} color="purple" sub="en curso" />
+          <StatCard label="Pendientes" value={stats.pendingActions}              icon={<Clock size={15}/>}        color="blue"   sub="acciones" />
+          <StatCard label="Workflows"  value={`${stats.workflowSuccessRate}%`}   icon={<CheckCircle2 size={15}/>} color="green"  sub="tasa de éxito" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-          {/* Métricas sociales */}
-          <div className="lg:col-span-2 bg-[#0f1d30] border border-[#1a2d45] rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[#1a2d45] flex items-center justify-between">
-              <h3 className="text-xs font-semibold text-[#64748b]">Métricas sociales</h3>
-              <a href="/metrics" className="text-[11px] text-[#f97316] hover:text-[#fb923c] transition-colors">Ver todo →</a>
+          {/* Tareas urgentes */}
+          <div className="lg:col-span-2 bg-[#0f1d30] border border-[#1a2d45] rounded-xl overflow-hidden flex flex-col">
+            <div className="px-5 py-3.5 border-b border-[#1a2d45] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Flag size={12} className="text-red-400" />
+                <h3 className="text-xs font-semibold text-[#64748b]">Foco del día</h3>
+              </div>
+              <Link href="/tasks" className="text-[11px] text-[#f97316] hover:text-[#fb923c] transition-colors flex items-center gap-0.5">
+                Ver tareas <ArrowRight size={10} />
+              </Link>
             </div>
 
-            <div className="p-4 space-y-2">
-              {/* Instagram */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#080f1e] border border-[#1a2d45] hover:border-[#253f60] transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0 text-white text-xs font-bold">
-                  IG
+            <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+              {urgentTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                  </div>
+                  <p className="text-xs text-[#334155]">Sin tareas urgentes</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-[#4a6080]">Instagram</p>
-                  <p className="text-sm font-semibold text-white">
-                    {metrics?.instagram_followers ? formatNumber(metrics.instagram_followers) : '—'}
-                  </p>
+              ) : urgentTasks.map(task => (
+                <div
+                  key={task.id}
+                  className={cn('flex items-start gap-3 p-3 rounded-lg border transition-colors', PRIORITY_RING[task.priority])}
+                >
+                  <div className={cn('w-2 h-2 rounded-full mt-1.5 shrink-0', PRIORITY_DOT[task.priority])} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium leading-snug truncate">{task.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={cn('text-[10px] font-bold uppercase', task.priority === 'urgent' ? 'text-red-400' : 'text-orange-400')}>
+                        {PRIORITY_LABEL[task.priority]}
+                      </span>
+                      {task.due_date && (
+                        <span className="text-[10px] text-[#4a6080] flex items-center gap-0.5">
+                          <Calendar size={9} /> {new Date(task.due_date).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                        </span>
+                      )}
+                      {task.assigned_to && (
+                        <span className="text-[10px] text-[#4a6080] truncate">{task.assigned_to}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {metrics?.instagram_engagement && (
-                  <span className="text-xs text-emerald-400 font-medium">{metrics.instagram_engagement}%</span>
-                )}
-              </div>
-
-              {/* YouTube */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#080f1e] border border-[#1a2d45] hover:border-[#253f60] transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">
-                  YT
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-[#4a6080]">YouTube</p>
-                  <p className="text-sm font-semibold text-white">
-                    {metrics?.youtube_subscribers ? formatNumber(metrics.youtube_subscribers) : '—'}
-                  </p>
-                </div>
-                {metrics?.youtube_views && (
-                  <span className="text-xs text-[#4a6080]">{formatNumber(metrics.youtube_views)} vistas</span>
-                )}
-              </div>
-
-              {/* TikTok */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#080f1e] border border-[#1a2d45] hover:border-[#253f60] transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-[#111] flex items-center justify-center shrink-0 border border-white/10">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="white">
-                    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-[#4a6080]">TikTok</p>
-                  <p className="text-sm font-semibold text-white">
-                    {metrics?.tiktok_followers ? formatNumber(metrics.tiktok_followers) : '—'}
-                  </p>
-                </div>
-                {metrics?.tiktok_engagement && (
-                  <span className="text-xs text-emerald-400 font-medium">{metrics.tiktok_engagement}%</span>
-                )}
-              </div>
-
-              {!metrics && (
-                <p className="text-xs text-[#334155] text-center py-3">
-                  Sin datos — <a href="/metrics" className="text-[#f97316] hover:underline">cargar métricas</a>
-                </p>
-              )}
+              ))}
             </div>
           </div>
 
-          {/* Activity */}
-          <div className="lg:col-span-3 bg-[#0f1d30] border border-[#1a2d45] rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-[#1a2d45] flex items-center justify-between">
+          {/* Actividad reciente */}
+          <div className="lg:col-span-3 bg-[#0f1d30] border border-[#1a2d45] rounded-xl overflow-hidden flex flex-col">
+            <div className="px-5 py-3.5 border-b border-[#1a2d45] flex items-center justify-between shrink-0">
               <h3 className="text-xs font-semibold text-[#64748b]">Actividad reciente</h3>
-              <a href="/audit" className="text-[11px] text-[#f97316] hover:text-[#fb923c] transition-colors">Audit log →</a>
+              <Link href="/audit" className="text-[11px] text-[#f97316] hover:text-[#fb923c] transition-colors flex items-center gap-0.5">
+                Audit log <ArrowRight size={10} />
+              </Link>
             </div>
 
-            <div className="divide-y divide-[#1a2d45]">
+            <div className="flex-1 divide-y divide-[#1a2d45] overflow-y-auto">
               {recentActions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2">
                   <div className="w-8 h-8 rounded-lg bg-[#1a2d45] flex items-center justify-center">

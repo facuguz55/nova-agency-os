@@ -15,10 +15,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router   = useRouter()
   const supabase = createClient()
-  const [items, setItems] = useState<SidebarItem[]>(getCachedItems)
+  const [items, setItems]   = useState<SidebarItem[]>(getCachedItems)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    // Fetch desde Supabase y actualizar cache
     fetch('/api/sidebar-config')
       .then(r => r.json())
       .then(({ items: stored }) => {
@@ -31,6 +31,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
     const handler = () => setItems(getCachedItems())
     window.addEventListener('nova-sidebar-config', handler)
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null)
+    })
+
     return () => window.removeEventListener('nova-sidebar-config', handler)
   }, [])
 
@@ -41,7 +46,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   const visible = items.filter(i => i.visible)
 
-  // Agrupar manteniendo orden del usuario, insertar label cuando cambia el grupo
   const rendered: Array<{ type: 'label'; label: string } | { type: 'item'; item: SidebarItem }> = []
   let lastGroup = ''
   for (const item of visible) {
@@ -51,6 +55,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     }
     rendered.push({ type: 'item', item })
   }
+
+  const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'U'
+  const displayName = userEmail ? userEmail.split('@')[0] : 'Usuario'
 
   return (
     <aside
@@ -128,6 +135,23 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Footer */}
       <div className="shrink-0 border-t border-[#1a2d45] p-2 space-y-px">
+        {/* Usuario logueado */}
+        {userEmail && (
+          <div className={cn(
+            'flex items-center gap-2.5 px-2 py-2 rounded-lg mb-1',
+            collapsed && 'justify-center px-0',
+          )}>
+            <div className="w-6 h-6 rounded-md bg-[#f97316]/20 border border-[#f97316]/30 flex items-center justify-center shrink-0">
+              <span className="text-[9px] font-bold text-[#f97316]">{initials}</span>
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-medium text-[#64748b] truncate">{displayName}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
           title={collapsed ? 'Buscar' : undefined}
