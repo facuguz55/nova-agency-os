@@ -1,8 +1,8 @@
 import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
-  Zap, Terminal, Server, Settings, ScrollText,
-  CheckSquare, DollarSign, FileText, CalendarDays, Mail, TrendingUp,
-  FileSignature, Brain, Target, type LucideIcon,
+  Zap, Terminal, Settings, ScrollText,
+  CheckSquare, DollarSign, FileText, CalendarDays,
+  Brain, type LucideIcon,
 } from 'lucide-react'
 
 export interface SidebarItem {
@@ -23,14 +23,9 @@ export const ALL_ITEMS: Omit<SidebarItem, 'visible'>[] = [
   { href: '/calendar',     label: 'Calendario',       Icon: CalendarDays,      group: 'Trabajo' },
   { href: '/invoices',     label: 'Facturación',      Icon: DollarSign,        group: 'Negocio' },
   { href: '/notes',        label: 'Notas',            Icon: FileText,          group: 'Negocio' },
-  { href: '/templates',    label: 'Templates',        Icon: Mail,              group: 'Negocio' },
-  { href: '/proposals',    label: 'Propuestas',       Icon: FileSignature,     group: 'Negocio' },
-  { href: '/prospeccion',  label: 'Prospección',      Icon: Target,            group: 'Negocio' },
   { href: '/automations',  label: 'Automatizaciones', Icon: Zap,               group: 'Automatización' },
-  { href: '/reports',      label: 'Reportes IA',      Icon: TrendingUp,        group: 'Automatización' },
   { href: '/brain',        label: 'IA Brain',         Icon: Brain,             group: 'Automatización' },
   { href: '/n8n-logs',     label: 'n8n Logs',         Icon: Terminal,          group: 'Sistema' },
-  { href: '/servers',      label: 'Servidores',       Icon: Server,            group: 'Sistema' },
   { href: '/audit',        label: 'Audit Log',        Icon: ScrollText,        group: 'Sistema' },
   { href: '/config',       label: 'Configuración',    Icon: Settings,          group: 'Sistema' },
 ]

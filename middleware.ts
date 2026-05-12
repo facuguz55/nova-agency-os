@@ -26,11 +26,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const isApiConfirm = request.nextUrl.pathname.startsWith('/api/confirm')
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  const isAuthPage    = request.nextUrl.pathname.startsWith('/login')
+  const isApiConfirm  = request.nextUrl.pathname.startsWith('/api/confirm')
+  const isApiRoute    = request.nextUrl.pathname.startsWith('/api/')
+  const isPortal      = request.nextUrl.pathname.startsWith('/portal')
+  const isInvoicePrint = request.nextUrl.pathname.startsWith('/invoice-print')
 
-  if (!user && !isAuthPage && !isApiConfirm && !isApiRoute) {
+  if (!user && !isAuthPage && !isApiConfirm && !isApiRoute && !isPortal && !isInvoicePrint) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

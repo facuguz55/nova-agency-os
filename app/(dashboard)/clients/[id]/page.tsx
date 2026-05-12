@@ -6,7 +6,9 @@ import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import { formatDate, cn } from '@/lib/utils'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, Globe, Copy, Check } from 'lucide-react'
+
+interface Portal { id: string; token: string; pin: string; active: boolean; created_at: string }
 
 interface Scorecard {
   score: number; nivel: string; resumen: string
@@ -30,8 +32,11 @@ export default function ClientDetailPage() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<ClientData['client']>>({})
   const [saving, setSaving]       = useState(false)
-  const [scorecard, setScorecard] = useState<Scorecard | null>(null)
+  const [scorecard, setScorecard]     = useState<Scorecard | null>(null)
   const [loadingScore, setLoadingScore] = useState(false)
+  const [portal, setPortal]           = useState<Portal | null | undefined>(undefined)
+  const [creatingPortal, setCreatingPortal] = useState(false)
+  const [copied, setCopied]           = useState(false)
 
   async function analyzeClient() {
     setLoadingScore(true)
@@ -48,7 +53,28 @@ export default function ClientDetailPage() {
     setForm(json.client)
   }
 
-  useEffect(() => { load() }, [id])
+  async function loadPortal() {
+    const res = await fetch(`/api/clients/${id}/portal`)
+    const json = await res.json()
+    setPortal(json.portal ?? null)
+  }
+
+  async function createPortal() {
+    setCreatingPortal(true)
+    const res = await fetch(`/api/clients/${id}/portal`, { method: 'POST' })
+    const json = await res.json()
+    setPortal(json.portal)
+    setCreatingPortal(false)
+  }
+
+  function copyPortalUrl() {
+    if (!portal) return
+    navigator.clipboard.writeText(`${window.location.origin}/portal/${portal.token}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  useEffect(() => { load(); loadPortal() }, [id])
 
   async function save() {
     setSaving(true)
@@ -241,6 +267,68 @@ export default function ClientDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Portal del cliente */}
+        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Globe size={14} className="text-[#f97316]" />
+              <h3 className="text-sm font-semibold text-white">Portal del cliente</h3>
+            </div>
+            {portal && (
+              <a
+                href={`/portal/${portal.token}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-[#f97316] hover:text-[#fb923c] transition-colors"
+              >
+                Ver portal →
+              </a>
+            )}
+          </div>
+
+          {portal === undefined && (
+            <p className="text-xs text-[#475569]">Cargando...</p>
+          )}
+
+          {portal === null && (
+            <div className="flex flex-col items-center justify-center py-6 gap-3">
+              <p className="text-sm text-[#475569]">Este cliente todavía no tiene portal.</p>
+              <button
+                onClick={createPortal}
+                disabled={creatingPortal}
+                className="flex items-center gap-2 px-4 py-2 bg-[#f97316] hover:bg-[#fb923c] disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {creatingPortal ? <Loader2 size={12} className="animate-spin" /> : <Globe size={12} />}
+                {creatingPortal ? 'Creando...' : 'Crear portal'}
+              </button>
+            </div>
+          )}
+
+          {portal && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-[#0f172a] rounded-xl border border-[#1a2d45]">
+                <code className="flex-1 text-xs text-[#94a3b8] truncate">
+                  {typeof window !== 'undefined' ? window.location.origin : ''}/portal/{portal.token}
+                </code>
+                <button
+                  onClick={copyPortalUrl}
+                  className="shrink-0 text-[#4a6080] hover:text-white transition-colors"
+                  title="Copiar URL"
+                >
+                  {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                </button>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-[#475569]">
+                <span>PIN de acceso: <span className="text-white font-mono font-bold text-sm tracking-widest">{portal.pin}</span></span>
+                <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold', portal.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400')}>
+                  {portal.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </>
   )

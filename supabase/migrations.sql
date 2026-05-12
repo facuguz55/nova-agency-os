@@ -162,3 +162,30 @@ create table if not exists public.task_comments (
   created_at timestamptz not null default now()
 );
 create index if not exists task_comments_task_idx on public.task_comments(task_id);
+
+-- ── UPDATE TEAM MEMBER NAME ────────────────────────────────
+update public.team_members set name = 'Mauricio Kinkela' where name ilike '%mauricio%';
+
+-- ── CLIENT PORTALS ─────────────────────────────────────────
+create table if not exists public.client_portals (
+  id         uuid primary key default gen_random_uuid(),
+  client_id  uuid not null references public.clients(id) on delete cascade,
+  token      text unique not null default encode(gen_random_bytes(16), 'hex'),
+  pin        char(4) not null,
+  active     boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create index if not exists portals_client_idx on public.client_portals(client_id);
+create index if not exists portals_token_idx  on public.client_portals(token);
+
+-- ── PORTAL REPORTS ─────────────────────────────────────────
+create table if not exists public.portal_reports (
+  id         uuid primary key default gen_random_uuid(),
+  portal_id  uuid references public.client_portals(id) on delete cascade,
+  client_id  uuid references public.clients(id) on delete cascade,
+  title      text not null,
+  content    text not null,
+  period     text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists portal_reports_portal_idx on public.portal_reports(portal_id);
