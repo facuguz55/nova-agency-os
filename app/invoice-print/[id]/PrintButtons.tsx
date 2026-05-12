@@ -8,25 +8,17 @@ export default function PrintButtons({ invoiceId }: Props) {
   const [enhancing, setEnhancing] = useState(false)
   const [enhanced, setEnhanced]   = useState(false)
 
-  async function handlePrint() {
-    if (!enhanced) {
-      setEnhancing(true)
-      try {
-        const res = await fetch(`/api/invoices/${invoiceId}/enhance`, { method: 'POST' })
-        if (res.ok) {
-          const { enhanced: text } = await res.json()
-          const el = document.getElementById('invoice-description')
-          if (el && text) {
-            el.textContent = text
-            setEnhanced(true)
-          }
-        }
-      } catch {
-        // imprime igual si falla el enhance
+  async function handleEnhance() {
+    setEnhancing(true)
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/enhance`, { method: 'POST' })
+      if (res.ok) {
+        const { enhanced: text } = await res.json()
+        const el = document.getElementById('invoice-description')
+        if (el && text) { el.textContent = text; setEnhanced(true) }
       }
-      setEnhancing(false)
-    }
-    window.print()
+    } catch { /* silencioso */ }
+    setEnhancing(false)
   }
 
   return (
@@ -34,16 +26,19 @@ export default function PrintButtons({ invoiceId }: Props) {
       <button onClick={() => window.history.back()} className="btn-back">
         ← Volver
       </button>
-      <button onClick={handlePrint} disabled={enhancing} className="btn-print">
+      <button onClick={handleEnhance} disabled={enhancing || enhanced} className="btn-enhance">
         {enhancing ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg style={{ animation: 'spin .8s linear infinite', width: 14, height: 14 }} viewBox="0 0 24 24" fill="none">
+            <svg style={{ animation: 'spin .8s linear infinite', width: 13, height: 13 }} viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
               <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
             </svg>
-            Mejorando con IA...
+            Mejorando...
           </span>
-        ) : enhanced ? 'Imprimir / PDF' : 'IA + PDF'}
+        ) : enhanced ? '✓ Mejorado con IA' : '✦ Mejorar con IA'}
+      </button>
+      <button onClick={() => window.print()} className="btn-print">
+        Imprimir / PDF
       </button>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -59,6 +54,15 @@ export default function PrintButtons({ invoiceId }: Props) {
           backdrop-filter: blur(12px); transition: all .15s;
         }
         .btn-back:hover { background: rgba(255,255,255,0.1); color: white; }
+        .btn-enhance {
+          padding: 11px 20px; border-radius: 12px; font-size: 13px; font-weight: 700;
+          cursor: pointer; border: 1px solid rgba(167,139,250,0.35);
+          background: rgba(167,139,250,0.1); color: rgba(196,181,253,0.9);
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          backdrop-filter: blur(12px); transition: all .15s; min-width: 160px; text-align: center;
+        }
+        .btn-enhance:hover:not(:disabled) { background: rgba(167,139,250,0.18); border-color: rgba(167,139,250,0.5); }
+        .btn-enhance:disabled { opacity: .6; cursor: not-allowed; }
         .btn-print {
           padding: 11px 22px; border-radius: 12px; font-size: 13px; font-weight: 700;
           cursor: pointer; border: none;
@@ -68,7 +72,6 @@ export default function PrintButtons({ invoiceId }: Props) {
           transition: all .15s; min-width: 140px; text-align: center;
         }
         .btn-print:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(249,115,22,0.45); }
-        .btn-print:disabled { opacity: .7; cursor: not-allowed; transform: none; }
         @media print { .no-print { display: none !important; } }
       `}</style>
     </div>
