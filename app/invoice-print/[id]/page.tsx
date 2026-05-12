@@ -21,128 +21,255 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
   const amount = Number(inv.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })
 
   const statusLabel: Record<string, string> = {
-    draft: 'BORRADOR', pending: 'PENDIENTE DE PAGO', paid: 'PAGADA', overdue: 'VENCIDA', canceled: 'CANCELADA',
+    draft: 'BORRADOR', pending: 'PENDIENTE', paid: 'PAGADA', overdue: 'VENCIDA', canceled: 'CANCELADA',
   }
-  const statusColor: Record<string, string> = {
-    draft: '#64748b', pending: '#f97316', paid: '#22c55e', overdue: '#ef4444', canceled: '#94a3b8',
+  const statusColor: Record<string, { bg: string; text: string; ring: string }> = {
+    draft:    { bg: 'rgba(100,116,139,0.1)',  text: '#94a3b8', ring: 'rgba(100,116,139,0.2)' },
+    pending:  { bg: 'rgba(249,115,22,0.1)',   text: '#f97316', ring: 'rgba(249,115,22,0.2)' },
+    paid:     { bg: 'rgba(34,197,94,0.1)',    text: '#22c55e', ring: 'rgba(34,197,94,0.2)' },
+    overdue:  { bg: 'rgba(239,68,68,0.1)',    text: '#ef4444', ring: 'rgba(239,68,68,0.2)' },
+    canceled: { bg: 'rgba(148,163,184,0.08)', text: '#64748b', ring: 'rgba(148,163,184,0.15)' },
   }
+  const sc = statusColor[inv.status] || statusColor.draft
 
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
-        .invoice-page { background: white; max-width: 800px; margin: 40px auto; padding: 56px; box-shadow: 0 4px 24px rgba(0,0,0,.08); border-radius: 12px; }
-        .divider { border: none; border-top: 1px solid #e2e8f0; margin: 28px 0; }
-        .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; }
-        .value { font-size: 14px; color: #1e293b; margin-top: 4px; }
-        .meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
-        .amount-box { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 20px 28px; }
-        .no-print { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 12px; }
-        .btn { padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
-        .btn-primary { background: #f97316; color: white; }
-        .btn-secondary { background: #f1f5f9; color: #475569; }
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          background: linear-gradient(160deg, #030810 0%, #08152a 50%, #060f1e 100%);
+          min-height: 100vh;
+          color: #1e293b;
+        }
+
+        .wrapper {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 48px 20px;
+          min-height: 100vh;
+        }
+
+        .invoice {
+          background: white;
+          width: 760px;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 48px 96px rgba(0,0,0,0.7), 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
+        }
+
+        /* Header dark */
+        .inv-header {
+          background: #060d18;
+          padding: 40px 48px 36px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          position: relative;
+          overflow: hidden;
+        }
+        .inv-header::before {
+          content: '';
+          position: absolute;
+          top: -40px; right: -40px;
+          width: 200px; height: 200px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%);
+        }
+
+        .agency-logo { height: 48px; object-fit: contain; }
+
+        .inv-number-area { text-align: right; }
+        .inv-label {
+          font-size: 10px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: .12em; color: rgba(255,255,255,0.3); margin-bottom: 6px;
+        }
+        .inv-number {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 36px; font-weight: 700;
+          color: white; letter-spacing: -1px; line-height: 1;
+        }
+        .status-badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          margin-top: 10px; padding: 5px 12px; border-radius: 99px;
+          font-size: 10px; font-weight: 700; letter-spacing: .08em;
+        }
+        .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+        /* Accent line */
+        .accent-line {
+          height: 3px;
+          background: linear-gradient(90deg, #f97316 0%, #fb923c 50%, #f97316 100%);
+        }
+
+        /* Body */
+        .inv-body { padding: 40px 48px; }
+
+        .billing-grid {
+          display: grid; grid-template-columns: 1fr 1fr;
+          gap: 40px; margin-bottom: 36px;
+        }
+        .field-label {
+          font-size: 9px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: .12em; color: #94a3b8; margin-bottom: 6px;
+        }
+        .field-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 22px; font-weight: 600; color: #0f172a; line-height: 1.2;
+        }
+        .field-sub { font-size: 12px; color: #64748b; margin-top: 3px; }
+
+        .dates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .date-item {}
+        .date-value { font-size: 13px; font-weight: 600; color: #1e293b; margin-top: 3px; }
+        .date-value-green { color: #16a34a; }
+        .date-value-red { color: #dc2626; }
+
+        .divider { border: none; border-top: 1px solid #f1f5f9; margin: 28px 0; }
+
+        /* Table */
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        .items-table thead tr { border-bottom: 2px solid #f1f5f9; }
+        .th { padding: 8px 0; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #94a3b8; }
+        .th-r { text-align: right; }
+        .td { padding: 16px 0; font-size: 13px; color: #334155; border-bottom: 1px solid #f8fafc; vertical-align: top; }
+        .td-r { text-align: right; font-weight: 600; color: #1e293b; }
+
+        /* Total */
+        .total-box {
+          display: flex; justify-content: flex-end;
+        }
+        .total-inner {
+          text-align: right; padding: 20px 28px; border-radius: 16px;
+          background: #fff7ed; border: 1px solid #fed7aa; min-width: 220px;
+        }
+        .total-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #d97706; margin-bottom: 6px; }
+        .total-amount {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 40px; font-weight: 700; color: #f97316; letter-spacing: -1px;
+          line-height: 1;
+        }
+
+        /* Footer */
+        .inv-footer {
+          background: #060d18;
+          padding: 20px 48px;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .footer-text { font-size: 10px; color: rgba(255,255,255,0.25); }
+        .footer-ig { font-size: 10px; color: rgba(249,115,22,0.5); margin-top: 2px; }
+
+        /* Buttons */
+        .no-print {
+          position: fixed; bottom: 24px; right: 24px;
+          display: flex; gap: 10px; z-index: 100;
+        }
+
         @media print {
-          body { background: white; }
-          .invoice-page { box-shadow: none; margin: 0; max-width: 100%; border-radius: 0; padding: 40px; }
+          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .wrapper { padding: 0; }
+          .invoice { box-shadow: none; border-radius: 0; width: 100%; }
+          .inv-header { background: #060d18 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .inv-footer { background: #060d18 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
         }
+        @page { margin: 0; size: A4 portrait; }
       `}</style>
 
-      <div className="invoice-page">
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
-          <div>
+      <div className="wrapper">
+        <div className="invoice">
+
+          {/* Header */}
+          <div className="inv-header">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-nova.png" alt="Nova Agency" style={{ height: 52, marginBottom: 12 }} />
-            <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
-              Nova Agency<br/>
-              Buenos Aires, Argentina<br/>
-              hello@novaagency.com
-            </p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: '#94a3b8', marginBottom: 6 }}>Factura</p>
-            <p style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-.5px' }}>{inv.invoice_number}</p>
-            <span style={{
-              display: 'inline-block', marginTop: 10, padding: '4px 12px', borderRadius: 99,
-              background: `${statusColor[inv.status]}20`, color: statusColor[inv.status],
-              fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
-            }}>
-              {statusLabel[inv.status] || inv.status.toUpperCase()}
-            </span>
-          </div>
-        </div>
-
-        <hr className="divider" />
-
-        {/* Billing to + dates */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 32 }}>
-          <div>
-            <p className="label">Facturado a</p>
-            <p style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 8 }}>{client?.name || '—'}</p>
-            {client?.contact_person && <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{client.contact_person}</p>}
-            {client?.email && <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{client.email}</p>}
-            {client?.industry && <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{client.industry}</p>}
-          </div>
-          <div className="meta-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <div>
-              <p className="label">Fecha de emisión</p>
-              <p className="value">{issued}</p>
+            <img src="/logo-nova-clear.png" alt="Nova Agency" className="agency-logo" />
+            <div className="inv-number-area">
+              <p className="inv-label">Factura</p>
+              <p className="inv-number">{inv.invoice_number}</p>
+              <div
+                className="status-badge"
+                style={{ background: sc.bg, color: sc.text, boxShadow: `0 0 0 1px ${sc.ring}` }}
+              >
+                <span className="status-dot" />
+                {statusLabel[inv.status] || inv.status.toUpperCase()}
+              </div>
             </div>
-            {due && (
+          </div>
+
+          <div className="accent-line" />
+
+          {/* Body */}
+          <div className="inv-body">
+            <div className="billing-grid">
               <div>
-                <p className="label">Vencimiento</p>
-                <p className="value" style={{ color: inv.status === 'overdue' ? '#ef4444' : undefined }}>{due}</p>
+                <p className="field-label">Facturado a</p>
+                <p className="field-name">{client?.name || '—'}</p>
+                {client?.contact_person && <p className="field-sub">{client.contact_person}</p>}
+                {client?.email && <p className="field-sub">{client.email}</p>}
+                {client?.industry && <p className="field-sub" style={{ color: '#94a3b8' }}>{client.industry}</p>}
               </div>
-            )}
-            {paid && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <p className="label">Fecha de pago</p>
-                <p className="value" style={{ color: '#22c55e' }}>{paid}</p>
+              <div className="dates-grid">
+                <div>
+                  <p className="field-label">Emisión</p>
+                  <p className="date-value">{issued}</p>
+                </div>
+                {due && (
+                  <div>
+                    <p className="field-label">Vencimiento</p>
+                    <p className={`date-value ${inv.status === 'overdue' ? 'date-value-red' : ''}`}>{due}</p>
+                  </div>
+                )}
+                {paid && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <p className="field-label">Fecha de pago</p>
+                    <p className="date-value date-value-green">{paid}</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            <hr className="divider" />
+
+            {/* Tabla */}
+            <table className="items-table">
+              <thead>
+                <tr>
+                  <th className="th" style={{ textAlign: 'left' }}>Descripción</th>
+                  <th className="th th-r">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="td">{inv.description || 'Servicios profesionales'}</td>
+                  <td className="td td-r">ARS $ {amount}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Total */}
+            <div className="total-box">
+              <div className="total-inner">
+                <p className="total-label">Total ARS</p>
+                <p className="total-amount">$ {amount}</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <hr className="divider" />
+          <hr className="divider" style={{ margin: '0 48px' }} />
 
-        {/* Items */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 28 }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-              <th style={{ textAlign: 'left', padding: '8px 0', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#94a3b8' }}>Descripción</th>
-              <th style={{ textAlign: 'right', padding: '8px 0', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#94a3b8' }}>Monto</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ padding: '16px 0', fontSize: 14, color: '#1e293b', borderBottom: '1px solid #f8fafc' }}>
-                {inv.description || 'Servicios profesionales'}
-              </td>
-              <td style={{ padding: '16px 0', textAlign: 'right', fontSize: 14, fontWeight: 600, color: '#1e293b', borderBottom: '1px solid #f8fafc' }}>
-                $ {amount}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Total */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <div className="amount-box">
-            <p className="label" style={{ marginBottom: 6 }}>Total ARS</p>
-            <p style={{ fontSize: 32, fontWeight: 800, color: '#f97316', letterSpacing: '-.5px' }}>
-              $ {amount}
-            </p>
+          {/* Footer */}
+          <div className="inv-footer">
+            <div>
+              <p className="footer-text">Nova Agency · Agencia Digital</p>
+              <p className="footer-ig">@novaagencytec</p>
+            </div>
+            <p className="footer-text">Generado el {new Date().toLocaleDateString('es-AR')}</p>
           </div>
-        </div>
 
-        <hr className="divider" />
-
-        {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: 11, color: '#cbd5e1' }}>Nova Agency · hello@novaagency.com</p>
-          <p style={{ fontSize: 11, color: '#cbd5e1' }}>Generado el {new Date().toLocaleDateString('es-AR')}</p>
         </div>
       </div>
 
