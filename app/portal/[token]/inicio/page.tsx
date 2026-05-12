@@ -121,7 +121,7 @@ export default function PortalInicio() {
 
         {/* Header */}
         <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 py-4 flex items-center justify-between">
-          <Image src="/logo-nova-clear.png" alt="Nova Agency" width={90} height={34} className="object-contain" />
+          <Image src="/logo-nova-clear.png" alt="Nova Agency" width={36} height={36} className="object-contain rounded-xl" />
           <div className="flex items-center gap-2">
             <Link
               href={`/portal/${token}/bienvenida`}

@@ -74,13 +74,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       )}>
         {collapsed ? (
           <>
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.25)' }}>
-              <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-                <polygon points="10,2 18,17 2,17" fill="none" stroke="#f97316" strokeWidth="2.2" strokeLinejoin="round"/>
-                <circle cx="10" cy="13" r="2" fill="#f97316"/>
-              </svg>
-            </div>
+            <Image
+              src="/logo-nova-clear.png"
+              alt="Nova Agency"
+              width={32}
+              height={32}
+              className="object-contain rounded-xl shrink-0"
+            />
             <button
               onClick={onToggle}
               className="absolute -right-3 top-[52px] w-6 h-6 rounded-full bg-[#0c1628] border border-[#1a2d45] flex items-center justify-center text-[#64748b] hover:text-[#f97316] transition-colors z-10"
@@ -93,10 +93,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <Image
               src="/logo-nova-clear.png"
               alt="Nova Agency"
-              width={100}
-              height={36}
-              className="object-contain flex-1 min-w-0"
+              width={32}
+              height={32}
+              className="object-contain rounded-xl shrink-0"
             />
+            <span className="text-sm font-bold text-white/90 truncate">Nova Agency</span>
             <button onClick={onToggle} className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md shrink-0">
               <ChevronRight size={14} className="rotate-180" />
             </button>

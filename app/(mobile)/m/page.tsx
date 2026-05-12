@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CheckSquare, Square, FolderKanban, Users, Zap, ArrowRight, Flag } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 interface Task { id: string; title: string; priority: string; status: string; due_date: string | null; assigned_to: string | null }
@@ -67,15 +68,13 @@ export default function MobileHomePage() {
             </p>
             <p className="text-[10px] capitalize mt-0.5" style={{ color: 'rgba(255,255,255,0.2)' }}>{dayStr}</p>
           </div>
-          <div
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.2)' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <polygon points="10,2 18,17 2,17" fill="none" stroke="#f97316" strokeWidth="2" strokeLinejoin="round"/>
-              <circle cx="10" cy="13" r="1.8" fill="#f97316"/>
-            </svg>
-          </div>
+          <Image
+            src="/logo-nova-clear.png"
+            alt="Nova Agency"
+            width={40}
+            height={40}
+            className="object-contain rounded-2xl shrink-0"
+          />
         </div>
       </header>
 

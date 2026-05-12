@@ -107,9 +107,9 @@ export default function LoginPage() {
               <Image
                 src="/logo-nova-clear.png"
                 alt="Nova Agency"
-                width={130}
-                height={50}
-                className="object-contain"
+                width={88}
+                height={88}
+                className="object-contain rounded-3xl"
               />
             </div>
             <h1 className="login-display text-white" style={{ fontStyle: 'italic', fontSize: 28, letterSpacing: '-0.3px' }}>

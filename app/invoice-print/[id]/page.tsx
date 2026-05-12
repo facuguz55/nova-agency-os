@@ -81,7 +81,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%);
         }
 
-        .agency-logo { height: 48px; object-fit: contain; }
+        .agency-logo { width: 52px; height: 52px; object-fit: contain; border-radius: 14px; }
 
         .inv-number-area { text-align: right; }
         .inv-label {
