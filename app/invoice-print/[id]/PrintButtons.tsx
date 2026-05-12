@@ -13,12 +13,35 @@ export default function PrintButtons({ invoiceId }: Props) {
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/enhance`, { method: 'POST' })
       if (res.ok) {
-        const { enhanced: text } = await res.json()
+        const { structured } = await res.json()
         const el = document.getElementById('invoice-description')
-        if (el && text) { el.textContent = text; setEnhanced(true) }
+        if (el && structured) {
+          el.innerHTML = buildHTML(structured)
+          setEnhanced(true)
+        }
       }
     } catch { /* silencioso */ }
     setEnhancing(false)
+  }
+
+  function buildHTML(s: { titulo: string; resumen: string; entregables: string[]; periodo: string | null; nota: string | null }) {
+    const items = (s.entregables || [])
+      .map((e: string) => `<li style="margin:3px 0;padding-left:4px;">${e}</li>`)
+      .join('')
+
+    return `
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;">
+        <p style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 6px 0;letter-spacing:-.2px;">${s.titulo}</p>
+        <p style="font-size:12.5px;color:#475569;margin:0 0 10px 0;line-height:1.5;">${s.resumen}</p>
+        ${items ? `
+        <ul style="margin:0 0 10px 0;padding-left:16px;color:#334155;font-size:12px;line-height:1.6;">
+          ${items}
+        </ul>` : ''}
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          ${s.periodo ? `<span style="font-size:10.5px;color:#94a3b8;font-weight:500;">${s.periodo}</span>` : ''}
+          ${s.nota ? `<span style="font-size:10.5px;color:#94a3b8;font-style:italic;">${s.nota}</span>` : ''}
+        </div>
+      </div>`
   }
 
   return (
