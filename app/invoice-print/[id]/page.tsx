@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import PrintButtons from './PrintButtons'
 
 export default async function InvoicePrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -145,16 +146,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      {/* Botones (no se imprimen) */}
-      <div className="no-print">
-        <button className="btn btn-secondary" onClick={() => window.history.back()}>← Volver</button>
-        <button className="btn btn-primary" onClick={() => window.print()}>🖨️ Imprimir / PDF</button>
-      </div>
-
-      <script dangerouslySetInnerHTML={{ __html: `
-        document.querySelector('.btn-secondary').addEventListener('click', () => window.history.back());
-        document.querySelector('.btn-primary').addEventListener('click', () => window.print());
-      `}} />
+      <PrintButtons />
     </>
   )
 }
