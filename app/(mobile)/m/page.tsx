@@ -1,310 +1,167 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Send, Mic, MicOff, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CheckSquare, Square, FolderKanban, Users, Zap, Flag, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
-interface Message { role: 'user' | 'assistant'; content: string; isError?: boolean }
+interface Task { id: string; title: string; priority: string; status: string; due_date: string | null; assigned_to: string | null }
+interface Stats { totalClients: number; activeProjects: number; pendingActions: number }
 
-function MdMessage({ text }: { text: string }) {
-  const lines = text.split('\n')
-  const nodes: React.ReactNode[] = []
-  let i = 0
+const PRIORITY_COLOR: Record<string, string> = { urgent: 'text-red-400', high: 'text-orange-400', medium: 'text-yellow-400', low: 'text-[#4a6080]' }
+const PRIORITY_DOT:   Record<string, string> = { urgent: 'bg-red-500', high: 'bg-orange-400', medium: 'bg-yellow-400', low: 'bg-[#334155]' }
 
-  const parseInline = (s: string): React.ReactNode => {
-    const parts = s.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g)
-    return parts.map((p, j) => {
-      if (p.startsWith('**') && p.endsWith('**')) return <strong key={j} className="font-semibold text-white">{p.slice(2, -2)}</strong>
-      if (p.startsWith('*')  && p.endsWith('*'))  return <em key={j} className="italic text-[#fb923c]">{p.slice(1, -1)}</em>
-      if (p.startsWith('`')  && p.endsWith('`'))  return <code key={j} className="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-[#fb923c]">{p.slice(1, -1)}</code>
-      return p
-    })
-  }
+export default function MobileHomePage() {
+  const [tasks, setTasks]   = useState<Task[]>([])
+  const [stats, setStats]   = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
 
-  while (i < lines.length) {
-    const line = lines[i]
-
-    // Code block
-    if (line.startsWith('```')) {
-      const codeLines: string[] = []
-      i++
-      while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++ }
-      nodes.push(<pre key={i} className="bg-black/30 border border-white/10 rounded-xl p-3 my-2 overflow-x-auto"><code className="text-[12px] font-mono text-[#94a3b8] whitespace-pre">{codeLines.join('\n')}</code></pre>)
-      i++; continue
-    }
-
-    // Heading
-    if (line.startsWith('### ')) { nodes.push(<p key={i} className="font-bold text-white text-sm mt-2 mb-0.5">{parseInline(line.slice(4))}</p>); i++; continue }
-    if (line.startsWith('## '))  { nodes.push(<p key={i} className="font-bold text-white text-sm mt-2 mb-0.5">{parseInline(line.slice(3))}</p>); i++; continue }
-    if (line.startsWith('# '))   { nodes.push(<p key={i} className="font-bold text-white text-sm mt-2 mb-0.5">{parseInline(line.slice(2))}</p>); i++; continue }
-
-    // Bullet list block
-    if (line.match(/^[-•*] /)) {
-      const items: string[] = []
-      while (i < lines.length && lines[i].match(/^[-•*] /)) { items.push(lines[i].slice(2)); i++ }
-      nodes.push(
-        <ul key={i} className="my-1 space-y-0.5 pl-1">
-          {items.map((it, j) => (
-            <li key={j} className="flex gap-2"><span className="text-[#f97316] mt-1 shrink-0">•</span><span>{parseInline(it)}</span></li>
-          ))}
-        </ul>
-      )
-      continue
-    }
-
-    // Numbered list block
-    if (line.match(/^\d+\. /)) {
-      const items: string[] = []
-      while (i < lines.length && lines[i].match(/^\d+\. /)) { items.push(lines[i].replace(/^\d+\. /, '')); i++ }
-      nodes.push(
-        <ol key={i} className="my-1 space-y-0.5 pl-1">
-          {items.map((it, j) => (
-            <li key={j} className="flex gap-2"><span className="text-[#f97316] shrink-0 font-medium">{j + 1}.</span><span>{parseInline(it)}</span></li>
-          ))}
-        </ol>
-      )
-      continue
-    }
-
-    // Empty line → spacer
-    if (line.trim() === '') { nodes.push(<div key={i} className="h-1" />); i++; continue }
-
-    // Normal paragraph
-    nodes.push(<p key={i} className="leading-relaxed">{parseInline(line)}</p>)
-    i++
-  }
-
-  return <div className="space-y-0.5 text-sm text-[#e2e8f0]">{nodes}</div>
-}
-
-// Detecta el MIME type soportado (iOS usa mp4, Android/Chrome usa webm)
-// SpeechRecognition nativo del navegador — sin APIs externas
-type SR = typeof window extends { SpeechRecognition: infer T } ? T : typeof window extends { webkitSpeechRecognition: infer T } ? T : never
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getSR = (): any => (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null
-
-type MicState = 'idle' | 'recording' | 'processing'
-
-export default function MobileChatPage() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput]       = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [micState, setMicState] = useState<MicState>('idle')
-  const [micError, setMicError] = useState('')
-  const [interim, setInterim]   = useState('') // texto en tiempo real
-  const bottomRef   = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const srRef = useRef<any>(null)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
-  }, [messages, loading])
-
-  function resizeTextarea() {
-    const ta = textareaRef.current
-    if (!ta) return
-    ta.style.height = 'auto'
-    ta.style.height = Math.min(ta.scrollHeight, 96) + 'px'
-  }
-
-  async function send(text: string) {
-    if (!text.trim() || loading) return
-    const userMsg: Message = { role: 'user', content: text.trim() }
-    setMessages(m => [...m, userMsg])
-    setInput('')
-    setLoading(true)
-
-    const history = messages.map(m => ({ role: m.role, content: m.content }))
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text.trim(), history }),
-    })
-    const data = await res.json()
-    setMessages(m => [...m, {
-      role: 'assistant',
-      content: data.response || data.error || 'Error desconocido',
-      isError: !!data.error,
-    }])
+  async function load() {
+    const [tRes, dRes] = await Promise.all([fetch('/api/tasks'), fetch('/api/dashboard')])
+    const [tData, dData] = await Promise.all([tRes.json(), dRes.json()])
+    setTasks(tData.tasks || [])
+    setStats(dData.stats || null)
     setLoading(false)
   }
 
-  function toggleMic() {
-    if (micState === 'recording') {
-      srRef.current?.stop()
-      return
-    }
+  useEffect(() => { load() }, [])
 
-    const SR = getSR()
-    if (!SR) {
-      setMicError('Tu navegador no soporta reconocimiento de voz')
-      setTimeout(() => setMicError(''), 4000)
-      return
-    }
-
-    setMicError('')
-    setInterim('')
-    const sr = new SR()
-    srRef.current = sr
-    sr.lang = 'es-AR'
-    sr.continuous = false
-    sr.interimResults = true
-
-    sr.onstart = () => setMicState('recording')
-
-    sr.onresult = (e: { results: { [key: number]: { [key: number]: { transcript: string }; isFinal: boolean } }; resultIndex: number }) => {
-      let interimText = ''
-      let finalText   = ''
-      for (let i = e.resultIndex; i < Object.keys(e.results).length; i++) {
-        const t = e.results[i][0].transcript
-        if (e.results[i].isFinal) finalText += t
-        else interimText += t
-      }
-      if (interimText) setInterim(interimText)
-      if (finalText) {
-        // Acumular en el input — el usuario elige cuándo enviar
-        setInput(prev => (prev + ' ' + finalText).trim())
-        setInterim('')
-      }
-    }
-
-    sr.onerror = (e: { error: string }) => {
-      const msgs: Record<string, string> = {
-        'not-allowed': 'Permiso denegado — habilitá el micrófono en Configuración de Safari',
-        'no-speech':   'No se detectó voz — intentá de nuevo',
-        'network':     'Error de red',
-      }
-      setMicError(msgs[e.error] || `Error: ${e.error}`)
-      setTimeout(() => setMicError(''), 5000)
-      setMicState('idle')
-      setInterim('')
-    }
-
-    sr.onend = () => { setMicState('idle'); setInterim('') }
-
-    sr.start()
+  async function toggleTask(t: Task) {
+    const newStatus = t.status === 'done' ? 'todo' : 'done'
+    setTasks(prev => prev.map(x => x.id === t.id ? { ...x, status: newStatus } : x))
+    await fetch(`/api/tasks/${t.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
   }
 
-  return (
-    <div className="flex flex-col h-full overflow-hidden">
+  const pending  = tasks.filter(t => t.status !== 'done')
+  const urgent   = pending.filter(t => t.priority === 'urgent' || t.priority === 'high').slice(0, 4)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const dueToday = pending.filter(t => t.due_date === todayStr)
 
-      {/* Header — nunca se mueve */}
-      <header
-        className="shrink-0 flex items-center gap-3 px-4 border-b border-[#1a2d45] bg-[#0c1628]"
-        style={{ paddingTop: `calc(env(safe-area-inset-top) + 12px)`, paddingBottom: '12px' }}
-      >
-        <div className="w-8 h-8 rounded-lg bg-[#f97316] flex items-center justify-center shrink-0">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-            <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
-            <circle cx="10" cy="13" r="2.2" fill="white"/>
-          </svg>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-white">Nova IA</p>
-          <p className="text-[11px] text-[#4a6080]">Asistente de Nova Agency</p>
+  return (
+    <div className="flex flex-col h-full overflow-y-auto overscroll-contain">
+      {/* Header */}
+      <header className="shrink-0 px-5 border-b border-[#1a2d45] bg-[#0c1628]"
+        style={{ paddingTop: `calc(env(safe-area-inset-top) + 16px)`, paddingBottom: '16px' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] text-[#4a6080]">{greeting}</p>
+            <p className="text-lg font-bold text-white leading-tight">Nova Agency</p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-[#f97316] flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
+              <circle cx="10" cy="13" r="2.2" fill="white"/>
+            </svg>
+          </div>
         </div>
       </header>
 
-      {/* Mensajes — área scrollable contenida */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center min-h-full gap-3 text-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-                <polygon points="10,1 19,18 1,18" fill="none" stroke="#f97316" strokeWidth="2" strokeLinejoin="round"/>
-                <circle cx="10" cy="13" r="2.2" fill="#f97316"/>
-              </svg>
-            </div>
-            <p className="text-white font-semibold">¿En qué te ayudo hoy?</p>
-            <p className="text-[#4a6080] text-sm">Escribí o grabá un audio para empezar</p>
+      <div className="flex-1 px-4 py-5 space-y-5">
+
+        {/* Stats rápidas */}
+        {stats && (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Users, label: 'Clientes', value: stats.totalClients, color: 'text-[#f97316]', bg: 'bg-[#f97316]/10' },
+              { icon: FolderKanban, label: 'Proyectos', value: stats.activeProjects, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+              { icon: Zap, label: 'Pendientes', value: stats.pendingActions, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+            ].map(({ icon: Icon, label, value, color, bg }) => (
+              <div key={label} className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-3 flex flex-col items-center gap-1.5">
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', bg)}>
+                  <Icon size={15} className={color} />
+                </div>
+                <p className="text-lg font-bold text-white leading-none">{value}</p>
+                <p className="text-[10px] text-[#4a6080]">{label}</p>
+              </div>
+            ))}
           </div>
         )}
 
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[86%] px-4 py-3 rounded-2xl ${
-              m.role === 'user'
-                ? 'bg-[#f97316] text-white rounded-br-sm text-sm leading-relaxed'
-                : m.isError
-                  ? 'bg-red-950/50 border border-red-800/40 rounded-bl-sm'
-                  : 'bg-[#0f1d30] border border-[#1a2d45] rounded-bl-sm'
-            }`}>
-              {m.role === 'user'
-                ? m.content
-                : m.isError
-                  ? <p className="text-xs text-red-400 font-mono">{m.content}</p>
-                  : <MdMessage text={m.content} />}
-            </div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-[#0f1d30] border border-[#1a2d45] px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2">
-              <Loader2 size={14} className="animate-spin text-[#f97316]" />
-              <span className="text-xs text-[#4a6080]">Pensando...</span>
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input — nunca se mueve */}
-      <div className="shrink-0 border-t border-[#1a2d45] bg-[#0c1628]">
-
-        {/* Estado del mic */}
-        {(micState !== 'idle' || micError || interim) && (
-          <div className={`px-4 py-2 flex items-center gap-2 text-xs ${micError ? 'text-red-400' : 'text-[#4a6080]'}`}>
-            {micState === 'recording' && !micError && (
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-            )}
-            <span className="italic">
-              {micError || interim || 'Escuchando... tocá el mic para detener, luego enviá'}
-            </span>
+        {/* Vencen hoy */}
+        {dueToday.length > 0 && (
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+            <Flag size={14} className="text-orange-400 shrink-0" />
+            <p className="text-sm text-orange-300">
+              <span className="font-semibold">{dueToday.length} tarea{dueToday.length > 1 ? 's' : ''}</span> vence{dueToday.length > 1 ? 'n' : ''} hoy
+            </p>
           </div>
         )}
 
-        <div className="px-3 py-3 flex items-end gap-2">
-          {/* Textarea + enviar */}
-          <div className="flex-1 flex items-end bg-[#0f1d30] border border-[#1a2d45] rounded-2xl px-4 py-2.5 gap-2">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={e => { setInput(e.target.value); resizeTextarea() }}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
-              placeholder={micState === 'recording' ? 'Grabando...' : 'Mensaje...'}
-              rows={1}
-              inputMode="text"
-              disabled={micState !== 'idle'}
-              className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none disabled:opacity-40"
-              style={{ height: '24px', maxHeight: '96px' }}
-            />
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim() || loading || micState !== 'idle'}
-              className="shrink-0 w-8 h-8 rounded-xl bg-[#f97316] disabled:bg-[#1a2d45] flex items-center justify-center transition-colors"
-            >
-              <Send size={14} className="text-white" />
-            </button>
+        {/* Tareas urgentes */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Foco de hoy</p>
+            <Link href="/m/tareas" className="text-[11px] text-[#f97316] flex items-center gap-0.5">
+              Ver todas <ArrowRight size={10} />
+            </Link>
           </div>
 
-          {/* Botón micrófono — tap to start / tap to stop */}
-          <button
-            onClick={toggleMic}
-            disabled={micState === 'processing' || loading}
-            className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 ${
-              micState === 'recording'
-                ? 'bg-red-500'
-                : 'bg-[#0f1d30] border border-[#1a2d45]'
-            }`}
-          >
-            {micState === 'processing'
-              ? <Loader2 size={20} className="text-[#f97316] animate-spin" />
-              : micState === 'recording'
-                ? <MicOff size={20} className="text-white" />
-                : <Mic size={20} className="text-[#64748b]" />
-            }
-          </button>
+          {loading ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <div key={i} className="shimmer h-16 rounded-xl" />)}
+            </div>
+          ) : urgent.length === 0 ? (
+            <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-6 flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <CheckSquare size={18} className="text-emerald-400" />
+              </div>
+              <p className="text-sm text-[#64748b]">Sin tareas urgentes 🎉</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {urgent.map(t => (
+                <div key={t.id} className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-4 flex items-start gap-3 active:bg-[#152338] transition-colors">
+                  <button onClick={() => toggleTask(t)} className="shrink-0 mt-0.5">
+                    {t.status === 'done'
+                      ? <CheckSquare size={18} className="text-[#f97316]" />
+                      : <Square size={18} className="text-[#334155]" />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn('text-sm font-medium leading-snug', t.status === 'done' ? 'text-[#334155] line-through' : 'text-white')}>
+                      {t.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', PRIORITY_DOT[t.priority])} />
+                      <span className={cn('text-[10px] font-bold uppercase', PRIORITY_COLOR[t.priority])}>{t.priority}</span>
+                      {t.due_date && (
+                        <span className="text-[10px] text-[#4a6080]">
+                          {new Date(t.due_date).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                        </span>
+                      )}
+                      {t.assigned_to && <span className="text-[10px] text-[#4a6080] truncate">{t.assigned_to}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Accesos rápidos */}
+        <div>
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Accesos rápidos</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { href: '/m/chat',      label: 'IA Chat',    desc: 'Hablar con Nova',   emoji: '🤖' },
+              { href: '/m/tareas',    label: 'Tareas',     desc: `${pending.length} pendientes`, emoji: '✓' },
+              { href: '/m/proyectos', label: 'Proyectos',  desc: 'Ver estado actual', emoji: '📁' },
+              { href: '/m/notas',     label: 'Notas',      desc: 'Grabación de voz',  emoji: '🎙️' },
+            ].map(({ href, label, desc, emoji }) => (
+              <Link key={href} href={href}
+                className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-4 flex flex-col gap-2 active:bg-[#152338] transition-colors">
+                <span className="text-xl">{emoji}</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">{label}</p>
+                  <p className="text-[11px] text-[#4a6080]">{desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -6,17 +6,19 @@ import Header from '@/components/layout/Header'
 import { StatCard } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/Badge'
 import { formatRelative, cn } from '@/lib/utils'
-import { Users, FolderKanban, Clock, CheckCircle2, RefreshCw, Flag, ArrowRight, Calendar } from 'lucide-react'
+import { Users, FolderKanban, Clock, CheckCircle2, RefreshCw, Flag, ArrowRight, Calendar, AlertTriangle } from 'lucide-react'
 
 interface UrgentTask {
   id: string; title: string; priority: 'urgent' | 'high'
   status: string; due_date: string | null; assigned_to: string | null
 }
+interface ColdClient { id: string; name: string; updated_at: string | null }
 
 interface DashboardData {
   stats: { totalClients: number; activeProjects: number; pendingActions: number; workflowSuccessRate: number }
   recentActions: Array<{ id: string; action_type: string; description: string; status: string; created_by: string; created_at: string }>
   urgentTasks: UrgentTask[]
+  coldClients: ColdClient[]
 }
 
 const TYPE_ICONS: Record<string, string> = { email: '✉', api_call: '⚡', ssh: '💻', report: '📊', decision: '◈', other: '·' }
@@ -58,7 +60,7 @@ export default function DashboardPage() {
     </div>
   )
 
-  const { stats, recentActions, urgentTasks } = data!
+  const { stats, recentActions, urgentTasks, coldClients } = data!
 
   return (
     <>
@@ -86,6 +88,24 @@ export default function DashboardPage() {
           <StatCard label="Pendientes" value={stats.pendingActions}              icon={<Clock size={15}/>}        color="blue"   sub="acciones" />
           <StatCard label="Workflows"  value={`${stats.workflowSuccessRate}%`}   icon={<CheckCircle2 size={15}/>} color="green"  sub="tasa de éxito" />
         </div>
+
+        {/* Clientes fríos */}
+        {coldClients.length > 0 && (
+          <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-5 py-3.5 flex items-start gap-3">
+            <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-yellow-400 mb-1">Clientes sin contacto — más de 14 días</p>
+              <div className="flex flex-wrap gap-2">
+                {coldClients.map(c => (
+                  <Link key={c.id} href={`/clients/${c.id}`}
+                    className="text-xs text-yellow-300/80 hover:text-yellow-300 underline underline-offset-2 transition-colors">
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 

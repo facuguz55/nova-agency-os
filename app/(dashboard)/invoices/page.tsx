@@ -161,9 +161,15 @@ export default function InvoicesPage() {
                       <td className="px-5 py-3 text-xs text-[#475569]">{inv.due_date ? formatDate(inv.due_date).split(' ')[0] : '—'}</td>
                       <td className="px-3 py-3">
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => window.open(`/invoice-print/${inv.id}`, '_blank')}
+                            className="text-xs px-2 py-1 bg-[#1e2f4a] hover:bg-[#253f60] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-lg transition-colors"
+                          >
+                            PDF
+                          </button>
                           {inv.status !== 'paid' && (
                             <button onClick={() => markPaid(inv.id)} className="text-xs px-2 py-1 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 rounded-lg transition-colors">
-                              Marcar pagada
+                              Cobrada
                             </button>
                           )}
                           <button onClick={() => deleteInvoice(inv.id)} className="text-xs px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors">

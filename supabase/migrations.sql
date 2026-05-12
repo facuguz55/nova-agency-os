@@ -149,3 +149,16 @@ create table if not exists public.ai_observations (
   resolved    boolean default false,
   created_at  timestamptz not null default now()
 );
+
+-- ── TASK CHECKLIST (column JSONB en tasks) ────────────────
+alter table public.tasks add column if not exists checklist jsonb not null default '[]'::jsonb;
+
+-- ── TASK COMMENTS ─────────────────────────────────────────
+create table if not exists public.task_comments (
+  id         uuid primary key default gen_random_uuid(),
+  task_id    uuid not null references public.tasks(id) on delete cascade,
+  author     text not null default 'Nova',
+  content    text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists task_comments_task_idx on public.task_comments(task_id);

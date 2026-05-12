@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatDate, cn } from '@/lib/utils'
-import { Plus, Calendar, Flag, Trash2, Pencil } from 'lucide-react'
+import { Plus, Calendar, Flag, Trash2, Pencil, CheckSquare2, Square, MessageCircle, Send } from 'lucide-react'
 
 interface Task {
   id: string; title: string; description: string | null
@@ -41,6 +41,8 @@ type EditForm = {
   title: string; description: string; status: string; priority: string
   assigned_to: string; project_id: string; client_id: string; due_date: string
 }
+interface ChecklistItem { id: string; text: string; done: boolean }
+interface Comment { id: string; author: string; content: string; created_at: string }
 
 export default function TasksPage() {
   const [tasks, setTasks]       = useState<Task[]>([])
@@ -53,6 +55,11 @@ export default function TasksPage() {
   const [editForm, setEditForm] = useState<EditForm>(EMPTY)
   const [saving, setSaving]     = useState(false)
   const [view, setView]         = useState<'kanban' | 'list'>('kanban')
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([])
+  const [newCheck, setNewCheck]   = useState('')
+  const [comments, setComments]   = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [sendingComment, setSendingComment] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -81,7 +88,54 @@ export default function TasksPage() {
       client_id:   '',
       due_date:    task.due_date ? task.due_date.slice(0, 10) : '',
     })
+    setChecklist([])
+    setComments([])
+    setNewCheck('')
+    setNewComment('')
     setEditing(task)
+    // Cargar checklist y comentarios en paralelo
+    fetch(`/api/tasks/${task.id}`).then(r => r.json()).then(d => {
+      if (d.task?.checklist) setChecklist(d.task.checklist)
+    }).catch(() => {})
+    fetch(`/api/tasks/${task.id}/comments`).then(r => r.json()).then(d => {
+      setComments(d.comments || [])
+    }).catch(() => {})
+  }
+
+  async function addCheckItem() {
+    if (!newCheck.trim() || !editing) return
+    const item: ChecklistItem = { id: crypto.randomUUID(), text: newCheck.trim(), done: false }
+    const updated = [...checklist, item]
+    setChecklist(updated)
+    setNewCheck('')
+    await fetch(`/api/tasks/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checklist: updated }) })
+  }
+
+  async function toggleCheck(itemId: string) {
+    if (!editing) return
+    const updated = checklist.map(c => c.id === itemId ? { ...c, done: !c.done } : c)
+    setChecklist(updated)
+    await fetch(`/api/tasks/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checklist: updated }) })
+  }
+
+  async function removeCheck(itemId: string) {
+    if (!editing) return
+    const updated = checklist.filter(c => c.id !== itemId)
+    setChecklist(updated)
+    await fetch(`/api/tasks/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checklist: updated }) })
+  }
+
+  async function sendComment() {
+    if (!newComment.trim() || !editing) return
+    setSendingComment(true)
+    const res = await fetch(`/api/tasks/${editing.id}/comments`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: newComment.trim(), author: 'Equipo' }),
+    })
+    const { comment } = await res.json()
+    if (comment) setComments(c => [...c, comment])
+    setNewComment('')
+    setSendingComment(false)
   }
 
   async function saveEdit() {
@@ -316,7 +370,7 @@ export default function TasksPage() {
       </Modal>
 
       {/* Modal: editar tarea */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar tarea">
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar tarea" size="lg">
         <div className="space-y-4">
           <Input label="Título *" value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} />
           <Textarea label="Descripción" value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={3} />
@@ -338,6 +392,67 @@ export default function TasksPage() {
             <Input label="Asignado a" value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} placeholder="Facundo / Mauricio" />
             <Input label="Fecha límite" value={editForm.due_date} onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))} type="date" />
           </div>
+          {/* Checklist */}
+          <div className="border-t border-[#1e2f4a] pt-4">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <CheckSquare2 size={12} /> Checklist {checklist.length > 0 && `(${checklist.filter(c=>c.done).length}/${checklist.length})`}
+            </p>
+            <div className="space-y-1.5 mb-2">
+              {checklist.map(item => (
+                <div key={item.id} className="flex items-center gap-2 group">
+                  <button onClick={() => toggleCheck(item.id)} className="shrink-0">
+                    {item.done
+                      ? <CheckSquare2 size={14} className="text-[#f97316]" />
+                      : <Square size={14} className="text-[#334155]" />}
+                  </button>
+                  <span className={cn('flex-1 text-sm', item.done ? 'line-through text-[#334155]' : 'text-[#94a3b8]')}>{item.text}</span>
+                  <button onClick={() => removeCheck(item.id)} className="opacity-0 group-hover:opacity-100 text-[#334155] hover:text-red-400 transition-all">
+                    <Trash2 size={10}/>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newCheck} onChange={e => setNewCheck(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addCheckItem() }}
+                placeholder="Agregar ítem..."
+                className="flex-1 px-3 py-1.5 text-xs bg-[#080f1e] border border-[#1a2d45] rounded-lg text-[#e2e8f0] placeholder-[#253f60] focus:outline-none focus:border-[#f97316]/40"
+              />
+              <Button size="sm" variant="secondary" onClick={addCheckItem} disabled={!newCheck.trim()}>+</Button>
+            </div>
+          </div>
+
+          {/* Comentarios */}
+          <div className="border-t border-[#1e2f4a] pt-4">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <MessageCircle size={12} /> Comentarios {comments.length > 0 && `(${comments.length})`}
+            </p>
+            <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+              {comments.map(c => (
+                <div key={c.id} className="bg-[#080f1e] border border-[#1a2d45] rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-semibold text-[#f97316]">{c.author}</span>
+                    <span className="text-[10px] text-[#334155]">{new Date(c.created_at).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p className="text-xs text-[#94a3b8]">{c.content}</p>
+                </div>
+              ))}
+              {comments.length === 0 && <p className="text-xs text-[#334155]">Sin comentarios todavía</p>}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newComment} onChange={e => setNewComment(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') sendComment() }}
+                placeholder="Escribir comentario..."
+                className="flex-1 px-3 py-1.5 text-xs bg-[#080f1e] border border-[#1a2d45] rounded-lg text-[#e2e8f0] placeholder-[#253f60] focus:outline-none focus:border-[#f97316]/40"
+              />
+              <Button size="sm" variant="secondary" onClick={sendComment} disabled={!newComment.trim() || sendingComment}>
+                <Send size={11}/>
+              </Button>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <Button onClick={saveEdit} disabled={saving || !editForm.title}>{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
             <Button variant="secondary" onClick={() => deleteTask(editing!.id)} className="!text-red-400 hover:!bg-red-500/10">

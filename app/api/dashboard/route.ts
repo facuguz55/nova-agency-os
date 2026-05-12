@@ -11,6 +11,7 @@ export async function GET() {
     { data: recentActions },
     { data: workflowStats },
     { data: urgentTasks },
+    { data: allActiveClients },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('projects').select('*', { count: 'exact', head: true }).in('status', ['active', 'planning']),
@@ -23,10 +24,21 @@ export async function GET() {
       .neq('status', 'done')
       .order('priority', { ascending: true })
       .limit(6),
+    supabase.from('clients')
+      .select('id, name, status, updated_at')
+      .eq('status', 'active')
+      .order('updated_at', { ascending: true })
+      .limit(20),
   ])
 
   const wfSuccess = workflowStats?.filter(w => w.status === 'success').length || 0
   const wfTotal = workflowStats?.length || 0
+
+  // Clientes sin actividad en más de 14 días
+  const cutoff = new Date(Date.now() - 14 * 86400000).toISOString()
+  const coldClients = (allActiveClients || [])
+    .filter(c => !c.updated_at || c.updated_at < cutoff)
+    .slice(0, 4)
 
   return NextResponse.json({
     stats: {
@@ -37,5 +49,6 @@ export async function GET() {
     },
     recentActions: recentActions || [],
     urgentTasks: urgentTasks || [],
+    coldClients,
   })
 }

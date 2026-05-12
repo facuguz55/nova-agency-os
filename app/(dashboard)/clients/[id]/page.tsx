@@ -5,7 +5,13 @@ import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
-import { formatDate } from '@/lib/utils'
+import { formatDate, cn } from '@/lib/utils'
+import { Sparkles, Loader2 } from 'lucide-react'
+
+interface Scorecard {
+  score: number; nivel: string; resumen: string
+  fortalezas: string[]; riesgos: string[]; acciones: string[]
+}
 
 interface ClientData {
   client: {
@@ -23,7 +29,17 @@ export default function ClientDetailPage() {
   const [data, setData] = useState<ClientData | null>(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<ClientData['client']>>({})
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [scorecard, setScorecard] = useState<Scorecard | null>(null)
+  const [loadingScore, setLoadingScore] = useState(false)
+
+  async function analyzeClient() {
+    setLoadingScore(true)
+    const res = await fetch(`/api/clients/${id}/scorecard`)
+    const { scorecard: sc } = await res.json()
+    setScorecard(sc)
+    setLoadingScore(false)
+  }
 
   async function load() {
     const res = await fetch(`/api/clients/${id}`)
@@ -70,6 +86,10 @@ export default function ClientDetailPage() {
               </>
             ) : (
               <>
+                <Button variant="secondary" onClick={analyzeClient} disabled={loadingScore} size="sm">
+                  {loadingScore ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  {loadingScore ? 'Analizando...' : 'Scorecard IA'}
+                </Button>
                 <Button variant="secondary" onClick={() => setEditing(true)} size="sm">Editar</Button>
                 <Button variant="danger" onClick={deleteClient} size="sm">Eliminar</Button>
               </>
@@ -79,6 +99,51 @@ export default function ClientDetailPage() {
       />
 
       <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+
+        {/* Scorecard IA */}
+        {scorecard && (
+          <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-5">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  'w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black border-2',
+                  scorecard.score >= 8 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : scorecard.score >= 6 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+                  : scorecard.score >= 4 ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                  : 'bg-red-500/10 border-red-500/30 text-red-400'
+                )}>
+                  {scorecard.score}
+                </div>
+                <div>
+                  <p className="text-xs text-[#64748b] uppercase tracking-widest">Scorecard IA</p>
+                  <p className="text-base font-bold text-white">{scorecard.nivel}</p>
+                </div>
+              </div>
+              <button onClick={() => setScorecard(null)} className="text-[#334155] hover:text-[#64748b] text-xs px-2 py-1 border border-[#1a2d45] rounded-lg">×</button>
+            </div>
+            <p className="text-sm text-[#94a3b8] mb-4 leading-relaxed">{scorecard.resumen}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { label: 'Fortalezas', items: scorecard.fortalezas, color: 'text-emerald-400', dot: 'bg-emerald-400' },
+                { label: 'Riesgos', items: scorecard.riesgos, color: 'text-red-400', dot: 'bg-red-400' },
+                { label: 'Acciones', items: scorecard.acciones, color: 'text-[#f97316]', dot: 'bg-[#f97316]' },
+              ].map(({ label, items, color, dot }) => (
+                <div key={label} className="bg-[#080f1e] border border-[#1a2d45] rounded-lg p-3">
+                  <p className={cn('text-[10px] font-bold uppercase tracking-widest mb-2', color)}>{label}</p>
+                  <ul className="space-y-1.5">
+                    {items?.map((item, i) => (
+                      <li key={i} className="flex gap-2 text-xs text-[#94a3b8]">
+                        <div className={cn('w-1.5 h-1.5 rounded-full mt-1.5 shrink-0', dot)} />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Info principal */}
           <div className="lg:col-span-2 bg-[#1e293b] border border-[#334155] rounded-xl p-5">
