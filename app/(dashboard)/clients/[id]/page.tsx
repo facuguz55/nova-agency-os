@@ -308,9 +308,14 @@ export default function ClientDetailPage() {
           {portal && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 p-3 bg-[#0f172a] rounded-xl border border-[#1a2d45]">
-                <code className="flex-1 text-xs text-[#94a3b8] truncate">
+                <a
+                  href={`/portal/${portal.token}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 text-xs text-[#94a3b8] hover:text-[#f97316] truncate transition-colors"
+                >
                   {typeof window !== 'undefined' ? window.location.origin : ''}/portal/{portal.token}
-                </code>
+                </a>
                 <button
                   onClick={copyPortalUrl}
                   className="shrink-0 text-[#4a6080] hover:text-white transition-colors"

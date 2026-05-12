@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function PortalPinPage() {
   const { token } = useParams<{ token: string }>()
@@ -9,6 +10,20 @@ export default function PortalPinPage() {
   const [pin, setPin]       = useState('')
   const [error, setError]   = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Backspace') { setPin(p => p.slice(0, -1)); return }
+      if (/^[0-9]$/.test(e.key)) { setPin(p => p.length < 4 ? p + e.key : p) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  useEffect(() => {
+    if (pin.length === 4) verify()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin])
 
   async function verify() {
     if (pin.length !== 4) return
@@ -35,11 +50,7 @@ export default function PortalPinPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-[#f97316] flex items-center justify-center">
-            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-              <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-            </svg>
-          </div>
+          <Image src="/logo-nova-clear.png" alt="Nova Agency" width={120} height={48} className="object-contain" />
         </div>
 
         <div className="bg-[#0d1b2e] border border-[#1a2d45] rounded-2xl p-8 text-center">
