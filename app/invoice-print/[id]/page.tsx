@@ -244,7 +244,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               </thead>
               <tbody>
                 <tr>
-                  <td className="td">{inv.description || 'Servicios profesionales'}</td>
+                  <td className="td" id="invoice-description">{inv.description || 'Servicios profesionales'}</td>
                   <td className="td td-r">ARS $ {amount}</td>
                 </tr>
               </tbody>
@@ -273,7 +273,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <PrintButtons />
+      <PrintButtons invoiceId={id} />
     </>
   )
 }

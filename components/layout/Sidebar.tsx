@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -68,33 +69,38 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center h-14 px-4 border-b border-[#1a2d45] shrink-0 gap-2.5',
+        'flex items-center h-14 px-3 border-b border-[#1a2d45] shrink-0 gap-2',
         collapsed && 'justify-center px-0',
       )}>
-        <div className="w-7 h-7 rounded-lg bg-[#f97316] flex items-center justify-center shrink-0">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-            <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
-            <circle cx="10" cy="13" r="2.2" fill="white"/>
-          </svg>
-        </div>
-        {!collapsed && (
+        {collapsed ? (
           <>
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-sm font-semibold text-white leading-tight">Nova OS</span>
-              <span className="text-[10px] text-[#334155] leading-tight">Agency</span>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.25)' }}>
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+                <polygon points="10,2 18,17 2,17" fill="none" stroke="#f97316" strokeWidth="2.2" strokeLinejoin="round"/>
+                <circle cx="10" cy="13" r="2" fill="#f97316"/>
+              </svg>
             </div>
-            <button onClick={onToggle} className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md">
+            <button
+              onClick={onToggle}
+              className="absolute -right-3 top-[52px] w-6 h-6 rounded-full bg-[#0c1628] border border-[#1a2d45] flex items-center justify-center text-[#64748b] hover:text-[#f97316] transition-colors z-10"
+            >
+              <ChevronRight size={11} />
+            </button>
+          </>
+        ) : (
+          <>
+            <Image
+              src="/logo-nova-clear.png"
+              alt="Nova Agency"
+              width={100}
+              height={36}
+              className="object-contain flex-1 min-w-0"
+            />
+            <button onClick={onToggle} className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md shrink-0">
               <ChevronRight size={14} className="rotate-180" />
             </button>
           </>
-        )}
-        {collapsed && (
-          <button
-            onClick={onToggle}
-            className="absolute -right-3 top-[52px] w-6 h-6 rounded-full bg-[#0c1628] border border-[#1a2d45] flex items-center justify-center text-[#64748b] hover:text-[#f97316] transition-colors z-10"
-          >
-            <ChevronRight size={11} />
-          </button>
         )}
       </div>
 
