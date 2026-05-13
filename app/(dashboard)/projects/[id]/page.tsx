@@ -310,16 +310,9 @@ export default function ProjectDetailPage() {
             <option value="paused">Pausado</option>
           </Select>
           <div className="space-y-2">
-            <Input
-              label="Presupuesto (ARS)"
-              value={subForm.budget}
-              onChange={e => setSubForm(f => ({ ...f, budget: e.target.value }))}
-              type="number"
-              placeholder="0"
-            />
             <button
               type="button"
-              onClick={() => setSubForm(f => ({ ...f, add_to_budget: !f.add_to_budget }))}
+              onClick={() => setSubForm(f => ({ ...f, add_to_budget: !f.add_to_budget, budget: !f.add_to_budget ? f.budget : '' }))}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border transition-all text-xs font-medium ${
                 subForm.add_to_budget
                   ? 'bg-emerald-400/8 border-emerald-400/30 text-emerald-400'
@@ -333,6 +326,15 @@ export default function ProjectDetailPage() {
               </div>
               Agregar al presupuesto total del proyecto
             </button>
+            <div className={subForm.add_to_budget ? '' : 'opacity-30 pointer-events-none'}>
+              <Input
+                label="Presupuesto (ARS)"
+                value={subForm.budget}
+                onChange={e => setSubForm(f => ({ ...f, budget: e.target.value }))}
+                type="number"
+                placeholder="0"
+              />
+            </div>
           </div>
           <Textarea
             label="Descripción"
