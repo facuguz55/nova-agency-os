@@ -75,7 +75,7 @@ export default function ProjectDetailPage() {
   async function saveSubproject() {
     if (!subForm.name.trim()) return
     setSavingSub(true)
-    await fetch('/api/projects', {
+    const res = await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -87,7 +87,9 @@ export default function ProjectDetailPage() {
         parent_id:      id,
       }),
     })
-    setSubForm(SUB_EMPTY); setShowSubModal(false); setSavingSub(false); loadSubs()
+    setSavingSub(false)
+    if (!res.ok) { alert('Error al crear el subproyecto. Revisá la consola.'); return }
+    setSubForm(SUB_EMPTY); setShowSubModal(false); loadSubs()
   }
 
   async function deleteSubproject(subId: string) {

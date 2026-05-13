@@ -43,7 +43,16 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const body = await req.json()
 
-  const { data, error } = await supabase.from('projects').insert(body).select().single()
+  let { data, error } = await supabase.from('projects').insert(body).select().single()
+
+  // Si falla por columnas que aún no existen en Supabase, reintentar sin ellas
+  if (error && (error.message.includes('add_to_budget') || error.message.includes('parent_id'))) {
+    const { add_to_budget, parent_id, ...safeBody } = body
+    void add_to_budget; void parent_id
+    const retry = await supabase.from('projects').insert(safeBody).select().single()
+    data  = retry.data
+    error = retry.error
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
