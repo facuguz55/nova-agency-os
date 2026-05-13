@@ -13,6 +13,7 @@ import { FolderKanban, Plus, ChevronRight, TrendingUp } from 'lucide-react'
 interface Project {
   id: string; name: string; status: string; description: string | null
   budget: number | null; created_at: string; updated_at: string
+  client_id: string | null
   clients: { name: string; email: string | null; contact_person: string | null } | null
 }
 
@@ -85,6 +86,7 @@ export default function ProjectDetailPage() {
         budget:         subForm.budget ? parseFloat(subForm.budget) : null,
         add_to_budget:  subForm.add_to_budget,
         parent_id:      id,
+        client_id:      data?.project.client_id ?? null,
       }),
     })
     setSavingSub(false)
