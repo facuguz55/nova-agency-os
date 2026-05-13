@@ -23,17 +23,51 @@ const STATUS_STYLES: Record<string, string> = {
   cerrado:     'bg-[#a855f7]/10 text-[#c084fc] border-[#a855f7]/20',
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  active:      'ACTIVO',
+  inactive:    'INACTIVO',
+  prospect:    'PROSPECTO',
+  planning:    'PLANIFICANDO',
+  completed:   'COMPLETADO',
+  paused:      'PAUSADO',
+  success:     'ÉXITO',
+  failed:      'FALLIDO',
+  running:     'EN CURSO',
+  pending:     'PENDIENTE',
+  executed:    'EJECUTADO',
+  canceled:    'CANCELADO',
+  online:      'EN LÍNEA',
+  offline:     'OFFLINE',
+  unreachable: 'INALCANZABLE',
+  enviado:     'ENVIADO',
+  'respondió': 'RESPONDIÓ',
+  interesado:  'INTERESADO',
+  no_interesa: 'NO INTERESA',
+  cerrado:     'CERRADO',
+  todo:        'PENDIENTE',
+  in_progress: 'EN PROGRESO',
+  done:        'HECHO',
+  blocked:     'BLOQUEADO',
+  draft:       'BORRADOR',
+  sent:        'ENVIADO',
+  accepted:    'ACEPTADO',
+  rejected:    'RECHAZADO',
+  overdue:     'VENCIDO',
+  paid:        'PAGADO',
+}
+
 interface BadgeProps { status: string; className?: string }
 
 export function StatusBadge({ status, className }: BadgeProps) {
   const style = STATUS_STYLES[status] ?? 'bg-[#1a2d45] text-[#4a6080] border-[#1a2d45]'
+  const label = STATUS_LABELS[status] ?? status.toUpperCase().replace(/_/g, ' ')
   return (
     <span className={cn(
-      'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border',
+      'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border tracking-wide',
       style, className,
     )}>
       <span className="w-1.5 h-1.5 rounded-full bg-current" />
-      {status}
+      {label}
     </span>
   )
 }

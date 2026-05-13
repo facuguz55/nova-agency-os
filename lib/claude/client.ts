@@ -184,9 +184,10 @@ async function getRelevantContext(message: string): Promise<string> {
         .limit(20)
       if (portals?.length) {
         const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://nova-agency-os.vercel.app'
-        const list = portals.map((p: { token: string; pin: string; active: boolean; clients: { name: string } | null }) =>
-          `- ${p.clients?.name || 'Sin nombre'}: ${origin}/portal/${p.token} | PIN: ${p.pin}`
-        ).join('\n')
+        const list = portals.map((p: { token: string; pin: string; clients: { name: string }[] | { name: string } | null }) => {
+          const name = Array.isArray(p.clients) ? p.clients[0]?.name : p.clients?.name
+          return `- ${name || 'Sin nombre'}: ${origin}/portal/${p.token} | PIN: ${(p as { pin: string }).pin}`
+        }).join('\n')
         parts.push(`Portales activos de clientes:\n${list}`)
       }
     }

@@ -18,7 +18,7 @@ interface PortalData {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  active: 'En curso', completed: 'Completado', paused: 'Pausado', planning: 'Planificando',
+  active: 'ACTIVO', completed: 'COMPLETADO', paused: 'PAUSADO', planning: 'PLANIFICANDO',
 }
 const STATUS_BG: Record<string, string> = {
   active:    'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',

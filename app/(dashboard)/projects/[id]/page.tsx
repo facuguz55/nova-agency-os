@@ -27,7 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   paused:    'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
   planning:  'text-blue-400 bg-blue-400/10 border-blue-400/20',
 }
-const STATUS_LABEL: Record<string, string> = { active: 'Activo', completed: 'Completado', paused: 'Pausado', planning: 'Planning' }
+const STATUS_LABEL: Record<string, string> = { active: 'ACTIVO', completed: 'COMPLETADO', paused: 'PAUSADO', planning: 'PLANIFICANDO' }
 const SUB_EMPTY = { name: '', status: 'planning', description: '', budget: '', add_to_budget: true }
 
 export default function ProjectDetailPage() {
