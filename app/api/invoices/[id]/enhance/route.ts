@@ -44,13 +44,14 @@ Respondé ÚNICAMENTE con un objeto JSON válido, sin markdown, sin explicacione
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const raw = (message.content[0] as { type: string; text: string }).text.trim()
+  const rawText = (message.content[0] as { type: string; text: string }).text.trim()
+  const raw = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
   let structured
   try {
     structured = JSON.parse(raw)
   } catch {
-    structured = { titulo: inv.description || 'Servicios profesionales', resumen: raw, entregables: [], periodo: null, nota: null }
+    structured = { titulo: inv.description || 'Servicios profesionales', resumen: rawText, entregables: [], periodo: null, nota: null }
   }
 
   return NextResponse.json({ structured })
