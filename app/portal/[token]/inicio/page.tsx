@@ -53,7 +53,7 @@ export default function PortalInicio() {
   const router = useRouter()
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null)
+  const [installPrompt, setInstallPrompt] = useState<{ prompt: () => void } | null>(null)
   const [isIOS, setIsIOS] = useState(false)
   const [showIOSHint, setShowIOSHint] = useState(false)
   const [installed, setInstalled] = useState(false)
@@ -61,7 +61,7 @@ export default function PortalInicio() {
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as { standalone?: boolean }).standalone
     setIsIOS(ios)
-    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e) }
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as unknown as { prompt: () => void }) }
     window.addEventListener('beforeinstallprompt', handler)
     window.addEventListener('appinstalled', () => setInstalled(true))
     return () => window.removeEventListener('beforeinstallprompt', handler)
@@ -148,8 +148,7 @@ export default function PortalInicio() {
               <button
                 onClick={() => {
                   if (isIOS) { setShowIOSHint(h => !h); return }
-                  const prompt = installPrompt as { prompt: () => void }
-                  prompt.prompt()
+                  installPrompt.prompt()
                   setInstallPrompt(null)
                 }}
                 className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/15 text-white/50 hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"
