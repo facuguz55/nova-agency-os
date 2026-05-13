@@ -148,7 +148,7 @@ export default function PortalInicio() {
               <button
                 onClick={() => {
                   if (isIOS) { setShowIOSHint(h => !h); return }
-                  installPrompt.prompt()
+                  installPrompt?.prompt()
                   setInstallPrompt(null)
                 }}
                 className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/15 text-white/50 hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"
