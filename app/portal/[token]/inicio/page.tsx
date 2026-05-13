@@ -5,17 +5,27 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
-interface Subproject {
-  id: string; name: string; status: string; budget: number | null; description: string | null
+interface Objective  { id: string; title: string; current_value: number; target_value: number; unit: string }
+interface Subproject { id: string; name: string; status: string; budget: number | null; description: string | null }
+interface Project {
+  id: string; name: string; status: string; budget: number | null; created_at: string
+  subprojects: Subproject[]
+  objectives:  Objective[]
+  feedback:    'up' | 'down' | null
 }
+interface Task   { id: string; title: string; status: string; priority: string; due_date: string | null; assigned_to: string | null }
+interface Report { id: string; title: string; period: string; created_at: string }
+interface Member { id: string; name: string; role: string; whatsapp: string | null }
 
 interface PortalData {
-  client: { id: string; name: string; email: string | null; industry: string | null; contact_person: string | null; notes: string | null }
-  projects: Array<{ id: string; name: string; status: string; budget: number | null; created_at: string; subprojects: Subproject[] }>
-  tasks: Array<{ id: string; title: string; status: string; priority: string; due_date: string | null; assigned_to: string | null }>
-  reports: Array<{ id: string; title: string; period: string; created_at: string }>
-  team: Array<{ id: string; name: string; role: string; whatsapp: string | null }>
+  client:   { id: string; name: string; email: string | null; industry: string | null; contact_person: string | null; notes: string | null }
+  projects: Project[]
+  tasks:    Task[]
+  reports:  Report[]
+  team:     Member[]
 }
+
+type MsgType = 'new_service' | 'problem' | 'note'
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'ACTIVO', completed: 'COMPLETADO', paused: 'PAUSADO', planning: 'PLANIFICANDO',
@@ -29,6 +39,11 @@ const STATUS_BG: Record<string, string> = {
 const PRIO_DOT: Record<string, string> = {
   urgent: 'bg-red-400', high: 'bg-orange-400', medium: 'bg-amber-400', low: 'bg-white/20',
 }
+const MSG_CONFIG: Record<MsgType, { label: string; icon: string; placeholder: string; color: string }> = {
+  new_service: { label: 'Nuevo servicio',     icon: '🚀', placeholder: 'Describí el servicio que necesitás...', color: '#f97316' },
+  problem:     { label: 'Reportar problema',  icon: '🔴', placeholder: 'Describí el problema o urgencia...', color: '#f87171' },
+  note:        { label: 'Dejar una nota',     icon: '📝', placeholder: 'Escribí tu nota o comentario...', color: '#60a5fa' },
+}
 
 function Ring({ pct, color = '#f97316', size = 56 }: { pct: number; color?: string; size?: number }) {
   const r = (size - 8) / 2
@@ -37,10 +52,8 @@ function Ring({ pct, color = '#f97316', size = 56 }: { pct: number; color?: stri
   return (
     <svg width={size} height={size} className="-rotate-90">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
-      <circle
-        cx={size/2} cy={size/2} r={r} fill="none"
-        stroke={color} strokeWidth="4"
-        strokeLinecap="round"
+      <circle cx={size/2} cy={size/2} r={r} fill="none"
+        stroke={color} strokeWidth="4" strokeLinecap="round"
         strokeDasharray={`${dash} ${circ}`}
         style={{ transition: 'stroke-dasharray .8s ease' }}
       />
@@ -50,13 +63,25 @@ function Ring({ pct, color = '#f97316', size = 56 }: { pct: number; color?: stri
 
 export default function PortalInicio() {
   const { token } = useParams<{ token: string }>()
-  const router = useRouter()
-  const [data, setData] = useState<PortalData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const router    = useRouter()
+
+  const [data, setData]           = useState<PortalData | null>(null)
+  const [loading, setLoading]     = useState(true)
   const [installPrompt, setInstallPrompt] = useState<{ prompt: () => void } | null>(null)
-  const [isIOS, setIsIOS] = useState(false)
+  const [isIOS, setIsIOS]         = useState(false)
   const [showIOSHint, setShowIOSHint] = useState(false)
   const [installed, setInstalled] = useState(false)
+
+  // feedback local (optimista)
+  const [feedbacks, setFeedbacks] = useState<Record<string, 'up' | 'down' | null>>({})
+
+  // solicitud / nota / problema
+  const [sheet, setSheet]           = useState<MsgType | null>(null)
+  const [msgTitle, setMsgTitle]     = useState('')
+  const [msgBody, setMsgBody]       = useState('')
+  const [msgProject, setMsgProject] = useState('')
+  const [sending, setSending]       = useState(false)
+  const [sent, setSent]             = useState(false)
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as { standalone?: boolean }).standalone
@@ -79,20 +104,52 @@ export default function PortalInicio() {
         }
         return r.json()
       })
-      .then(json => { if (json) setData(json) })
+      .then(json => {
+        if (json) {
+          setData(json)
+          const fb: Record<string, 'up' | 'down' | null> = {}
+          ;(json.projects as Project[]).forEach(p => { fb[p.id] = p.feedback })
+          setFeedbacks(fb)
+        }
+      })
       .finally(() => setLoading(false))
   }, [token, router])
 
+  async function submitFeedback(projectId: string, vote: 'up' | 'down') {
+    const prev = feedbacks[projectId]
+    const next = prev === vote ? null : vote
+    setFeedbacks(f => ({ ...f, [projectId]: next }))
+    const pin = localStorage.getItem(`portal_pin_${token}`)
+    await fetch(`/api/portal/${token}/feedback`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin, project_id: projectId, vote: next ?? vote }),
+    })
+  }
+
+  async function submitMessage() {
+    if (!msgBody.trim() || !sheet) return
+    setSending(true)
+    const pin = localStorage.getItem(`portal_pin_${token}`)
+    const res = await fetch(`/api/portal/${token}/message`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin, type: sheet, title: msgTitle || null, body: msgBody, project_id: msgProject || null }),
+    })
+    setSending(false)
+    if (res.ok) {
+      setSent(true)
+      setTimeout(() => { setSent(false); setSheet(null); setMsgTitle(''); setMsgBody(''); setMsgProject('') }, 2000)
+    }
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-[#050c1a] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-2 h-2 rounded-full bg-[#f97316] animate-ping" />
-      </div>
+      <div className="w-2 h-2 rounded-full bg-[#f97316] animate-ping" />
     </div>
   )
-
   if (!data) return null
+
   const { client, projects, tasks, reports, team } = data
+  const pin = typeof window !== 'undefined' ? localStorage.getItem(`portal_pin_${token}`) ?? '' : ''
 
   const allSubs    = projects.flatMap(p => p.subprojects || [])
   const allItems   = [...projects, ...allSubs]
@@ -100,9 +157,20 @@ export default function PortalInicio() {
   const completedP = allItems.filter(p => p.status === 'completed').length
   const pct        = allItems.length > 0 ? Math.round((completedP / allItems.length) * 100) : 0
 
-  const hour = new Date().getHours()
+  const hour     = new Date().getHours()
   const greeting = hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches'
-  const first = client.name.split(' ')[0]
+  const first    = client.name.split(' ')[0]
+
+  // Tareas con fecha para el calendario
+  const upcoming = tasks
+    .filter(t => t.due_date && t.status !== 'done')
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+    .slice(0, 8)
+
+  // Objetivos de todos los proyectos
+  const allObjectives = projects.flatMap(p =>
+    (p.objectives || []).map(o => ({ ...o, projectName: p.name }))
+  )
 
   return (
     <>
@@ -116,22 +184,24 @@ export default function PortalInicio() {
         .fs-3 { animation: fadeSlide .5s .2s ease both; }
         .fs-4 { animation: fadeSlide .5s .3s ease both; }
         .fs-5 { animation: fadeSlide .5s .4s ease both; }
+        .fs-6 { animation: fadeSlide .5s .5s ease both; }
+        .fs-7 { animation: fadeSlide .5s .6s ease both; }
         .portal-inicio { font-family: 'Plus Jakarta Sans', sans-serif; }
         .card-glass {
           background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.07);
           backdrop-filter: blur(8px);
         }
-        .glow-bar {
-          background: linear-gradient(90deg, #f97316, #fb923c 40%, #f97316);
-          background-size: 200% 100%;
-          animation: shimmer 3s infinite linear;
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
         }
-        @keyframes shimmer { to { background-position: -200% 0; } }
+        .sheet-anim { animation: slideUp .3s cubic-bezier(.32,.72,0,1) both; }
       `}</style>
 
       <div className="portal-inicio min-h-screen bg-[#050c1a] text-white">
-        {/* Gradient orb background */}
+
+        {/* Orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-10"
             style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)' }} />
@@ -144,46 +214,34 @@ export default function PortalInicio() {
           style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)', paddingBottom: '16px' }}>
           <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-contain rounded-xl" />
           <div className="flex items-center gap-2">
-            {/* Botón instalar PWA */}
             {!installed && (installPrompt || isIOS) && (
-              <button
-                onClick={() => {
-                  if (isIOS) { setShowIOSHint(h => !h); return }
-                  installPrompt?.prompt()
-                  setInstallPrompt(null)
-                }}
-                className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/15 text-white/50 hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"
-              >
-                <span>⬇</span> Instalar app
+              <button onClick={() => { if (isIOS) { setShowIOSHint(h => !h); return }; installPrompt?.prompt(); setInstallPrompt(null) }}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/15 text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
+                <span>⬇</span> Instalar
               </button>
             )}
-            <Link
-              href={`/portal/${token}/bienvenida`}
-              className="text-[11px] text-[#f97316] flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#f97316]/25 hover:border-[#f97316]/50 transition-colors font-semibold tracking-wide"
-            >
+            <Link href={`/portal/${token}/bienvenida`}
+              className="text-[11px] text-[#f97316] px-3 py-1.5 rounded-xl border border-[#f97316]/25 hover:border-[#f97316]/50 transition-colors font-semibold">
               Bienvenida
             </Link>
             {reports.length > 0 && (
-              <Link
-                href={`/portal/${token}/reportes`}
-                className="text-[11px] text-white/40 flex items-center gap-1 px-3 py-1.5 rounded-xl border border-white/10 hover:border-white/20 hover:text-white/60 transition-colors font-medium"
-              >
+              <Link href={`/portal/${token}/reportes`}
+                className="text-[11px] text-white/40 px-3 py-1.5 rounded-xl border border-white/10 hover:text-white/60 transition-colors font-medium">
                 Reportes
               </Link>
             )}
           </div>
         </header>
 
-        {/* Hint iOS */}
         {showIOSHint && (
           <div className="mx-5 mt-3 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-[12px] text-white/60 leading-relaxed">
-            En Safari: tocá <strong className="text-white/80">Compartir</strong> <span className="text-base">⎙</span> y luego <strong className="text-white/80">«Agregar a pantalla de inicio»</strong> para instalar el portal como app.
+            En Safari: tocá <strong className="text-white/80">Compartir ⎙</strong> → <strong className="text-white/80">«Agregar a pantalla de inicio»</strong>
           </div>
         )}
 
-        <div className="max-w-xl mx-auto px-5 pt-8 pb-20 space-y-7 relative">
+        <div className="max-w-xl mx-auto px-5 pt-8 pb-28 space-y-7 relative">
 
-          {/* Hero greeting */}
+          {/* Saludo */}
           <div className="fs-1">
             <p className="text-white/35 text-sm font-medium tracking-wide mb-0.5">{greeting},</p>
             <h1 style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic' }}
@@ -195,7 +253,7 @@ export default function PortalInicio() {
             )}
           </div>
 
-          {/* Progress ring + stats */}
+          {/* Progress ring */}
           <div className="fs-2 card-glass rounded-3xl p-5 flex items-center gap-5">
             <div className="relative shrink-0">
               <Ring pct={pct} size={80} />
@@ -206,9 +264,9 @@ export default function PortalInicio() {
             </div>
             <div className="flex-1 grid grid-cols-3 gap-3">
               {[
-                { n: allItems.length, label: 'Total', color: 'text-white' },
-                { n: activeP, label: 'En curso', color: 'text-emerald-400' },
-                { n: completedP, label: 'Listos', color: 'text-[#f97316]' },
+                { n: allItems.length, label: 'Total',    color: 'text-white' },
+                { n: activeP,         label: 'En curso', color: 'text-emerald-400' },
+                { n: completedP,      label: 'Listos',   color: 'text-[#f97316]' },
               ].map(({ n, label, color }) => (
                 <div key={label} className="text-center">
                   <p className={`text-2xl font-black leading-none ${color}`}>{n}</p>
@@ -218,14 +276,13 @@ export default function PortalInicio() {
             </div>
           </div>
 
-          {/* Proyectos */}
+          {/* Proyectos + feedback */}
           {projects.length > 0 && (
             <div className="fs-3">
               <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Tus proyectos</p>
               <div className="space-y-3">
                 {projects.map(p => (
                   <div key={p.id} className="card-glass rounded-2xl overflow-hidden">
-                    {/* Proyecto padre */}
                     <div className="px-5 py-4 flex items-center gap-4">
                       <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center font-black text-base"
                         style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
@@ -234,9 +291,7 @@ export default function PortalInicio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
                         {p.budget && (
-                          <p className="text-[11px] text-white/30 mt-0.5">
-                            ${Number(p.budget).toLocaleString('es-AR')} ARS
-                          </p>
+                          <p className="text-[11px] text-white/30 mt-0.5">${Number(p.budget).toLocaleString('es-AR')} ARS</p>
                         )}
                       </div>
                       <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
@@ -245,17 +300,12 @@ export default function PortalInicio() {
                     </div>
 
                     {/* Subproyectos */}
-                    {p.subprojects && p.subprojects.length > 0 && (
+                    {p.subprojects?.length > 0 && (
                       <div className="border-t border-white/[0.04] divide-y divide-white/[0.03]">
                         {p.subprojects.map(s => (
                           <div key={s.id} className="flex items-center gap-3 pl-8 pr-5 py-3">
                             <div className="w-1 h-5 rounded-full shrink-0" style={{ background: 'rgba(249,115,22,0.35)' }} />
                             <p className="text-[12px] text-white/55 flex-1 truncate font-medium">{s.name}</p>
-                            {s.budget && (
-                              <span className="text-[11px] text-[#f97316]/60 shrink-0">
-                                ${Number(s.budget).toLocaleString('es-AR')}
-                              </span>
-                            )}
                             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${STATUS_BG[s.status] || 'bg-white/5 text-white/30'}`}>
                               {STATUS_LABEL[s.status] || s.status}
                             </span>
@@ -263,46 +313,97 @@ export default function PortalInicio() {
                         ))}
                       </div>
                     )}
+
+                    {/* Feedback */}
+                    <div className="border-t border-white/[0.04] px-5 py-3 flex items-center gap-2">
+                      <p className="text-[11px] text-white/25 flex-1">¿Cómo va este proyecto?</p>
+                      {(['up', 'down'] as const).map(vote => {
+                        const active = feedbacks[p.id] === vote
+                        return (
+                          <button key={vote} onClick={() => submitFeedback(p.id, vote)}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center text-base transition-all"
+                            style={active
+                              ? { background: vote === 'up' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', transform: 'scale(1.1)' }
+                              : { background: 'rgba(255,255,255,0.04)' }
+                            }>
+                            {vote === 'up' ? '👍' : '👎'}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Trabajo en curso */}
-          {tasks.length > 0 && (
+          {/* Objetivos del mes */}
+          {allObjectives.length > 0 && (
             <div className="fs-4">
-              <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Trabajo en curso</p>
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Objetivos del mes</p>
               <div className="card-glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-                {tasks.slice(0, 6).map(t => (
-                  <div key={t.id} className="px-5 py-3.5 flex items-center gap-3.5">
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIO_DOT[t.priority] || 'bg-white/20'}`} />
-                    <p className="text-sm text-white/70 flex-1 truncate">{t.title}</p>
-                    {t.due_date && (
-                      <p className="text-[11px] text-white/25 shrink-0 font-medium">
-                        {new Date(t.due_date).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                {allObjectives.map(o => {
+                  const pctO = o.target_value > 0 ? Math.min(100, Math.round((o.current_value / o.target_value) * 100)) : 0
+                  return (
+                    <div key={o.id} className="px-5 py-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-white/80 font-medium">{o.title}</p>
+                        <p className="text-[12px] font-black text-[#f97316]">
+                          {o.current_value}{o.unit} <span className="text-white/25 font-normal">/ {o.target_value}{o.unit}</span>
+                        </p>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                        <div className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${pctO}%`, background: pctO >= 100 ? '#34d399' : 'linear-gradient(90deg, #f97316, #fb923c)' }} />
+                      </div>
+                      <p className="text-[10px] text-white/20 mt-1">{o.projectName}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Calendario de entregas */}
+          {upcoming.length > 0 && (
+            <div className="fs-5">
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Calendario de entregas</p>
+              <div className="card-glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+                {upcoming.map(t => {
+                  const d    = new Date(t.due_date!)
+                  const day  = d.toLocaleDateString('es-AR', { day: '2-digit' })
+                  const mon  = d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')
+                  const past = d < new Date()
+                  return (
+                    <div key={t.id} className="px-5 py-3.5 flex items-center gap-4">
+                      <div className="shrink-0 w-10 text-center">
+                        <p className={`text-lg font-black leading-none ${past ? 'text-red-400' : 'text-[#f97316]'}`}>{day}</p>
+                        <p className="text-[10px] text-white/25 uppercase tracking-wide">{mon}</p>
+                      </div>
+                      <div className="w-px h-8 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/75 truncate">{t.title}</p>
+                        {t.assigned_to && (
+                          <p className="text-[11px] text-white/25 mt-0.5 truncate">{t.assigned_to}</p>
+                        )}
+                      </div>
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${past ? 'bg-red-400' : PRIO_DOT[t.priority] || 'bg-white/20'}`} />
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
 
           {/* Equipo */}
           {team.length > 0 && (
-            <div className="fs-5">
+            <div className="fs-6">
               <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Tu equipo</p>
               <div className="grid grid-cols-2 gap-3">
                 {team.map(m => (
                   m.whatsapp ? (
-                    <a
-                      key={m.id}
-                      href={`https://wa.me/${m.whatsapp}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="card-glass rounded-2xl p-4 flex flex-col gap-3 hover:border-[#f97316]/25 transition-colors group"
-                    >
+                    <a key={m.id} href={`https://wa.me/${m.whatsapp}`} target="_blank" rel="noreferrer"
+                      className="card-glass rounded-2xl p-4 flex flex-col gap-3 hover:border-[#f97316]/25 transition-colors group">
                       <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[#f97316] text-lg"
                         style={{ background: 'rgba(249,115,22,0.1)' }}>
                         {m.name.charAt(0).toUpperCase()}
@@ -312,15 +413,11 @@ export default function PortalInicio() {
                         <p className="text-[11px] text-white/35 mt-0.5">{m.role}</p>
                       </div>
                       <span className="text-[11px] font-semibold text-emerald-400/80 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        WhatsApp
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> WhatsApp
                       </span>
                     </a>
                   ) : (
-                    <div
-                      key={m.id}
-                      className="card-glass rounded-2xl p-4 flex flex-col gap-3"
-                    >
+                    <div key={m.id} className="card-glass rounded-2xl p-4 flex flex-col gap-3">
                       <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[#f97316] text-lg"
                         style={{ background: 'rgba(249,115,22,0.1)' }}>
                         {m.name.charAt(0).toUpperCase()}
@@ -337,14 +434,82 @@ export default function PortalInicio() {
           )}
 
           {/* Footer */}
-          <p className="text-center text-[10px] text-white/15 tracking-widest uppercase py-2">
-            Nova Agency ·{' '}
-            <a href="https://instagram.com/novaagencytec" target="_blank" rel="noreferrer" className="hover:text-[#f97316]/60 transition-colors">
-              @novaagencytec
-            </a>
+          <p className="fs-7 text-center text-[10px] text-white/15 tracking-widest uppercase py-2">
+            Nova Agency · <a href="https://instagram.com/novaagencytec" target="_blank" rel="noreferrer" className="hover:text-[#f97316]/60 transition-colors">@novaagencytec</a>
           </p>
 
         </div>
+
+        {/* FAB — solicitudes */}
+        <div className="fixed bottom-0 left-0 right-0 px-5 z-30"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+          <div className="max-w-xl mx-auto">
+            {/* Selector de tipo si no hay sheet abierto */}
+            {!sheet && (
+              <div className="flex gap-2">
+                {(Object.entries(MSG_CONFIG) as [MsgType, typeof MSG_CONFIG[MsgType]][]).map(([type, cfg]) => (
+                  <button key={type} onClick={() => setSheet(type)}
+                    className="flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all"
+                    style={{ background: 'rgba(5,12,26,0.95)', border: `1px solid ${cfg.color}25`, color: cfg.color, backdropFilter: 'blur(16px)' }}>
+                    <span className="text-lg">{cfg.icon}</span>
+                    <span>{cfg.label.split(' ')[0]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sheet de mensaje */}
+        {sheet && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSheet(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="sheet-anim relative w-full rounded-t-3xl p-6 space-y-4 max-w-xl mx-auto"
+              style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={e => e.stopPropagation()}>
+
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{MSG_CONFIG[sheet].icon}</span>
+                  <p className="font-bold text-white text-base">{MSG_CONFIG[sheet].label}</p>
+                </div>
+                <button onClick={() => setSheet(null)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}>✕</button>
+              </div>
+
+              {sheet === 'new_service' && (
+                <input value={msgTitle} onChange={e => setMsgTitle(e.target.value)}
+                  placeholder="Título del servicio..."
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 outline-none"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+              )}
+
+              {projects.length > 0 && sheet === 'note' && (
+                <select value={msgProject} onChange={e => setMsgProject(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none appearance-none"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <option value="">Proyecto (opcional)</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
+
+              <textarea value={msgBody} onChange={e => setMsgBody(e.target.value)}
+                rows={4} placeholder={MSG_CONFIG[sheet].placeholder}
+                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 outline-none resize-none"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+
+              <button onClick={submitMessage} disabled={sending || !msgBody.trim()}
+                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40"
+                style={{ background: sent ? 'rgba(52,211,153,0.2)' : `linear-gradient(135deg, ${MSG_CONFIG[sheet].color}, ${MSG_CONFIG[sheet].color}cc)` }}>
+                {sent ? '✓ Enviado' : sending ? 'Enviando...' : 'Enviar'}
+              </button>
+
+              <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+            </div>
+          </div>
+        )}
+
       </div>
     </>
   )

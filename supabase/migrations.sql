@@ -202,3 +202,36 @@ alter table public.projects
 -- ── EQUIPO: campo whatsapp ────────────────────────────────────
 alter table public.team_members
   add column if not exists whatsapp text;
+
+-- ── PORTAL MESSAGES ──────────────────────────────────────────
+create table if not exists public.portal_messages (
+  id         uuid primary key default gen_random_uuid(),
+  client_id  uuid references public.clients(id) on delete cascade,
+  project_id uuid references public.projects(id) on delete set null,
+  type       text not null check (type in ('new_service', 'problem', 'note')),
+  title      text,
+  body       text not null,
+  status     text not null default 'pending',
+  created_at timestamptz not null default now()
+);
+
+-- ── PORTAL FEEDBACK ──────────────────────────────────────────
+create table if not exists public.portal_feedback (
+  id         uuid primary key default gen_random_uuid(),
+  project_id uuid references public.projects(id) on delete cascade,
+  client_id  uuid references public.clients(id) on delete cascade,
+  vote       text not null check (vote in ('up', 'down')),
+  created_at timestamptz not null default now(),
+  unique(project_id, client_id)
+);
+
+-- ── PROJECT OBJECTIVES ───────────────────────────────────────
+create table if not exists public.project_objectives (
+  id            uuid primary key default gen_random_uuid(),
+  project_id    uuid references public.projects(id) on delete cascade,
+  title         text not null,
+  current_value numeric not null default 0,
+  target_value  numeric not null default 100,
+  unit          text not null default '%',
+  created_at    timestamptz not null default now()
+);

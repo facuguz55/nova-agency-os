@@ -2,7 +2,7 @@ import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
   Zap, Terminal, Settings, ScrollText,
   CheckSquare, DollarSign, FileText, CalendarDays,
-  Brain, type LucideIcon,
+  Brain, Inbox, type LucideIcon,
 } from 'lucide-react'
 
 export interface SidebarItem {
@@ -22,6 +22,7 @@ export const ALL_ITEMS: Omit<SidebarItem, 'visible'>[] = [
   { href: '/tasks',        label: 'Tareas',           Icon: CheckSquare,       group: 'Trabajo' },
   { href: '/calendar',     label: 'Calendario',       Icon: CalendarDays,      group: 'Trabajo' },
   { href: '/invoices',     label: 'Facturación',      Icon: DollarSign,        group: 'Negocio' },
+  { href: '/solicitudes',  label: 'Solicitudes',      Icon: Inbox,             group: 'Negocio' },
   { href: '/notes',        label: 'Notas',            Icon: FileText,          group: 'Negocio' },
   { href: '/automations',  label: 'Automatizaciones', Icon: Zap,               group: 'Automatización' },
   { href: '/brain',        label: 'IA Brain',         Icon: Brain,             group: 'Automatización' },
