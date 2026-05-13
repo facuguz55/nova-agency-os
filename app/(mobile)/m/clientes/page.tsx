@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search, Globe, Copy, Check, ChevronRight, X } from 'lucide-react'
+import { Search, Globe, Copy, Check, ChevronRight, X, Share2 } from 'lucide-react'
 
 interface Client { id: string; name: string; email: string | null; industry: string | null; status: string }
 interface Portal { token: string; pin: string; active: boolean }
@@ -149,8 +149,23 @@ export default function ClientesMobilePage() {
                   </button>
                 </div>
 
+                {/* Compartir link de instalación */}
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/portal/${openPortal.portal!.token}/instalar`
+                    if (navigator.share) {
+                      navigator.share({ title: `Portal ${openPortal.clientName}`, text: `Accedé a tu portal de Nova Agency`, url })
+                    } else {
+                      navigator.clipboard.writeText(url)
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all"
+                  style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', color: '#f97316' }}>
+                  <Share2 size={15} /> Enviar link al cliente
+                </button>
+
                 {/* Abrir portal */}
-                <a href={`/portal/${openPortal.portal.token}`} target="_blank" rel="noreferrer"
+                <a href={`/portal/${openPortal.portal.token}/inicio`} target="_blank" rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all"
                   style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}>
                   <Globe size={16} /> Abrir portal del cliente

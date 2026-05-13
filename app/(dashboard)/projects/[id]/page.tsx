@@ -232,6 +232,16 @@ export default function ProjectDetailPage() {
                     {portal.active ? 'Activo' : 'Inactivo'}
                   </span>
                 </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/portal/${portal.token}/instalar`)
+                    setCopiedPortal(true); setTimeout(() => setCopiedPortal(false), 2000)
+                  }}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors"
+                  style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', color: '#f97316' }}
+                >
+                  {copiedPortal ? '✓ Link copiado' : '↗ Copiar link para cliente'}
+                </button>
               </div>
             )}
             {portal === null && project.client_id && (
