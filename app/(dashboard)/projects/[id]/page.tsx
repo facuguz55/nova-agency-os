@@ -62,7 +62,12 @@ export default function ProjectDetailPage() {
     await fetch(`/api/projects/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        name:        form.name,
+        status:      form.status,
+        budget:      form.budget ?? null,
+        description: form.description ?? null,
+      }),
     })
     setSaving(false); setEditing(false); load()
   }
