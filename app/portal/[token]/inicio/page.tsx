@@ -140,7 +140,8 @@ export default function PortalInicio() {
         </div>
 
         {/* Header */}
-        <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 py-4 flex items-center justify-between">
+        <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 flex items-center justify-between"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)', paddingBottom: '16px' }}>
           <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-contain rounded-xl" />
           <div className="flex items-center gap-2">
             {/* Botón instalar PWA */}
