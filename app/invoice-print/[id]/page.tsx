@@ -81,7 +81,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%);
         }
 
-        .agency-logo { width: 56px; height: 56px; object-fit: contain; }
+        .agency-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 14px; }
 
         .inv-number-area { text-align: right; }
         .inv-label {
@@ -186,7 +186,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           {/* Header */}
           <div className="inv-header">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-nova-clear.png" alt="Nova Agency" className="agency-logo" />
+            <img src="/logo-nova-dark.png" alt="Nova Agency" className="agency-logo" />
             <div className="inv-number-area">
               <p className="inv-label">Factura</p>
               <p className="inv-number">{inv.invoice_number}</p>

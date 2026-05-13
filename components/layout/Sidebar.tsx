@@ -75,11 +75,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {collapsed ? (
           <>
             <Image
-              src="/logo-nova-clear.png"
+              src="/logo-nova-dark.png"
               alt="Nova Agency"
               width={32}
               height={32}
-              className="object-contain shrink-0"
+              className="object-contain rounded-lg shrink-0"
             />
             <button
               onClick={onToggle}
@@ -91,11 +91,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <>
             <Image
-              src="/logo-nova-clear.png"
+              src="/logo-nova-dark.png"
               alt="Nova Agency"
               width={32}
               height={32}
-              className="object-contain shrink-0"
+              className="object-contain rounded-lg shrink-0"
             />
             <span className="text-sm font-bold text-white/90 truncate">Nova Agency</span>
             <button onClick={onToggle} className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md shrink-0">

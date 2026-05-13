@@ -114,7 +114,7 @@ export default function PortalPinPage() {
 
           {/* Logo */}
           <div className="flex justify-center mb-10 animate-fade-up">
-            <Image src="/logo-nova-clear.png" alt="Nova Agency" width={80} height={80} className="object-contain" />
+            <Image src="/logo-nova-dark.png" alt="Nova Agency" width={80} height={80} className="object-contain rounded-2xl" />
           </div>
 
           {/* Card */}

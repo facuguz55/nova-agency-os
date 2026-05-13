@@ -69,11 +69,11 @@ export default function MobileHomePage() {
             <p className="text-[10px] capitalize mt-0.5" style={{ color: 'rgba(255,255,255,0.2)' }}>{dayStr}</p>
           </div>
           <Image
-            src="/logo-nova-clear.png"
+            src="/logo-nova-dark.png"
             alt="Nova Agency"
             width={40}
             height={40}
-            className="object-contain shrink-0"
+            className="object-contain rounded-2xl shrink-0"
           />
         </div>
       </header>

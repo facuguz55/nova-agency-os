@@ -105,7 +105,7 @@ export default function LoginPage() {
           <div className="text-center mb-10 fade-up-1">
             <div className="flex justify-center mb-5">
               <Image
-                src="/logo-nova-clear.png"
+                src="/logo-nova-dark.png"
                 alt="Nova Agency"
                 width={96}
                 height={96}
