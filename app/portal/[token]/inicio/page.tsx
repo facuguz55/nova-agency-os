@@ -81,9 +81,11 @@ export default function PortalInicio() {
   if (!data) return null
   const { client, projects, tasks, reports, team } = data
 
-  const activeP    = projects.filter(p => p.status === 'active').length
-  const completedP = projects.filter(p => p.status === 'completed').length
-  const pct        = projects.length > 0 ? Math.round((completedP / projects.length) * 100) : 0
+  const allSubs    = projects.flatMap(p => p.subprojects || [])
+  const allItems   = [...projects, ...allSubs]
+  const activeP    = allItems.filter(p => p.status === 'active').length
+  const completedP = allItems.filter(p => p.status === 'completed').length
+  const pct        = allItems.length > 0 ? Math.round((completedP / allItems.length) * 100) : 0
 
   const hour = new Date().getHours()
   const greeting = hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches'
@@ -170,7 +172,7 @@ export default function PortalInicio() {
             </div>
             <div className="flex-1 grid grid-cols-3 gap-3">
               {[
-                { n: projects.length, label: 'Total', color: 'text-white' },
+                { n: allItems.length, label: 'Total', color: 'text-white' },
                 { n: activeP, label: 'En curso', color: 'text-emerald-400' },
                 { n: completedP, label: 'Listos', color: 'text-[#f97316]' },
               ].map(({ n, label, color }) => (
