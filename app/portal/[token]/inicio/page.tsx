@@ -39,10 +39,10 @@ const STATUS_BG: Record<string, string> = {
 const PRIO_DOT: Record<string, string> = {
   urgent: 'bg-red-400', high: 'bg-orange-400', medium: 'bg-amber-400', low: 'bg-white/20',
 }
-const MSG_CONFIG: Record<MsgType, { label: string; icon: string; placeholder: string; color: string }> = {
-  new_service: { label: 'Nuevo servicio',     icon: '🚀', placeholder: 'Describí el servicio que necesitás...', color: '#f97316' },
-  problem:     { label: 'Reportar problema',  icon: '🔴', placeholder: 'Describí el problema o urgencia...', color: '#f87171' },
-  note:        { label: 'Dejar una nota',     icon: '📝', placeholder: 'Escribí tu nota o comentario...', color: '#60a5fa' },
+const MSG_CONFIG: Record<MsgType, { label: string; placeholder: string; color: string }> = {
+  new_service: { label: 'Nuevo servicio',    placeholder: 'Describí el servicio que necesitás', color: '#f97316' },
+  problem:     { label: 'Reportar problema', placeholder: 'Describí el problema o urgencia',    color: '#f87171' },
+  note:        { label: 'Dejar una nota',    placeholder: 'Escribí tu nota o comentario',       color: '#60a5fa' },
 }
 
 function Ring({ pct, color = '#f97316', size = 56 }: { pct: number; color?: string; size?: number }) {
@@ -149,8 +149,6 @@ export default function PortalInicio() {
   if (!data) return null
 
   const { client, projects, tasks, reports, team } = data
-  const pin = typeof window !== 'undefined' ? localStorage.getItem(`portal_pin_${token}`) ?? '' : ''
-
   const allSubs    = projects.flatMap(p => p.subprojects || [])
   const allItems   = [...projects, ...allSubs]
   const activeP    = allItems.filter(p => p.status === 'active').length
@@ -440,72 +438,159 @@ export default function PortalInicio() {
 
         </div>
 
-        {/* FAB — solicitudes */}
-        <div className="fixed bottom-0 left-0 right-0 px-5 z-30"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
-          <div className="max-w-xl mx-auto">
-            {/* Selector de tipo si no hay sheet abierto */}
-            {!sheet && (
-              <div className="flex gap-2">
-                {(Object.entries(MSG_CONFIG) as [MsgType, typeof MSG_CONFIG[MsgType]][]).map(([type, cfg]) => (
-                  <button key={type} onClick={() => setSheet(type)}
-                    className="flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all"
-                    style={{ background: 'rgba(5,12,26,0.95)', border: `1px solid ${cfg.color}25`, color: cfg.color, backdropFilter: 'blur(16px)' }}>
-                    <span className="text-lg">{cfg.icon}</span>
-                    <span>{cfg.label.split(' ')[0]}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* FAB — botón circular fijo abajo a la derecha */}
+        {!sheet && (
+          <button
+            onClick={() => setSheet('new_service')}
+            className="fixed z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform active:scale-95"
+            style={{
+              bottom: 'calc(env(safe-area-inset-bottom) + 24px)',
+              right: '20px',
+              background: 'linear-gradient(135deg, #f97316, #fb923c)',
+              boxShadow: '0 8px 32px rgba(249,115,22,0.45)',
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        )}
 
-        {/* Sheet de mensaje */}
+        {/* Sheet — selector de tipo o formulario */}
         {sheet && (
-          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSheet(null)}>
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => { setSheet(null); setMsgTitle(''); setMsgBody(''); setMsgProject('') }}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="sheet-anim relative w-full rounded-t-3xl p-6 space-y-4 max-w-xl mx-auto"
+            <div className="sheet-anim relative w-full rounded-t-3xl max-w-xl mx-auto overflow-hidden"
               style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
               onClick={e => e.stopPropagation()}>
 
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{MSG_CONFIG[sheet].icon}</span>
-                  <p className="font-bold text-white text-base">{MSG_CONFIG[sheet].label}</p>
-                </div>
-                <button onClick={() => setSheet(null)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}>✕</button>
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
               </div>
 
-              {sheet === 'new_service' && (
-                <input value={msgTitle} onChange={e => setMsgTitle(e.target.value)}
-                  placeholder="Título del servicio..."
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 outline-none"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+              {/* Si el sheet es 'new_service' pero no hemos elegido tipo aún, mostramos selector */}
+              {sheet === 'new_service' && !msgBody && !msgTitle ? (
+                <div className="px-5 pb-6 pt-3 space-y-3">
+                  <p className="text-[11px] font-bold text-white/30 uppercase tracking-[.18em] mb-4">¿Qué necesitás?</p>
+                  {(Object.entries(MSG_CONFIG) as [MsgType, typeof MSG_CONFIG[MsgType]][]).map(([type, cfg]) => (
+                    <button key={type} onClick={e => { e.stopPropagation(); setSheet(type) }}
+                      className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all active:scale-[.98]"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.07)` }}>
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: `${cfg.color}15`, border: `1px solid ${cfg.color}25` }}>
+                        {type === 'new_service' && (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                          </svg>
+                        )}
+                        {type === 'problem' && (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                          </svg>
+                        )}
+                        {type === 'note' && (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-semibold text-white">{cfg.label}</p>
+                        <p className="text-[12px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{cfg.placeholder.replace('...', '')}</p>
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round">
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </button>
+                  ))}
+                  <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+                </div>
+              ) : (
+                <div className="px-5 pb-6 pt-2 space-y-3">
+                  {/* Header del formulario */}
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-3">
+                      <button onClick={e => { e.stopPropagation(); setMsgTitle(''); setMsgBody(''); setMsgProject(''); setSheet('new_service') }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
+                        style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-xl flex items-center justify-center"
+                          style={{ background: `${MSG_CONFIG[sheet].color}15` }}>
+                          {sheet === 'new_service' && (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MSG_CONFIG[sheet].color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                            </svg>
+                          )}
+                          {sheet === 'problem' && (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MSG_CONFIG[sheet].color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                            </svg>
+                          )}
+                          {sheet === 'note' && (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MSG_CONFIG[sheet].color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                          )}
+                        </div>
+                        <p className="font-bold text-white text-sm">{MSG_CONFIG[sheet].label}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => { setSheet(null); setMsgTitle(''); setMsgBody(''); setMsgProject('') }}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {sheet === 'new_service' && (
+                    <input value={msgTitle} onChange={e => setMsgTitle(e.target.value)}
+                      placeholder="Nombre del servicio"
+                      className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 outline-none"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  )}
+
+                  {projects.length > 0 && sheet === 'note' && (
+                    <select value={msgProject} onChange={e => setMsgProject(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none appearance-none"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <option value="">Proyecto (opcional)</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  )}
+
+                  <textarea value={msgBody} onChange={e => setMsgBody(e.target.value)}
+                    rows={4} placeholder={MSG_CONFIG[sheet].placeholder}
+                    className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 outline-none resize-none"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+
+                  <button onClick={submitMessage} disabled={sending || !msgBody.trim()}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                    style={{ background: sent ? 'rgba(52,211,153,0.2)' : `linear-gradient(135deg, ${MSG_CONFIG[sheet].color}, ${MSG_CONFIG[sheet].color}cc)` }}>
+                    {sent ? (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        Enviado
+                      </>
+                    ) : sending ? 'Enviando...' : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                        Enviar
+                      </>
+                    )}
+                  </button>
+
+                  <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+                </div>
               )}
-
-              {projects.length > 0 && sheet === 'note' && (
-                <select value={msgProject} onChange={e => setMsgProject(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none appearance-none"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <option value="">Proyecto (opcional)</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              )}
-
-              <textarea value={msgBody} onChange={e => setMsgBody(e.target.value)}
-                rows={4} placeholder={MSG_CONFIG[sheet].placeholder}
-                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 outline-none resize-none"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
-
-              <button onClick={submitMessage} disabled={sending || !msgBody.trim()}
-                className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40"
-                style={{ background: sent ? 'rgba(52,211,153,0.2)' : `linear-gradient(135deg, ${MSG_CONFIG[sheet].color}, ${MSG_CONFIG[sheet].color}cc)` }}>
-                {sent ? '✓ Enviado' : sending ? 'Enviando...' : 'Enviar'}
-              </button>
-
-              <div style={{ height: 'env(safe-area-inset-bottom)' }} />
             </div>
           </div>
         )}
