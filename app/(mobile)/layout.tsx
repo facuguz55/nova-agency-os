@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, MessageSquare, CheckSquare, FolderKanban } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, CheckSquare, FolderKanban, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: '/m/chat',      label: 'Chat IA',   Icon: MessageSquare },
   { href: '/m/tareas',    label: 'Tareas',    Icon: CheckSquare },
   { href: '/m/proyectos', label: 'Proyectos', Icon: FolderKanban },
+  { href: '/m/clientes',  label: 'Clientes',  Icon: Users },
 ]
 
 const NAV_H  = 64

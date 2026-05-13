@@ -53,6 +53,19 @@ export default function PortalInicio() {
   const router = useRouter()
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null)
+  const [isIOS, setIsIOS] = useState(false)
+  const [showIOSHint, setShowIOSHint] = useState(false)
+  const [installed, setInstalled] = useState(false)
+
+  useEffect(() => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as { standalone?: boolean }).standalone
+    setIsIOS(ios)
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => setInstalled(true))
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   useEffect(() => {
     const pin = localStorage.getItem(`portal_pin_${token}`)
@@ -130,6 +143,20 @@ export default function PortalInicio() {
         <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 py-4 flex items-center justify-between">
           <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-contain rounded-xl" />
           <div className="flex items-center gap-2">
+            {/* Botón instalar PWA */}
+            {!installed && (installPrompt || isIOS) && (
+              <button
+                onClick={() => {
+                  if (isIOS) { setShowIOSHint(h => !h); return }
+                  const prompt = installPrompt as { prompt: () => void }
+                  prompt.prompt()
+                  setInstallPrompt(null)
+                }}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/15 text-white/50 hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"
+              >
+                <span>⬇</span> Instalar app
+              </button>
+            )}
             <Link
               href={`/portal/${token}/bienvenida`}
               className="text-[11px] text-[#f97316] flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#f97316]/25 hover:border-[#f97316]/50 transition-colors font-semibold tracking-wide"
@@ -146,6 +173,13 @@ export default function PortalInicio() {
             )}
           </div>
         </header>
+
+        {/* Hint iOS */}
+        {showIOSHint && (
+          <div className="mx-5 mt-3 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-[12px] text-white/60 leading-relaxed">
+            En Safari: tocá <strong className="text-white/80">Compartir</strong> <span className="text-base">⎙</span> y luego <strong className="text-white/80">«Agregar a pantalla de inicio»</strong> para instalar el portal como app.
+          </div>
+        )}
 
         <div className="max-w-xl mx-auto px-5 pt-8 pb-20 space-y-7 relative">
 
