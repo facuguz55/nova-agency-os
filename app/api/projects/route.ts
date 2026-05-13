@@ -17,14 +17,23 @@ export async function GET(req: Request) {
   if (status)   query = query.eq('status', status)
   if (clientId) query = query.eq('client_id', clientId)
 
-  // Sin parent_id en query → solo proyectos raíz. Con parent_id → subproyectos de ese padre.
   if (parentId) {
     query = query.eq('parent_id', parentId)
   } else {
     query = query.is('parent_id', null)
   }
 
-  const { data, error } = await query
+  let { data, error } = await query
+
+  // Si falla (columna parent_id no existe aún), re-intentar sin ese filtro
+  if (error && error.message.includes('parent_id')) {
+    const fallback = await supabase
+      .from('projects')
+      .select('*, clients(name, email)')
+      .order('created_at', { ascending: false })
+    data  = fallback.data
+    error = fallback.error
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ projects: data || [] })
