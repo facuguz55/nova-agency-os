@@ -57,7 +57,8 @@ export default function ClientesMobilePage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar cliente..."
-            className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none"
+            className="flex-1 bg-transparent text-white placeholder-white/20 outline-none"
+            style={{ fontSize: '16px' }}
           />
         </div>
       </header>

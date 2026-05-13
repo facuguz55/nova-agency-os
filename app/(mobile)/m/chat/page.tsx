@@ -206,8 +206,8 @@ export default function MobileChatPage() {
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
               placeholder={micState === 'recording' ? 'Grabando...' : 'Mensaje...'}
               rows={1} inputMode="text" disabled={micState !== 'idle'}
-              className="flex-1 bg-transparent text-sm text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none disabled:opacity-40"
-              style={{ height: '24px', maxHeight: '96px' }}
+              className="flex-1 bg-transparent text-[#e2e8f0] placeholder-[#334155] resize-none focus:outline-none disabled:opacity-40"
+              style={{ height: '24px', maxHeight: '96px', fontSize: '16px', lineHeight: '1.4' }}
             />
             <button onClick={() => send(input)} disabled={!input.trim() || loading || micState !== 'idle'}
               className="shrink-0 w-8 h-8 rounded-xl bg-[#f97316] disabled:bg-[#1a2d45] flex items-center justify-center transition-colors">
