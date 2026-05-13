@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/lib/utils'
-import { FolderKanban, Plus, ChevronRight } from 'lucide-react'
+import { FolderKanban, Plus, ChevronRight, TrendingUp } from 'lucide-react'
 
 interface Project {
   id: string; name: string; status: string; description: string | null
@@ -100,6 +100,10 @@ export default function ProjectDetailPage() {
 
   const { project } = data
 
+  const subsBudget = subs.reduce((acc, s) => acc + (Number(s.budget) || 0), 0)
+  const baseBudget = Number(project.budget) || 0
+  const totalBudget = baseBudget + subsBudget
+
   return (
     <>
       <Header
@@ -147,8 +151,8 @@ export default function ProjectDetailPage() {
                   <dd><StatusBadge status={project.status} /></dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-[#475569] mb-1">Presupuesto</dt>
-                  <dd className="text-sm text-white">{project.budget ? `$${project.budget.toLocaleString('es-AR')}` : '—'}</dd>
+                  <dt className="text-xs text-[#475569] mb-1">Presupuesto base</dt>
+                  <dd className="text-sm text-white">{baseBudget ? `$${baseBudget.toLocaleString('es-AR')}` : '—'}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-[#475569] mb-1">Creado</dt>
@@ -212,39 +216,72 @@ export default function ProjectDetailPage() {
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-[#1a2d45]/60">
-              {subs.map(s => (
-                <div key={s.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-white/[.015] transition-colors group">
-                  <div className="w-1 h-8 rounded-full bg-[#f97316]/30 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{s.name}</p>
-                    {s.description && <p className="text-[11px] text-[#4a6080] truncate mt-0.5">{s.description}</p>}
-                  </div>
-                  {s.budget && (
-                    <span className="text-xs text-[#f97316] font-medium shrink-0">
-                      ${Number(s.budget).toLocaleString('es-AR')}
+            <>
+              <div className="divide-y divide-[#1a2d45]/60">
+                {subs.map(s => (
+                  <div key={s.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-white/[.015] transition-colors group">
+                    <div className="w-1 h-8 rounded-full bg-[#f97316]/30 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{s.name}</p>
+                      {s.description && <p className="text-[11px] text-[#4a6080] truncate mt-0.5">{s.description}</p>}
+                    </div>
+                    {s.budget && (
+                      <span className="text-xs text-[#f97316] font-medium shrink-0">
+                        ${Number(s.budget).toLocaleString('es-AR')}
+                      </span>
+                    )}
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLOR[s.status] || 'text-[#64748b] bg-[#1a2d45] border-[#253f60]'}`}>
+                      {STATUS_LABEL[s.status] || s.status}
                     </span>
-                  )}
-                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLOR[s.status] || 'text-[#64748b] bg-[#1a2d45] border-[#253f60]'}`}>
-                    {STATUS_LABEL[s.status] || s.status}
-                  </span>
-                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link
-                      href={`/projects/${s.id}`}
-                      className="p-1.5 text-[#64748b] hover:text-white transition-colors rounded-lg hover:bg-white/5"
-                    >
-                      <ChevronRight size={13} />
-                    </Link>
-                    <button
-                      onClick={() => deleteSubproject(s.id)}
-                      className="p-1.5 text-[#64748b] hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/5"
-                    >
-                      ×
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Link
+                        href={`/projects/${s.id}`}
+                        className="p-1.5 text-[#64748b] hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                      >
+                        <ChevronRight size={13} />
+                      </Link>
+                      <button
+                        onClick={() => deleteSubproject(s.id)}
+                        className="p-1.5 text-[#64748b] hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/5"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Resumen de presupuesto */}
+              {(baseBudget > 0 || subsBudget > 0) && (
+                <div className="border-t border-[#1a2d45] px-5 py-4 bg-[#0a1628]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp size={12} className="text-[#f97316]" />
+                    <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Resumen presupuesto</span>
+                  </div>
+                  <div className="space-y-2">
+                    {baseBudget > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[#475569]">Presupuesto base</span>
+                        <span className="text-white font-medium">${baseBudget.toLocaleString('es-AR')}</span>
+                      </div>
+                    )}
+                    {subs.filter(s => s.budget).map(s => (
+                      <div key={s.id} className="flex items-center justify-between text-xs">
+                        <span className="text-[#3a5070] pl-3 flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-[#f97316]/40 inline-block" />
+                          {s.name}
+                        </span>
+                        <span className="text-[#f97316]/70 font-medium">+${Number(s.budget).toLocaleString('es-AR')}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#1a2d45]">
+                      <span className="text-xs font-bold text-white/70">Total del proyecto</span>
+                      <span className="text-sm font-black text-[#f97316]">${totalBudget.toLocaleString('es-AR')}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
 
