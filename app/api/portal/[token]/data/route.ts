@@ -19,17 +19,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 
   const cid = portal.client_id
 
-  const [clientRes, projectsRes, tasksRes, reportsRes] = await Promise.all([
+  const [clientRes, projectsRes, subprojectsRes, tasksRes, reportsRes] = await Promise.all([
     supabase.from('clients').select('id,name,email,industry,contact_person,notes,created_at').eq('id', cid).single(),
-    supabase.from('projects').select('id,name,status,budget,created_at,updated_at').eq('client_id', cid).order('created_at', { ascending: false }),
+    supabase.from('projects').select('id,name,status,budget,description,created_at,updated_at').eq('client_id', cid).is('parent_id', null).order('created_at', { ascending: false }),
+    supabase.from('projects').select('id,name,status,budget,description,parent_id,created_at').eq('client_id', cid).not('parent_id', 'is', null).order('created_at', { ascending: false }),
     supabase.from('tasks').select('id,title,status,priority,due_date,assigned_to').eq('client_id', cid).neq('status', 'done').order('created_at', { ascending: false }),
     supabase.from('portal_reports').select('*').eq('portal_id', portal.id).order('created_at', { ascending: false }),
   ])
 
+  const topProjects = (projectsRes.data || []).map(p => ({
+    ...p,
+    subprojects: (subprojectsRes.data || []).filter(s => s.parent_id === p.id),
+  }))
+
   return NextResponse.json({
     client:   clientRes.data,
-    projects: projectsRes.data || [],
-    tasks:    tasksRes.data    || [],
-    reports:  reportsRes.data  || [],
+    projects: topProjects,
+    tasks:    tasksRes.data   || [],
+    reports:  reportsRes.data || [],
   })
 }

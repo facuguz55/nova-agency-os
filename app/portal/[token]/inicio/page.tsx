@@ -5,9 +5,13 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
+interface Subproject {
+  id: string; name: string; status: string; budget: number | null; description: string | null
+}
+
 interface PortalData {
   client: { id: string; name: string; email: string | null; industry: string | null; contact_person: string | null; notes: string | null }
-  projects: Array<{ id: string; name: string; status: string; budget: number | null; created_at: string }>
+  projects: Array<{ id: string; name: string; status: string; budget: number | null; created_at: string; subprojects: Subproject[] }>
   tasks: Array<{ id: string; title: string; status: string; priority: string; due_date: string | null; assigned_to: string | null }>
   reports: Array<{ id: string; title: string; period: string; created_at: string }>
 }
@@ -181,24 +185,47 @@ export default function PortalInicio() {
           {projects.length > 0 && (
             <div className="fs-3">
               <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Tus proyectos</p>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {projects.map(p => (
-                  <div key={p.id} className="card-glass rounded-2xl px-5 py-4 flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center font-black text-base"
-                      style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
-                      {p.name.charAt(0).toUpperCase()}
+                  <div key={p.id} className="card-glass rounded-2xl overflow-hidden">
+                    {/* Proyecto padre */}
+                    <div className="px-5 py-4 flex items-center gap-4">
+                      <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center font-black text-base"
+                        style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
+                        {p.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
+                        {p.budget && (
+                          <p className="text-[11px] text-white/30 mt-0.5">
+                            ${Number(p.budget).toLocaleString('es-AR')} ARS
+                          </p>
+                        )}
+                      </div>
+                      <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
+                        {STATUS_LABEL[p.status] || p.status}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
-                      {p.budget && (
-                        <p className="text-[11px] text-white/30 mt-0.5">
-                          ${Number(p.budget).toLocaleString('es-AR')} ARS
-                        </p>
-                      )}
-                    </div>
-                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
-                      {STATUS_LABEL[p.status] || p.status}
-                    </span>
+
+                    {/* Subproyectos */}
+                    {p.subprojects && p.subprojects.length > 0 && (
+                      <div className="border-t border-white/[0.04] divide-y divide-white/[0.03]">
+                        {p.subprojects.map(s => (
+                          <div key={s.id} className="flex items-center gap-3 pl-8 pr-5 py-3">
+                            <div className="w-1 h-5 rounded-full shrink-0" style={{ background: 'rgba(249,115,22,0.35)' }} />
+                            <p className="text-[12px] text-white/55 flex-1 truncate font-medium">{s.name}</p>
+                            {s.budget && (
+                              <span className="text-[11px] text-[#f97316]/60 shrink-0">
+                                ${Number(s.budget).toLocaleString('es-AR')}
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${STATUS_BG[s.status] || 'bg-white/5 text-white/30'}`}>
+                              {STATUS_LABEL[s.status] || s.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

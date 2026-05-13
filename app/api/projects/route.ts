@@ -7,13 +7,22 @@ export async function GET(req: Request) {
   const status = url.searchParams.get('status')
   const clientId = url.searchParams.get('client_id')
 
+  const parentId = url.searchParams.get('parent_id')
+
   let query = supabase
     .from('projects')
     .select('*, clients(name, email)')
     .order('created_at', { ascending: false })
 
-  if (status) query = query.eq('status', status)
+  if (status)   query = query.eq('status', status)
   if (clientId) query = query.eq('client_id', clientId)
+
+  // Sin parent_id en query → solo proyectos raíz. Con parent_id → subproyectos de ese padre.
+  if (parentId) {
+    query = query.eq('parent_id', parentId)
+  } else {
+    query = query.is('parent_id', null)
+  }
 
   const { data, error } = await query
 
