@@ -83,7 +83,9 @@ export default function PortalInstalarPage() {
 
           {/* Logo + agencia */}
           <div className="flex items-center gap-3">
-            <Image src="/logo-nova-dark.png" alt="Nova Agency" width={36} height={36} className="object-contain rounded-xl" />
+            <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0" style={{ background: '#0d1828' }}>
+              <Image src="/logo-nova-dark.png" alt="Nova Agency" width={36} height={36} className="object-cover w-full h-full" />
+            </div>
             <div>
               <p className="inst-title text-[11px] font-bold text-white/30 uppercase tracking-[.2em]">Nova Agency</p>
             </div>

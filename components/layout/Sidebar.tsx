@@ -74,13 +74,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       )}>
         {collapsed ? (
           <>
-            <Image
-              src="/logo-nova-dark.png"
-              alt="Nova Agency"
-              width={32}
-              height={32}
-              className="object-contain rounded-lg shrink-0"
-            />
+            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0" style={{ background: '#0d1828' }}>
+              <Image src="/logo-nova-dark.png" alt="Nova Agency" width={32} height={32} className="object-cover w-full h-full" />
+            </div>
             <button
               onClick={onToggle}
               className="absolute -right-3 top-[52px] w-6 h-6 rounded-full bg-[#0c1628] border border-[#1a2d45] flex items-center justify-center text-[#64748b] hover:text-[#f97316] transition-colors z-10"
@@ -90,14 +86,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </>
         ) : (
           <>
-            <Image
-              src="/logo-nova-dark.png"
-              alt="Nova Agency"
-              width={32}
-              height={32}
-              className="object-contain rounded-lg shrink-0"
-            />
-            <span className="text-sm font-bold text-white/90 truncate">Nova Agency</span>
+            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0" style={{ background: '#0d1828' }}>
+              <Image src="/logo-nova-dark.png" alt="Nova Agency" width={32} height={32} className="object-cover w-full h-full" />
+            </div>
+            <span className="text-sm font-bold text-white/90 truncate">Nova Agency OS</span>
             <button onClick={onToggle} className="text-[#334155] hover:text-[#64748b] transition-colors p-1 rounded-md shrink-0">
               <ChevronRight size={14} className="rotate-180" />
             </button>

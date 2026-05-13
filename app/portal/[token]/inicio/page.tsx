@@ -211,7 +211,9 @@ export default function PortalInicio() {
         {/* Header */}
         <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 flex items-center justify-between"
           style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)', paddingBottom: '16px' }}>
-          <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-contain" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0" style={{ background: '#0d1828' }}>
+            <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-cover w-full h-full" />
+          </div>
           <div className="flex items-center gap-2">
             {!installed && (installPrompt || isIOS) && (
               <button onClick={() => { if (isIOS) { setShowIOSHint(h => !h); return }; installPrompt?.prompt(); setInstallPrompt(null) }}
