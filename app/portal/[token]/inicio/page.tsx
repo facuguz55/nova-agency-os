@@ -76,6 +76,7 @@ export default function PortalInicio() {
   const [feedbacks, setFeedbacks] = useState<Record<string, 'up' | 'down' | null>>({})
 
   // solicitud / nota / problema
+  const [fabOpen, setFabOpen]       = useState(false)
   const [sheet, setSheet]           = useState<MsgType | null>(null)
   const [msgTitle, setMsgTitle]     = useState('')
   const [msgBody, setMsgBody]       = useState('')
@@ -210,7 +211,7 @@ export default function PortalInicio() {
         {/* Header */}
         <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 flex items-center justify-between"
           style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)', paddingBottom: '16px' }}>
-          <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-contain rounded-xl" />
+          <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-contain" />
           <div className="flex items-center gap-2">
             {!installed && (installPrompt || isIOS) && (
               <button onClick={() => { if (isIOS) { setShowIOSHint(h => !h); return }; installPrompt?.prompt(); setInstallPrompt(null) }}
@@ -439,9 +440,9 @@ export default function PortalInicio() {
         </div>
 
         {/* FAB — botón circular fijo abajo a la derecha */}
-        {!sheet && (
+        {!sheet && !fabOpen && (
           <button
-            onClick={() => setSheet('new_service')}
+            onClick={() => setFabOpen(true)}
             className="fixed z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform active:scale-95"
             style={{
               bottom: 'calc(env(safe-area-inset-bottom) + 24px)',
@@ -456,27 +457,22 @@ export default function PortalInicio() {
           </button>
         )}
 
-        {/* Sheet — selector de tipo o formulario */}
-        {sheet && (
-          <div className="fixed inset-0 z-50 flex items-end" onClick={() => { setSheet(null); setMsgTitle(''); setMsgBody(''); setMsgProject('') }}>
+        {/* Sheet — selector de tipo */}
+        {fabOpen && !sheet && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setFabOpen(false)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="sheet-anim relative w-full rounded-t-3xl max-w-xl mx-auto overflow-hidden"
               style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
               onClick={e => e.stopPropagation()}>
-
-              {/* Handle */}
               <div className="flex justify-center pt-3 pb-1">
                 <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
               </div>
-
-              {/* Si el sheet es 'new_service' pero no hemos elegido tipo aún, mostramos selector */}
-              {sheet === 'new_service' && !msgBody && !msgTitle ? (
-                <div className="px-5 pb-6 pt-3 space-y-3">
-                  <p className="text-[11px] font-bold text-white/30 uppercase tracking-[.18em] mb-4">¿Qué necesitás?</p>
-                  {(Object.entries(MSG_CONFIG) as [MsgType, typeof MSG_CONFIG[MsgType]][]).map(([type, cfg]) => (
-                    <button key={type} onClick={e => { e.stopPropagation(); setSheet(type) }}
-                      className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all active:scale-[.98]"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.07)` }}>
+              <div className="px-5 pb-6 pt-3 space-y-3">
+                <p className="text-[11px] font-bold text-white/30 uppercase tracking-[.18em] mb-4">¿Qué necesitás?</p>
+                {(Object.entries(MSG_CONFIG) as [MsgType, typeof MSG_CONFIG[MsgType]][]).map(([type, cfg]) => (
+                  <button key={type} onClick={() => { setSheet(type); setFabOpen(false) }}
+                    className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all active:scale-[.98]"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.07)` }}>
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: `${cfg.color}15`, border: `1px solid ${cfg.color}25` }}>
                         {type === 'new_service' && (
@@ -506,12 +502,25 @@ export default function PortalInicio() {
                   ))}
                   <div style={{ height: 'env(safe-area-inset-bottom)' }} />
                 </div>
-              ) : (
+            </div>
+          </div>
+        )}
+
+        {/* Sheet — formulario */}
+        {sheet && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => { setSheet(null); setMsgTitle(''); setMsgBody(''); setMsgProject('') }}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="sheet-anim relative w-full rounded-t-3xl max-w-xl mx-auto overflow-hidden"
+              style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
+              </div>
                 <div className="px-5 pb-6 pt-2 space-y-3">
                   {/* Header del formulario */}
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
-                      <button onClick={e => { e.stopPropagation(); setMsgTitle(''); setMsgBody(''); setMsgProject(''); setSheet('new_service') }}
+                      <button onClick={e => { e.stopPropagation(); setMsgTitle(''); setMsgBody(''); setMsgProject(''); setSheet(null); setFabOpen(true) }}
                         className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
                         style={{ background: 'rgba(255,255,255,0.05)' }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
