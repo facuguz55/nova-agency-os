@@ -12,7 +12,7 @@ import {
 } from '@/lib/sidebar-config'
 
 interface TeamMember {
-  id: string; name: string; email: string; role: string; status: string; created_at: string
+  id: string; name: string; email: string; role: string; status: string; created_at: string; whatsapp: string | null
 }
 
 const INTEGRATIONS = [
@@ -41,7 +41,8 @@ export default function ConfigPage() {
   const [team, setTeam]             = useState<TeamMember[]>([])
   const [loadingTeam, setLoadingTeam] = useState(true)
   const [showModal, setShowModal]   = useState(false)
-  const [form, setForm]             = useState({ name: '', email: '', role: 'user' })
+  const [editMember, setEditMember] = useState<TeamMember | null>(null)
+  const [form, setForm]             = useState({ name: '', email: '', role: 'user', whatsapp: '' })
   const [saving, setSaving]         = useState(false)
 
   /* ── Sidebar config ─────────────────────────────── */
@@ -75,14 +76,46 @@ export default function ConfigPage() {
     setLoadingTeam(false)
   }
 
-  async function addMember() {
+  function openAdd() {
+    setEditMember(null)
+    setForm({ name: '', email: '', role: 'user', whatsapp: '' })
+    setShowModal(true)
+  }
+
+  function openEdit(m: TeamMember) {
+    setEditMember(m)
+    setForm({ name: m.name, email: m.email, role: m.role, whatsapp: m.whatsapp || '' })
+    setShowModal(true)
+  }
+
+  async function saveMember() {
+    if (!form.name.trim()) return
     setSaving(true)
     const { createClient } = await import('@/lib/supabase/client')
     const s = createClient()
-    await s.from('team_members').insert({ name: form.name, email: form.email, role: form.role })
+    const payload = {
+      name:      form.name.trim(),
+      email:     form.email.trim(),
+      role:      form.role,
+      whatsapp:  form.whatsapp.trim() || null,
+    }
+    if (editMember) {
+      await s.from('team_members').update(payload).eq('id', editMember.id)
+    } else {
+      await s.from('team_members').insert(payload)
+    }
     setShowModal(false)
-    setForm({ name: '', email: '', role: 'user' })
+    setEditMember(null)
+    setForm({ name: '', email: '', role: 'user', whatsapp: '' })
     setSaving(false)
+    loadTeam()
+  }
+
+  async function deleteMember(m: TeamMember) {
+    if (!confirm(`¿Eliminar a ${m.name} del equipo?`)) return
+    const { createClient } = await import('@/lib/supabase/client')
+    const s = createClient()
+    await s.from('team_members').delete().eq('id', m.id)
     loadTeam()
   }
 
@@ -245,7 +278,7 @@ export default function ConfigPage() {
         <section className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-white">Equipo</h3>
-            <Button size="sm" onClick={() => setShowModal(true)}>+ Agregar</Button>
+            <Button size="sm" onClick={openAdd}>+ Agregar</Button>
           </div>
           {loadingTeam ? (
             <p className="text-sm text-[#4a6080]">Cargando...</p>
@@ -259,16 +292,31 @@ export default function ConfigPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{m.name}</p>
-                      <p className="text-xs text-[#4a6080]">{m.email} · {m.role}</p>
+                      <p className="text-xs text-[#4a6080]">
+                        {m.email}{m.role ? ` · ${m.role}` : ''}
+                        {m.whatsapp && <span className="text-emerald-500/60"> · WA: {m.whatsapp}</span>}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={m.status} />
                     <button
+                      onClick={() => openEdit(m)}
+                      className="text-xs px-2.5 py-1 bg-[#1a2d45] hover:bg-[#253f60] text-[#94a3b8] hover:text-white rounded-lg transition-colors"
+                    >
+                      Editar
+                    </button>
+                    <button
                       onClick={() => toggleStatus(m)}
                       className="text-xs px-2.5 py-1 bg-[#1a2d45] hover:bg-[#253f60] text-[#94a3b8] hover:text-white rounded-lg transition-colors"
                     >
                       {m.status === 'active' ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button
+                      onClick={() => deleteMember(m)}
+                      className="text-xs px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 rounded-lg transition-colors"
+                    >
+                      Eliminar
                     </button>
                   </div>
                 </div>
@@ -311,21 +359,40 @@ export default function ConfigPage() {
 
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Agregar miembro del equipo">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editMember ? 'Editar miembro' : 'Agregar miembro'}>
         <div className="space-y-4">
-          <p className="text-xs text-[#4a6080]">
-            Para crear el usuario en Supabase Auth usá "Invite user" desde el dashboard → Authentication. Acá solo registrás el miembro en la tabla del equipo.
-          </p>
-          <Input label="Nombre" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Juan García" />
-          <Input label="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} type="email" placeholder="juan@email.com" />
+          {!editMember && (
+            <p className="text-xs text-[#4a6080]">
+              Para acceso al sistema usá "Invite user" en Supabase Auth. Acá solo registrás el miembro en la tabla del equipo.
+            </p>
+          )}
+          <Input
+            label="Nombre *"
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder="Juan García"
+          />
+          <Input
+            label="Email"
+            value={form.email}
+            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            type="email"
+            placeholder="juan@email.com"
+          />
           <Select label="Rol" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
             <option value="user">Usuario</option>
             <option value="manager">Manager</option>
             <option value="owner">Owner</option>
           </Select>
+          <Input
+            label="WhatsApp (sin + ni espacios)"
+            value={form.whatsapp}
+            onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))}
+            placeholder="5491112345678"
+          />
           <div className="flex gap-2 pt-1">
-            <Button onClick={addMember} disabled={saving || !form.name || !form.email}>
-              {saving ? 'Guardando...' : 'Agregar'}
+            <Button onClick={saveMember} disabled={saving || !form.name.trim()}>
+              {saving ? 'Guardando...' : editMember ? 'Guardar cambios' : 'Agregar'}
             </Button>
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
           </div>

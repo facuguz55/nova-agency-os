@@ -14,6 +14,7 @@ interface PortalData {
   projects: Array<{ id: string; name: string; status: string; budget: number | null; created_at: string; subprojects: Subproject[] }>
   tasks: Array<{ id: string; title: string; status: string; priority: string; due_date: string | null; assigned_to: string | null }>
   reports: Array<{ id: string; title: string; period: string; created_at: string }>
+  team: Array<{ id: string; name: string; role: string; whatsapp: string | null }>
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -78,7 +79,7 @@ export default function PortalInicio() {
   )
 
   if (!data) return null
-  const { client, projects, tasks, reports } = data
+  const { client, projects, tasks, reports, team } = data
 
   const activeP    = projects.filter(p => p.status === 'active').length
   const completedP = projects.filter(p => p.status === 'completed').length
@@ -253,36 +254,51 @@ export default function PortalInicio() {
           )}
 
           {/* Equipo */}
-          <div className="fs-5">
-            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Tu equipo</p>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { name: 'Facundo Guzmán', role: 'Desarrollo & Automatización', wa: '549424633285', initial: 'F' },
-                { name: 'Mauricio Kinkela', role: 'Estrategia & Operaciones', wa: '5493424484572', initial: 'M' },
-              ].map(m => (
-                <a
-                  key={m.name}
-                  href={`https://wa.me/${m.wa}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="card-glass rounded-2xl p-4 flex flex-col gap-3 hover:border-[#f97316]/25 transition-colors group"
-                >
-                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[#f97316] text-lg"
-                    style={{ background: 'rgba(249,115,22,0.1)' }}>
-                    {m.initial}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors leading-tight">{m.name}</p>
-                    <p className="text-[11px] text-white/35 mt-0.5">{m.role}</p>
-                  </div>
-                  <span className="text-[11px] font-semibold text-emerald-400/80 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    WhatsApp
-                  </span>
-                </a>
-              ))}
+          {team.length > 0 && (
+            <div className="fs-5">
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Tu equipo</p>
+              <div className="grid grid-cols-2 gap-3">
+                {team.map(m => (
+                  m.whatsapp ? (
+                    <a
+                      key={m.id}
+                      href={`https://wa.me/${m.whatsapp}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="card-glass rounded-2xl p-4 flex flex-col gap-3 hover:border-[#f97316]/25 transition-colors group"
+                    >
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[#f97316] text-lg"
+                        style={{ background: 'rgba(249,115,22,0.1)' }}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors leading-tight">{m.name}</p>
+                        <p className="text-[11px] text-white/35 mt-0.5">{m.role}</p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-emerald-400/80 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        WhatsApp
+                      </span>
+                    </a>
+                  ) : (
+                    <div
+                      key={m.id}
+                      className="card-glass rounded-2xl p-4 flex flex-col gap-3"
+                    >
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[#f97316] text-lg"
+                        style={{ background: 'rgba(249,115,22,0.1)' }}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white/90 leading-tight">{m.name}</p>
+                        <p className="text-[11px] text-white/35 mt-0.5">{m.role}</p>
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Footer */}
           <p className="text-center text-[10px] text-white/15 tracking-widest uppercase py-2">

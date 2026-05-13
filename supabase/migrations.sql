@@ -198,3 +198,7 @@ create index if not exists projects_parent_idx on public.projects(parent_id);
 
 alter table public.projects
   add column if not exists add_to_budget boolean not null default true;
+
+-- ── EQUIPO: campo whatsapp ────────────────────────────────────
+alter table public.team_members
+  add column if not exists whatsapp text;
