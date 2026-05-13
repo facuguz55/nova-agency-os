@@ -49,7 +49,7 @@ export default function PortalBienvenida() {
       `}</style>
 
       {/* Botón imprimir */}
-      <div className="no-print fixed top-5 right-5 z-50 flex gap-2">
+      <div className="no-print fixed right-5 z-50 flex gap-2" style={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}>
         <a href={`/portal/${token}/inicio`}
           className="px-4 py-2 text-sm font-semibold rounded-xl border border-white/15 text-white/60 hover:text-white transition-colors"
           style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(12px)' }}>
