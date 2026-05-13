@@ -73,7 +73,7 @@ export default function MobileHomePage() {
             alt="Nova Agency"
             width={40}
             height={40}
-            className="object-contain rounded-2xl shrink-0"
+            className="object-contain shrink-0"
           />
         </div>
       </header>

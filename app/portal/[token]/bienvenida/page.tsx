@@ -81,7 +81,7 @@ export default function PortalBienvenida() {
               style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #f97316 0%, transparent 50%), radial-gradient(circle at 20% 80%, #3b82f6 0%, transparent 50%)' }} />
 
             <div className="relative flex items-start justify-between mb-10">
-              <Image src="/logo-nova-clear.png" alt="Nova Agency" width={56} height={56} className="object-contain rounded-2xl" />
+              <Image src="/logo-nova-clear.png" alt="Nova Agency" width={64} height={64} className="object-contain" />
               <div className="text-right">
                 <p className="text-white/20 text-[10px] uppercase tracking-[.15em] font-semibold">Documento de bienvenida</p>
                 <p className="text-white/30 text-xs mt-1">{today}</p>
