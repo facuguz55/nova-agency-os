@@ -599,7 +599,6 @@ export default function PortalInicio() {
 
                   <div style={{ height: 'env(safe-area-inset-bottom)' }} />
                 </div>
-              )}
             </div>
           </div>
         )}
