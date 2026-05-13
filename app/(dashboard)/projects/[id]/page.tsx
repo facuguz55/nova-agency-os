@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/lib/utils'
-import { FolderKanban, Plus, ChevronRight, TrendingUp } from 'lucide-react'
+import { FolderKanban, Plus, ChevronRight, TrendingUp, Globe, Copy, Check } from 'lucide-react'
 
 interface Project {
   id: string; name: string; status: string; description: string | null
@@ -41,6 +41,8 @@ export default function ProjectDetailPage() {
   const [showSubModal, setShowSubModal] = useState(false)
   const [subForm, setSubForm]     = useState<typeof SUB_EMPTY>(SUB_EMPTY)
   const [savingSub, setSavingSub] = useState(false)
+  const [portal, setPortal]       = useState<{ token: string; pin: string; active: boolean } | null | undefined>(undefined)
+  const [copiedPortal, setCopiedPortal] = useState(false)
 
   async function load() {
     const res = await fetch(`/api/projects/${id}`)
@@ -55,7 +57,17 @@ export default function ProjectDetailPage() {
     setSubs(json.projects || [])
   }
 
-  useEffect(() => { load(); loadSubs() }, [id])
+  useEffect(() => {
+    load(); loadSubs()
+  }, [id])
+
+  useEffect(() => {
+    if (!data?.project.client_id) return
+    fetch(`/api/clients/${data.project.client_id}/portal`)
+      .then(r => r.json())
+      .then(j => setPortal(j.portal ?? null))
+      .catch(() => setPortal(null))
+  }, [data?.project.client_id])
 
   async function save() {
     setSaving(true)
@@ -182,8 +194,8 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Cliente */}
-          <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-5">
-            <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-widest mb-4">Cliente</h3>
+          <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-5 space-y-4">
+            <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-widest">Cliente</h3>
             {project.clients ? (
               <dl className="space-y-3">
                 <div><dt className="text-xs text-[#475569] mb-1">Nombre</dt><dd className="text-sm text-white">{project.clients.name}</dd></div>
@@ -192,6 +204,42 @@ export default function ProjectDetailPage() {
               </dl>
             ) : (
               <p className="text-sm text-[#475569]">Sin cliente asociado</p>
+            )}
+
+            {/* Portal del cliente */}
+            {portal && (
+              <div className="border-t border-[#1a2d45] pt-4">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <Globe size={11} className="text-[#f97316]" />
+                  <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Portal</span>
+                  <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
+                    className="ml-auto text-[10px] text-[#f97316] hover:text-[#fb923c] transition-colors">
+                    Abrir →
+                  </a>
+                </div>
+                <div className="flex items-center gap-2 p-2 bg-[#080f1e] rounded-lg border border-[#1a2d45]">
+                  <span className="text-[11px] text-[#4a6080] truncate flex-1">/portal/{portal.token.slice(0, 12)}…</span>
+                  <button onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/portal/${portal.token}`)
+                    setCopiedPortal(true); setTimeout(() => setCopiedPortal(false), 2000)
+                  }} className="shrink-0 text-[#4a6080] hover:text-white transition-colors">
+                    {copiedPortal ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                  </button>
+                </div>
+                <p className="text-xs text-[#475569] mt-2">
+                  PIN: <span className="text-white font-mono font-bold tracking-widest">{portal.pin}</span>
+                  <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${portal.active ? 'text-emerald-400 bg-emerald-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                    {portal.active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </p>
+              </div>
+            )}
+            {portal === null && project.client_id && (
+              <div className="border-t border-[#1a2d45] pt-4">
+                <Link href={`/clients/${project.client_id}`} className="text-xs text-[#f97316]/60 hover:text-[#f97316] transition-colors flex items-center gap-1">
+                  <Globe size={11} /> Crear portal en el cliente →
+                </Link>
+              </div>
             )}
           </div>
         </div>

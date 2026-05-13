@@ -175,6 +175,22 @@ async function getRelevantContext(message: string): Promise<string> {
       if (data) parts.push(`Métricas actuales: ${JSON.stringify(data)}`)
     }
 
+    // ── Condicional: portales si el mensaje lo pide ───────────
+    if (lower.includes('portal') || lower.includes('pin') || lower.includes('acceso') || lower.includes('link')) {
+      const { data: portals } = await supabase
+        .from('client_portals')
+        .select('token, pin, active, clients(name)')
+        .eq('active', true)
+        .limit(20)
+      if (portals?.length) {
+        const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://nova-agency-os.vercel.app'
+        const list = portals.map((p: { token: string; pin: string; active: boolean; clients: { name: string } | null }) =>
+          `- ${p.clients?.name || 'Sin nombre'}: ${origin}/portal/${p.token} | PIN: ${p.pin}`
+        ).join('\n')
+        parts.push(`Portales activos de clientes:\n${list}`)
+      }
+    }
+
     return parts.join('\n\n')
   } catch {
     return ''

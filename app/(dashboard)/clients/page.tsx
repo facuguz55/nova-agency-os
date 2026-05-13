@@ -7,12 +7,14 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatRelative } from '@/lib/utils'
-import { UserPlus, Search, ChevronRight } from 'lucide-react'
+import { UserPlus, Search, ChevronRight, Globe, Copy, Check, X } from 'lucide-react'
 
 interface Client {
   id: string; name: string; email: string | null; industry: string | null
   status: string; contact_person: string | null; notes: string | null; created_at: string
 }
+
+interface QuickPortal { clientId: string; portal: { token: string; pin: string; active: boolean } | null; loading: boolean }
 
 const EMPTY = { name: '', email: '', industry: '', status: 'active', contact_person: '', notes: '' }
 
@@ -24,7 +26,17 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm]           = useState(EMPTY)
   const [saving, setSaving]       = useState(false)
+  const [quickPortal, setQuickPortal] = useState<QuickPortal | null>(null)
+  const [copied, setCopied]       = useState(false)
   const router = useRouter()
+
+  async function openPortal(e: React.MouseEvent, clientId: string) {
+    e.stopPropagation()
+    setQuickPortal({ clientId, portal: null, loading: true })
+    const res = await fetch(`/api/clients/${clientId}/portal`)
+    const { portal } = await res.json()
+    setQuickPortal({ clientId, portal: portal ?? null, loading: false })
+  }
 
   async function load() {
     setLoading(true)
@@ -125,7 +137,50 @@ export default function ClientsPage() {
                     <td className="px-5 py-4 text-sm text-[#475569]">{c.contact_person || '—'}</td>
                     <td className="px-5 py-4"><StatusBadge status={c.status}/></td>
                     <td className="px-5 py-4 text-xs text-[#334155]">{formatRelative(c.created_at)}</td>
-                    <td className="px-3"><ChevronRight size={14} className="text-[#1e2f4a] group-hover:text-[#ff8c42] transition-colors"/></td>
+                    <td className="px-3 relative">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={e => openPortal(e, c.id)}
+                          title="Ver portal"
+                          className="p-1 text-[#1e2f4a] hover:text-[#f97316] transition-colors rounded opacity-0 group-hover:opacity-100"
+                        >
+                          <Globe size={13} />
+                        </button>
+                        <ChevronRight size={14} className="text-[#1e2f4a] group-hover:text-[#ff8c42] transition-colors"/>
+                      </div>
+                      {/* Popover */}
+                      {quickPortal?.clientId === c.id && (
+                        <div onClick={e => e.stopPropagation()} className="absolute right-0 top-full mt-1 z-50 w-64 bg-[#0f1d30] border border-[#1a2d45] rounded-xl shadow-2xl p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Portal del cliente</span>
+                            <button onClick={() => setQuickPortal(null)} className="text-[#334155] hover:text-white transition-colors"><X size={12}/></button>
+                          </div>
+                          {quickPortal.loading ? (
+                            <p className="text-xs text-[#475569]">Cargando...</p>
+                          ) : quickPortal.portal ? (
+                            <div className="space-y-2.5">
+                              <div className="flex items-center gap-2 p-2 bg-[#080f1e] rounded-lg border border-[#1a2d45]">
+                                <a href={`/portal/${quickPortal.portal.token}`} target="_blank" rel="noreferrer"
+                                  className="text-[11px] text-[#f97316] hover:text-[#fb923c] truncate flex-1 transition-colors">
+                                  Abrir portal →
+                                </a>
+                                <button onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/portal/${quickPortal.portal!.token}`)
+                                  setCopied(true); setTimeout(() => setCopied(false), 2000)
+                                }} className="shrink-0 text-[#4a6080] hover:text-white transition-colors">
+                                  {copied ? <Check size={11} className="text-emerald-400"/> : <Copy size={11}/>}
+                                </button>
+                              </div>
+                              <p className="text-xs text-[#475569]">
+                                PIN: <span className="text-white font-mono font-bold tracking-widest">{quickPortal.portal.pin}</span>
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[#475569]">Sin portal. <a href={`/clients/${c.id}`} className="text-[#f97316] hover:underline">Crear uno →</a></p>
+                          )}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
