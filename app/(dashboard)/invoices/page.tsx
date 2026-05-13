@@ -27,6 +27,7 @@ export default function InvoicesPage() {
   const [loading, setLoading]   = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null)
   const [form, setForm]         = useState(EMPTY)
   const [saving, setSaving]     = useState(false)
 
@@ -44,13 +45,43 @@ export default function InvoicesPage() {
 
   useEffect(() => { load() }, [statusFilter])
 
+  function openEdit(inv: Invoice) {
+    setEditInvoice(inv)
+    setForm({
+      client_id:   '',
+      amount:      String(inv.amount),
+      status:      inv.status,
+      description: inv.description || '',
+      due_date:    inv.due_date ? inv.due_date.split('T')[0] : '',
+    })
+    setShowModal(true)
+  }
+
+  function openNew() {
+    setEditInvoice(null)
+    setForm(EMPTY)
+    setShowModal(true)
+  }
+
   async function save() {
     setSaving(true)
-    await fetch('/api/invoices', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), due_date: form.due_date || null }),
-    })
-    setShowModal(false); setForm(EMPTY); setSaving(false); load()
+    if (editInvoice) {
+      await fetch(`/api/invoices/${editInvoice.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount:      parseFloat(form.amount),
+          status:      form.status,
+          description: form.description || null,
+          due_date:    form.due_date || null,
+        }),
+      })
+    } else {
+      await fetch('/api/invoices', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, amount: parseFloat(form.amount), due_date: form.due_date || null }),
+      })
+    }
+    setShowModal(false); setEditInvoice(null); setForm(EMPTY); setSaving(false); load()
   }
 
   async function markPaid(id: string) {
@@ -86,7 +117,7 @@ export default function InvoicesPage() {
       <Header
         title="Facturación"
         subtitle="Revenue tracking"
-        actions={<Button onClick={() => setShowModal(true)} size="sm"><Plus size={13}/> Nueva factura</Button>}
+        actions={<Button onClick={openNew} size="sm"><Plus size={13}/> Nueva factura</Button>}
       />
 
       <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-grid">
@@ -167,6 +198,12 @@ export default function InvoicesPage() {
                           >
                             PDF
                           </button>
+                          <button
+                            onClick={() => openEdit(inv)}
+                            className="text-xs px-2 py-1 bg-[#1e2f4a] hover:bg-[#253f60] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-lg transition-colors"
+                          >
+                            Editar
+                          </button>
                           {inv.status !== 'paid' && (
                             <button onClick={() => markPaid(inv.id)} className="text-xs px-2 py-1 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 rounded-lg transition-colors">
                               Cobrada
@@ -186,25 +223,36 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Nueva factura">
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditInvoice(null) }} title={editInvoice ? `Editar factura ${editInvoice.invoice_number}` : 'Nueva factura'}>
         <div className="space-y-4">
-          <Select label="Cliente *" value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}>
-            <option value="">Seleccionar cliente...</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+          {editInvoice && (
+            <div className="px-3 py-2 bg-[#0f1d30] border border-[#1a2d45] rounded-lg">
+              <p className="text-xs text-[#64748b]">Cliente: <span className="text-white font-medium">{editInvoice.clients?.name || '—'}</span></p>
+            </div>
+          )}
+          {!editInvoice && (
+            <Select label="Cliente *" value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}>
+              <option value="">Seleccionar cliente...</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+          )}
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Monto (ARS) *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="200.000k" />
+            <Input label="Monto (ARS) *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="200.000" />
             <Select label="Estado" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
               <option value="draft">Borrador</option>
               <option value="pending">Pendiente</option>
               <option value="paid">Pagada</option>
+              <option value="overdue">Vencida</option>
+              <option value="canceled">Cancelada</option>
             </Select>
           </div>
           <Input label="Fecha de vencimiento" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} type="date" />
           <Textarea label="Descripción" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Servicios de marketing digital — Marzo 2026" />
           <div className="flex gap-3 pt-2">
-            <Button onClick={save} disabled={saving || !form.client_id || !form.amount}>{saving ? 'Guardando...' : 'Crear factura'}</Button>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
+            <Button onClick={save} disabled={saving || (!editInvoice && (!form.client_id || !form.amount)) || (!!editInvoice && !form.amount)}>
+              {saving ? 'Guardando...' : editInvoice ? 'Guardar cambios' : 'Crear factura'}
+            </Button>
+            <Button variant="secondary" onClick={() => { setShowModal(false); setEditInvoice(null) }}>Cancelar</Button>
           </div>
         </div>
       </Modal>
