@@ -17,7 +17,7 @@ interface Project {
 }
 
 interface Subproject {
-  id: string; name: string; status: string; description: string | null; budget: number | null; created_at: string
+  id: string; name: string; status: string; description: string | null; budget: number | null; created_at: string; add_to_budget: boolean
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -27,7 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   planning:  'text-blue-400 bg-blue-400/10 border-blue-400/20',
 }
 const STATUS_LABEL: Record<string, string> = { active: 'Activo', completed: 'Completado', paused: 'Pausado', planning: 'Planning' }
-const SUB_EMPTY = { name: '', status: 'planning', description: '', budget: '' }
+const SUB_EMPTY = { name: '', status: 'planning', description: '', budget: '', add_to_budget: true }
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,7 +38,7 @@ export default function ProjectDetailPage() {
   const [form, setForm]           = useState<Partial<Project>>({})
   const [saving, setSaving]       = useState(false)
   const [showSubModal, setShowSubModal] = useState(false)
-  const [subForm, setSubForm]     = useState(SUB_EMPTY)
+  const [subForm, setSubForm]     = useState<typeof SUB_EMPTY>(SUB_EMPTY)
   const [savingSub, setSavingSub] = useState(false)
 
   async function load() {
@@ -79,12 +79,12 @@ export default function ProjectDetailPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name:        subForm.name.trim(),
-        status:      subForm.status,
-        description: subForm.description || null,
-        budget:      subForm.budget ? parseFloat(subForm.budget) : null,
-        parent_id:   id,
-        client_id:   data?.project.clients ? undefined : undefined,
+        name:           subForm.name.trim(),
+        status:         subForm.status,
+        description:    subForm.description || null,
+        budget:         subForm.budget ? parseFloat(subForm.budget) : null,
+        add_to_budget:  subForm.add_to_budget,
+        parent_id:      id,
       }),
     })
     setSubForm(SUB_EMPTY); setShowSubModal(false); setSavingSub(false); loadSubs()
@@ -100,7 +100,7 @@ export default function ProjectDetailPage() {
 
   const { project } = data
 
-  const subsBudget = subs.reduce((acc, s) => acc + (Number(s.budget) || 0), 0)
+  const subsBudget = subs.reduce((acc, s) => acc + (s.add_to_budget ? (Number(s.budget) || 0) : 0), 0)
   const baseBudget = Number(project.budget) || 0
   const totalBudget = baseBudget + subsBudget
 
@@ -226,8 +226,11 @@ export default function ProjectDetailPage() {
                       {s.description && <p className="text-[11px] text-[#4a6080] truncate mt-0.5">{s.description}</p>}
                     </div>
                     {s.budget && (
-                      <span className="text-xs text-[#f97316] font-medium shrink-0">
-                        ${Number(s.budget).toLocaleString('es-AR')}
+                      <span className="text-xs font-medium shrink-0 flex items-center gap-1.5">
+                        {s.add_to_budget && (
+                          <span className="text-[9px] font-bold text-emerald-400/80 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full">+Total</span>
+                        )}
+                        <span className="text-[#f97316]">${Number(s.budget).toLocaleString('es-AR')}</span>
                       </span>
                     )}
                     <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLOR[s.status] || 'text-[#64748b] bg-[#1a2d45] border-[#253f60]'}`}>
@@ -265,7 +268,7 @@ export default function ProjectDetailPage() {
                         <span className="text-white font-medium">${baseBudget.toLocaleString('es-AR')}</span>
                       </div>
                     )}
-                    {subs.filter(s => s.budget).map(s => (
+                    {subs.filter(s => s.budget && s.add_to_budget).map(s => (
                       <div key={s.id} className="flex items-center justify-between text-xs">
                         <span className="text-[#3a5070] pl-3 flex items-center gap-1.5">
                           <span className="w-1 h-1 rounded-full bg-[#f97316]/40 inline-block" />
@@ -306,13 +309,31 @@ export default function ProjectDetailPage() {
             <option value="completed">Completado</option>
             <option value="paused">Pausado</option>
           </Select>
-          <Input
-            label="Presupuesto (ARS)"
-            value={subForm.budget}
-            onChange={e => setSubForm(f => ({ ...f, budget: e.target.value }))}
-            type="number"
-            placeholder="0"
-          />
+          <div className="space-y-2">
+            <Input
+              label="Presupuesto (ARS)"
+              value={subForm.budget}
+              onChange={e => setSubForm(f => ({ ...f, budget: e.target.value }))}
+              type="number"
+              placeholder="0"
+            />
+            <button
+              type="button"
+              onClick={() => setSubForm(f => ({ ...f, add_to_budget: !f.add_to_budget }))}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border transition-all text-xs font-medium ${
+                subForm.add_to_budget
+                  ? 'bg-emerald-400/8 border-emerald-400/30 text-emerald-400'
+                  : 'bg-white/[.02] border-[#1a2d45] text-[#475569] hover:border-[#253f60]'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all ${
+                subForm.add_to_budget ? 'bg-emerald-400 text-[#050c1a]' : 'bg-[#1a2d45] border border-[#253f60]'
+              }`}>
+                {subForm.add_to_budget && <span className="text-[10px] font-black leading-none">✓</span>}
+              </div>
+              Agregar al presupuesto total del proyecto
+            </button>
+          </div>
           <Textarea
             label="Descripción"
             value={subForm.description}
