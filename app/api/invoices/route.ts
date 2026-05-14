@@ -37,9 +37,17 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const body = await req.json()
 
-  // Generar número de factura
-  const { count } = await supabase.from('invoices').select('*', { count: 'exact', head: true })
-  const invoiceNumber = `INV-${String((count || 0) + 1).padStart(4, '0')}`
+  // Generar número de factura basado en el máximo existente
+  const { data: last } = await supabase
+    .from('invoices')
+    .select('invoice_number')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  const lastNum = last?.invoice_number
+    ? parseInt(last.invoice_number.replace('INV-', ''), 10)
+    : 0
+  const invoiceNumber = `INV-${String(lastNum + 1).padStart(4, '0')}`
 
   const { data, error } = await supabase.from('invoices').insert({
     client_id:      body.client_id,
