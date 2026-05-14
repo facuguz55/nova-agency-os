@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatDate } from '@/lib/utils'
-import { FolderKanban, Plus, ChevronRight, TrendingUp, Globe, Copy, Check } from 'lucide-react'
+import { FolderKanban, Plus, ChevronRight, TrendingUp, Globe, Copy, Check, Pencil } from 'lucide-react'
 
 interface Project {
   id: string; name: string; status: string; description: string | null
@@ -27,7 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   paused:    'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
   planning:  'text-blue-400 bg-blue-400/10 border-blue-400/20',
 }
-const STATUS_LABEL: Record<string, string> = { active: 'ACTIVO', completed: 'COMPLETADO', paused: 'PAUSADO', planning: 'PLANIFICANDO' }
+const STATUS_LABEL: Record<string, string> = { active: 'Activo', completed: 'Completado', paused: 'Pausado', planning: 'Planificando' }
 const SUB_EMPTY = { name: '', status: 'planning', description: '', budget: '', add_to_budget: true }
 
 export default function ProjectDetailPage() {
@@ -41,6 +41,9 @@ export default function ProjectDetailPage() {
   const [showSubModal, setShowSubModal] = useState(false)
   const [subForm, setSubForm]     = useState<typeof SUB_EMPTY>(SUB_EMPTY)
   const [savingSub, setSavingSub] = useState(false)
+  const [editingSub, setEditingSub] = useState<Subproject | null>(null)
+  const [editSubForm, setEditSubForm] = useState<typeof SUB_EMPTY>(SUB_EMPTY)
+  const [savingEditSub, setSavingEditSub] = useState(false)
   const [portal, setPortal]       = useState<{ token: string; pin: string; active: boolean } | null | undefined>(undefined)
   const [copiedPortal, setCopiedPortal] = useState(false)
 
@@ -115,6 +118,34 @@ export default function ProjectDetailPage() {
     if (!confirm('¿Eliminar este subproyecto?')) return
     await fetch(`/api/projects/${subId}`, { method: 'DELETE' })
     loadSubs()
+  }
+
+  function openEditSub(s: Subproject) {
+    setEditingSub(s)
+    setEditSubForm({
+      name:          s.name,
+      status:        s.status,
+      description:   s.description || '',
+      budget:        s.budget ? String(s.budget) : '',
+      add_to_budget: s.add_to_budget,
+    })
+  }
+
+  async function saveEditSubproject() {
+    if (!editingSub) return
+    setSavingEditSub(true)
+    await fetch(`/api/projects/${editingSub.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name:          editSubForm.name,
+        status:        editSubForm.status,
+        description:   editSubForm.description || null,
+        budget:        editSubForm.budget ? parseFloat(editSubForm.budget) : null,
+        add_to_budget: editSubForm.add_to_budget,
+      }),
+    })
+    setSavingEditSub(false); setEditingSub(null); loadSubs()
   }
 
   if (!data) return <div className="flex-1 flex items-center justify-center"><p className="text-[#475569]">Cargando...</p></div>
@@ -284,38 +315,66 @@ export default function ProjectDetailPage() {
             </div>
           ) : (
             <>
-              <div className="divide-y divide-[#1a2d45]/60">
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                 {subs.map(s => (
-                  <div key={s.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-white/[.015] transition-colors group">
-                    <div className="w-1 h-8 rounded-full bg-[#f97316]/30 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{s.name}</p>
-                      {s.description && <p className="text-[11px] text-[#4a6080] truncate mt-0.5">{s.description}</p>}
-                    </div>
-                    {s.budget && (
-                      <span className="text-xs font-medium shrink-0 flex items-center gap-1.5">
-                        {s.add_to_budget && (
-                          <span className="text-[9px] font-bold text-emerald-400/80 bg-emerald-400/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full">+Total</span>
-                        )}
-                        <span className="text-[#f97316]">${Number(s.budget).toLocaleString('es-AR')}</span>
+                  <div key={s.id} className="bg-[#0a1628] border border-[#1a2d45] rounded-xl p-4 group hover:border-[#f97316]/20 transition-colors">
+                    {/* Header: tag SUBPROYECTO + estado */}
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-[9px] font-black tracking-[0.15em] uppercase text-[#f97316]/60 bg-[#f97316]/8 border border-[#f97316]/15 px-2 py-0.5 rounded-full">
+                        ↳ Subproyecto
                       </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_COLOR[s.status] || 'text-[#64748b] bg-[#1a2d45] border-[#253f60]'}`}>
+                        {STATUS_LABEL[s.status] || s.status}
+                      </span>
+                    </div>
+
+                    {/* Nombre */}
+                    <p className="text-sm font-bold text-white mb-1 leading-snug">{s.name}</p>
+                    {s.description && (
+                      <p className="text-[11px] text-[#4a6080] line-clamp-2 mb-3">{s.description}</p>
                     )}
-                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${STATUS_COLOR[s.status] || 'text-[#64748b] bg-[#1a2d45] border-[#253f60]'}`}>
-                      {STATUS_LABEL[s.status] || s.status}
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link
-                        href={`/projects/${s.id}`}
-                        className="p-1.5 text-[#64748b] hover:text-white transition-colors rounded-lg hover:bg-white/5"
-                      >
-                        <ChevronRight size={13} />
-                      </Link>
-                      <button
-                        onClick={() => deleteSubproject(s.id)}
-                        className="p-1.5 text-[#64748b] hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/5"
-                      >
-                        ×
-                      </button>
+
+                    {/* Footer: presupuesto + acciones */}
+                    <div className="flex items-center justify-between mt-auto pt-2 border-t border-[#1a2d45]/60">
+                      <div className="flex items-center gap-2">
+                        {s.budget ? (
+                          <span className="text-sm font-bold text-[#f97316]">${Number(s.budget).toLocaleString('es-AR')}</span>
+                        ) : (
+                          <span className="text-xs text-[#334155]">Sin precio</span>
+                        )}
+                        {s.budget && (
+                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                            s.add_to_budget
+                              ? 'text-emerald-400 bg-emerald-400/8 border-emerald-400/20'
+                              : 'text-[#334155] bg-[#1a2d45] border-[#1a2d45]'
+                          }`}>
+                            {s.add_to_budget ? '✓ suma al total' : 'no suma'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEditSub(s)}
+                          className="p-1.5 text-[#64748b] hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                          title="Editar"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <Link
+                          href={`/projects/${s.id}`}
+                          className="p-1.5 text-[#64748b] hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                          title="Ver detalle"
+                        >
+                          <ChevronRight size={13} />
+                        </Link>
+                        <button
+                          onClick={() => deleteSubproject(s.id)}
+                          className="p-1.5 text-[#64748b] hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/5"
+                          title="Eliminar"
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -331,7 +390,7 @@ export default function ProjectDetailPage() {
                   <div className="space-y-2">
                     {baseBudget > 0 && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-[#475569]">Presupuesto base</span>
+                        <span className="text-[#475569]">Presupuesto base del proyecto</span>
                         <span className="text-white font-medium">${baseBudget.toLocaleString('es-AR')}</span>
                       </div>
                     )}
@@ -356,6 +415,54 @@ export default function ProjectDetailPage() {
         </div>
 
       </div>
+
+      {/* Modal editar subproyecto */}
+      <Modal open={!!editingSub} onClose={() => setEditingSub(null)} title={`Editar subproyecto`}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f97316]/5 border border-[#f97316]/20">
+            <span className="text-[9px] font-black tracking-widest text-[#f97316]">↳ SUBPROYECTO DE: {project.name.toUpperCase()}</span>
+          </div>
+          <Input label="Nombre *" value={editSubForm.name} onChange={e => setEditSubForm(f => ({ ...f, name: e.target.value }))} />
+          <Select label="Estado" value={editSubForm.status} onChange={e => setEditSubForm(f => ({ ...f, status: e.target.value }))}>
+            <option value="planning">Planificando</option>
+            <option value="active">Activo</option>
+            <option value="completed">Completado</option>
+            <option value="paused">Pausado</option>
+          </Select>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setEditSubForm(f => ({ ...f, add_to_budget: !f.add_to_budget }))}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border transition-all text-xs font-medium ${
+                editSubForm.add_to_budget
+                  ? 'bg-emerald-400/8 border-emerald-400/30 text-emerald-400'
+                  : 'bg-white/[.02] border-[#1a2d45] text-[#475569] hover:border-[#253f60]'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all ${
+                editSubForm.add_to_budget ? 'bg-emerald-400 text-[#050c1a]' : 'bg-[#1a2d45] border border-[#253f60]'
+              }`}>
+                {editSubForm.add_to_budget && <span className="text-[10px] font-black leading-none">✓</span>}
+              </div>
+              Sumar al precio total del proyecto
+            </button>
+            <Input
+              label="Precio (ARS)"
+              value={editSubForm.budget}
+              onChange={e => setEditSubForm(f => ({ ...f, budget: e.target.value }))}
+              type="number"
+              placeholder="0"
+            />
+          </div>
+          <Textarea label="Descripción" value={editSubForm.description} onChange={e => setEditSubForm(f => ({ ...f, description: e.target.value }))} rows={2} />
+          <div className="flex gap-3 pt-2">
+            <Button onClick={saveEditSubproject} disabled={savingEditSub || !editSubForm.name.trim()}>
+              {savingEditSub ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+            <Button variant="secondary" onClick={() => setEditingSub(null)}>Cancelar</Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal nuevo subproyecto */}
       <Modal open={showSubModal} onClose={() => setShowSubModal(false)} title="Nuevo subproyecto">
@@ -391,7 +498,7 @@ export default function ProjectDetailPage() {
               }`}>
                 {subForm.add_to_budget && <span className="text-[10px] font-black leading-none">✓</span>}
               </div>
-              Agregar al presupuesto total del proyecto
+              Sumar al precio total del proyecto
             </button>
             <div className={subForm.add_to_budget ? '' : 'opacity-30 pointer-events-none'}>
               <Input
