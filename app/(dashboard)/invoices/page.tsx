@@ -9,7 +9,7 @@ import Modal from '@/components/ui/Modal'
 import { StatCard } from '@/components/ui/Card'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { Plus, DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2 } from 'lucide-react'
+import { Plus, DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2, Split } from 'lucide-react'
 
 interface Invoice {
   id: string; invoice_number: string; amount: number; status: string
@@ -37,6 +37,7 @@ export default function InvoicesPage() {
   const [form, setForm]         = useState(EMPTY)
   const [saving, setSaving]     = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [showSplit, setShowSplit] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -165,7 +166,15 @@ export default function InvoicesPage() {
       <Header
         title="Facturación"
         subtitle="Revenue tracking"
-        actions={<Button onClick={openNew} size="sm"><Plus size={13}/> Nueva factura</Button>}
+        actions={
+          <div className="flex gap-2">
+            <button onClick={() => setShowSplit(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-[#f97316]/10 hover:bg-[#f97316]/20 text-[#f97316] border border-[#f97316]/30 hover:border-[#f97316]/50 rounded-lg transition-colors">
+              <Split size={12}/> ¿Cuánto nos toca?
+            </button>
+            <Button onClick={openNew} size="sm"><Plus size={13}/> Nueva factura</Button>
+          </div>
+        }
       />
 
       <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-grid">
@@ -359,6 +368,38 @@ export default function InvoicesPage() {
               {saving ? 'Guardando...' : editInvoice ? 'Guardar cambios' : 'Crear factura'}
             </Button>
             <Button variant="secondary" onClick={() => { setShowModal(false); setEditInvoice(null); setSaveError(null) }}>Cancelar</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal split */}
+      <Modal open={showSplit} onClose={() => setShowSplit(false)} title="¿Cuánto nos toca?">
+        <div className="space-y-5">
+          <p className="text-xs text-[#4a6080]">División 50/50 entre Facundo y Mauricio</p>
+
+          {[
+            { label: 'Ya cobrado', value: stats.paid, color: '#22c55e', sub: 'facturas pagadas' },
+            { label: 'Por cobrar', value: stats.pending, color: '#60a5fa', sub: 'facturas pendientes' },
+            { label: 'Vencido',    value: stats.overdue, color: '#f87171', sub: 'facturas vencidas' },
+            { label: 'Total potencial', value: stats.paid + stats.pending + stats.overdue, color: '#f97316', sub: 'si cobrás todo', bold: true },
+          ].map(row => (
+            <div key={row.label} className={`rounded-xl border p-4 ${row.bold ? 'border-[#f97316]/30 bg-[#f97316]/5' : 'border-[#1a2d45] bg-[#080f1e]'}`}>
+              <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-2">{row.label} · {row.sub}</p>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] text-[#475569] mb-0.5">Total</p>
+                  <p className="text-lg font-black" style={{ color: row.color }}>${formatNumber(row.value)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-[#475569] mb-0.5">Cada uno</p>
+                  <p className="text-2xl font-black" style={{ color: row.color }}>${formatNumber(row.value / 2)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex justify-center pt-1">
+            <button onClick={() => setShowSplit(false)} className="text-xs text-[#4a6080] hover:text-white transition-colors">Cerrar</button>
           </div>
         </div>
       </Modal>
