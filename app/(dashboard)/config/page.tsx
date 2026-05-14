@@ -6,7 +6,7 @@ import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
-import { GripVertical, Building2, Save, Upload } from 'lucide-react'
+import { GripVertical, Building2, Save, Upload, Sun, Moon } from 'lucide-react'
 import {
   getCachedItems, getDefaultItems, mergeConfig, setCacheItems,
   type SidebarItem, type StoredItem,
@@ -46,6 +46,7 @@ export default function ConfigPage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [savedProfile, setSavedProfile]   = useState(false)
   const [userEmail, setUserEmail]         = useState('')
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   /* ── Equipo ─────────────────────────────────────── */
   const [team, setTeam]             = useState<TeamMember[]>([])
@@ -76,6 +77,7 @@ export default function ConfigPage() {
       .then(r => r.json())
       .then(cfg => setProfile({ agency_name: cfg.agency_name || '', agency_tagline: cfg.agency_tagline || '', agency_logo: cfg.agency_logo || '' }))
       .catch(() => {})
+    try { setTheme((localStorage.getItem('nova-theme') as 'dark' | 'light') || 'dark') } catch {}
     const { createClient } = require('@/lib/supabase/client')
     createClient().auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
       setUserEmail(data.user?.email || '')
@@ -87,6 +89,13 @@ export default function ConfigPage() {
       profileRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [])
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    try { localStorage.setItem('nova-theme', next) } catch {}
+    document.documentElement.dataset.theme = next
+  }
 
   async function saveProfile() {
     setSavingProfile(true)
@@ -298,6 +307,30 @@ export default function ConfigPage() {
                 <p className="text-[10px] text-[#334155]">Subí tu logo a imgur.com o cualquier hosting de imágenes y pegá la URL directa</p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── Apariencia ───────────────────────────────────────── */}
+        <section className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-white mb-1">Apariencia</h3>
+          <p className="text-xs text-[#4a6080] mb-4">Cambiá entre modo oscuro y claro</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className={`relative flex items-center gap-3 px-4 py-3 rounded-xl border transition-all w-full ${
+                theme === 'light'
+                  ? 'bg-white/10 border-white/20 text-white'
+                  : 'bg-[#080f1e] border-[#1a2d45] text-[#64748b] hover:border-[#253f60]'
+              }`}
+            >
+              <div className={`w-10 h-6 rounded-full transition-colors relative ${theme === 'light' ? 'bg-[#f97316]' : 'bg-[#1a2d45]'}`}>
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${theme === 'light' ? 'left-5' : 'left-1'}`} />
+              </div>
+              <div className="flex items-center gap-2">
+                {theme === 'light' ? <Sun size={14} className="text-[#f97316]" /> : <Moon size={14} />}
+                <span className="text-sm font-medium">{theme === 'light' ? 'Modo claro' : 'Modo oscuro'}</span>
+              </div>
+            </button>
           </div>
         </section>
 

@@ -64,6 +64,17 @@ export default function DashboardPage() {
 
   const { stats, recentActions, urgentTasks, coldClients } = data!
 
+  // Panel de salud del negocio
+  const healthScore = Math.max(0, Math.min(100, Math.round(
+    60
+    + (stats.workflowSuccessRate >= 80 ? 15 : stats.workflowSuccessRate >= 50 ? 5 : -5)
+    + (urgentTasks.length === 0 ? 10 : urgentTasks.length <= 2 ? 5 : -10)
+    + (coldClients.length === 0 ? 10 : coldClients.length <= 2 ? 0 : -15)
+    + (stats.activeProjects > 0 ? 5 : 0)
+  )))
+  const healthColor = healthScore >= 80 ? '#22c55e' : healthScore >= 55 ? '#f97316' : '#ef4444'
+  const healthLabel = healthScore >= 80 ? 'Excelente' : healthScore >= 55 ? 'Atención' : 'Crítico'
+
   return (
     <>
       <Header
@@ -89,6 +100,30 @@ export default function DashboardPage() {
           <StatCard label="Proyectos"  value={stats.activeProjects}              icon={<FolderKanban size={15}/>} color="purple" sub="en curso" />
           <StatCard label="Pendientes" value={stats.pendingActions}              icon={<Clock size={15}/>}        color="blue"   sub="acciones" />
           <StatCard label="Workflows"  value={`${stats.workflowSuccessRate}%`}   icon={<CheckCircle2 size={15}/>} color="green"  sub="tasa de éxito" />
+        </div>
+
+        {/* Panel de salud */}
+        <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-4 flex items-center gap-5">
+          <div className="relative w-16 h-16 shrink-0">
+            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1a2d45" strokeWidth="3"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke={healthColor} strokeWidth="3"
+                strokeDasharray={`${healthScore} 100`} strokeLinecap="round"/>
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">{healthScore}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-bold text-white">Salud del negocio</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${healthColor}20`, color: healthColor }}>{healthLabel}</span>
+            </div>
+            <div className="flex flex-wrap gap-3 text-[11px] text-[#4a6080]">
+              <span>Workflows: <b className="text-[#94a3b8]">{stats.workflowSuccessRate}%</b></span>
+              <span>Tareas urgentes: <b className="text-[#94a3b8]">{urgentTasks.length}</b></span>
+              <span>Clientes fríos: <b className="text-[#94a3b8]">{coldClients.length}</b></span>
+              <span>Proyectos activos: <b className="text-[#94a3b8]">{stats.activeProjects}</b></span>
+            </div>
+          </div>
         </div>
 
         {/* Clientes fríos */}

@@ -267,6 +267,15 @@ create trigger portal_roadmap_updated_at
   before update on public.portal_roadmap
   for each row execute function public.set_updated_at();
 
+-- ── SNIPPETS ─────────────────────────────────────────────────
+create table if not exists public.snippets (
+  id         uuid primary key default gen_random_uuid(),
+  title      text not null,
+  content    text not null,
+  category   text not null default 'Otros',
+  created_at timestamptz not null default now()
+);
+
 -- ── APP CONFIG (perfil de agencia, key-value) ────────────────
 create table if not exists public.app_config (
   key        text primary key,

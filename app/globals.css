@@ -15,6 +15,16 @@
   --dim:       #334155;
 }
 
+/* ─── LIGHT MODE (invert trick) ────────────────────────── */
+[data-theme="light"] #app-root {
+  filter: invert(1) hue-rotate(180deg);
+}
+[data-theme="light"] #app-root img,
+[data-theme="light"] #app-root video,
+[data-theme="light"] #app-root [data-noinvert] {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 /* ─── BASE ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 

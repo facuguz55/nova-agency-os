@@ -177,6 +177,27 @@ export default function InvoicesPage() {
           <StatCard label="Vencido"        value={`$${formatNumber(stats.overdue)}`} icon={<AlertTriangle size={16}/>} color="purple" sub="overdue" />
         </div>
 
+        {/* Proyección */}
+        {(stats.pending > 0 || stats.overdue > 0) && (
+          <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-4">
+            <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-3">Proyección — si cobrás todo lo pendiente</p>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-lg font-black text-white">${formatNumber(stats.paid + stats.pending + stats.overdue)}</span>
+              <span className="text-xs text-[#4a6080]">total potencial</span>
+            </div>
+            <div className="h-2 rounded-full bg-[#1a2d45] overflow-hidden flex">
+              {stats.paid > 0 && <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.round(stats.paid/(stats.paid+stats.pending+stats.overdue)*100)}%` }}/>}
+              {stats.pending > 0 && <div className="h-full bg-blue-400 transition-all" style={{ width: `${Math.round(stats.pending/(stats.paid+stats.pending+stats.overdue)*100)}%` }}/>}
+              {stats.overdue > 0 && <div className="h-full bg-red-400 transition-all" style={{ width: `${Math.round(stats.overdue/(stats.paid+stats.pending+stats.overdue)*100)}%` }}/>}
+            </div>
+            <div className="flex gap-4 mt-2 text-[11px]">
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Cobrado ${formatNumber(stats.paid)}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block"/>Pendiente ${formatNumber(stats.pending)}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>Vencido ${formatNumber(stats.overdue)}</span>
+            </div>
+          </div>
+        )}
+
         {/* Gráfico */}
         <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-5">
           <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-5">Revenue cobrado — últimos 6 meses</h3>
