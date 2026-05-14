@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import webpush from 'web-push'
 
-webpush.setVapidDetails(
-  'mailto:nova@novaagency.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  webpush.setVapidDetails(
+    'mailto:nova@novaagency.com',
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  )
   const { token } = await params
   const supabase  = await createClient()
   const { title, body, url } = await req.json()
