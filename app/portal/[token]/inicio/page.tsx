@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,7 +8,7 @@ import Image from 'next/image'
 interface Objective  { id: string; title: string; current_value: number; target_value: number; unit: string }
 interface Subproject { id: string; name: string; status: string; budget: number | null; description: string | null }
 interface Project {
-  id: string; name: string; status: string; budget: number | null; created_at: string
+  id: string; name: string; status: string; budget: number | null; created_at: string; description: string | null
   subprojects: Subproject[]
   objectives:  Objective[]
   feedback:    'up' | 'down' | null
@@ -78,7 +78,18 @@ export default function PortalInicio() {
   const [installDismissed, setInstallDismissed] = useState(false)
 
   // feedback local (optimista)
-  const [feedbacks, setFeedbacks] = useState<Record<string, 'up' | 'down' | null>>({})
+  const [feedbacks, setFeedbacks]     = useState<Record<string, 'up' | 'down' | null>>({})
+  const [expandedP,  setExpandedP]    = useState<string | null>(null)
+  const [expandedS,  setExpandedS]    = useState<string | null>(null)
+
+  const toggleProject = useCallback((id: string) => {
+    setExpandedP(p => p === id ? null : id)
+    setExpandedS(null)
+  }, [])
+  const toggleSub = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedS(s => s === id ? null : id)
+  }, [])
 
   // push notifications
   const [pushState, setPushState] = useState<'idle' | 'loading' | 'subscribed' | 'denied'>('idle')
@@ -463,58 +474,115 @@ export default function PortalInicio() {
             <div className="fs-3">
               <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-3 px-1">Tus proyectos</p>
               <div className="space-y-3">
-                {projects.map(p => (
-                  <div key={p.id} className="card-glass rounded-2xl overflow-hidden">
-                    <div className="px-5 py-4 flex items-center gap-4">
-                      <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center font-black text-base"
-                        style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
-                        {p.budget && (
-                          <p className="text-[11px] text-white/30 mt-0.5">${Number(p.budget).toLocaleString('es-AR')} ARS</p>
-                        )}
-                      </div>
-                      <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
-                        {STATUS_LABEL[p.status] || p.status}
-                      </span>
-                    </div>
+                {projects.map(p => {
+                  const isExpanded = expandedP === p.id
+                  const subsBudget = (p.subprojects || []).reduce((a, s) => a + (Number(s.budget) || 0), 0)
+                  const totalBudget = (Number(p.budget) || 0) + subsBudget
+                  return (
+                    <div key={p.id} className="card-glass rounded-2xl overflow-hidden transition-all duration-200">
+                      {/* Header clickeable */}
+                      <button
+                        onClick={() => toggleProject(p.id)}
+                        className="w-full px-5 py-4 flex items-center gap-4 text-left"
+                      >
+                        <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center font-black text-base"
+                          style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
+                          <p className="text-[11px] text-white/30 mt-0.5">
+                            {p.subprojects?.length > 0 ? `${p.subprojects.length} etapa${p.subprojects.length !== 1 ? 's' : ''}` : 'Sin etapas'}
+                            {totalBudget > 0 && ` · $${Number(totalBudget).toLocaleString('es-AR')}`}
+                          </p>
+                        </div>
+                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
+                          {STATUS_LABEL[p.status] || p.status}
+                        </span>
+                        <span className="text-white/30 text-xs ml-1 transition-transform duration-200" style={{ display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+                      </button>
 
-                    {/* Subproyectos */}
-                    {p.subprojects?.length > 0 && (
-                      <div className="border-t border-white/[0.04] divide-y divide-white/[0.03]">
-                        {p.subprojects.map(s => (
-                          <div key={s.id} className="flex items-center gap-3 pl-8 pr-5 py-3">
-                            <div className="w-1 h-5 rounded-full shrink-0" style={{ background: 'rgba(249,115,22,0.35)' }} />
-                            <p className="text-[12px] text-white/55 flex-1 truncate font-medium">{s.name}</p>
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${STATUS_BG[s.status] || 'bg-white/5 text-white/30'}`}>
-                              {STATUS_LABEL[s.status] || s.status}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                      {/* Detalle expandido del proyecto */}
+                      {isExpanded && (
+                        <div className="border-t border-white/[0.05]" style={{ animation: 'fadeSlide .2s ease both' }}>
+                          {/* Descripción */}
+                          {p.description && (
+                            <div className="px-5 py-3 border-b border-white/[0.04]">
+                              <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1.5">Descripción</p>
+                              <p className="text-[13px] text-white/60 leading-relaxed">{p.description}</p>
+                            </div>
+                          )}
 
-                    {/* Feedback */}
-                    <div className="border-t border-white/[0.04] px-5 py-3 flex items-center gap-2">
-                      <p className="text-[11px] text-white/25 flex-1">¿Cómo va este proyecto?</p>
-                      {(['up', 'down'] as const).map(vote => {
-                        const active = feedbacks[p.id] === vote
-                        return (
-                          <button key={vote} onClick={() => submitFeedback(p.id, vote)}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center text-base transition-all"
-                            style={active
-                              ? { background: vote === 'up' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', transform: 'scale(1.1)' }
-                              : { background: 'rgba(255,255,255,0.04)' }
-                            }>
-                            {vote === 'up' ? '👍' : '👎'}
-                          </button>
-                        )
-                      })}
+                          {/* Presupuesto */}
+                          {totalBudget > 0 && (
+                            <div className="px-5 py-3 border-b border-white/[0.04] flex items-center justify-between">
+                              <p className="text-[10px] text-white/25 uppercase tracking-widest">Presupuesto total</p>
+                              <p className="text-sm font-black text-[#f97316]">${Number(totalBudget).toLocaleString('es-AR')} ARS</p>
+                            </div>
+                          )}
+
+                          {/* Subproyectos expandibles */}
+                          {p.subprojects?.length > 0 && (
+                            <div className="divide-y divide-white/[0.03]">
+                              <p className="text-[10px] text-white/20 uppercase tracking-widest px-5 pt-3 pb-1.5">Etapas del proyecto</p>
+                              {p.subprojects.map(s => {
+                                const isSubExp = expandedS === s.id
+                                return (
+                                  <div key={s.id}>
+                                    <button
+                                      onClick={(e) => toggleSub(s.id, e)}
+                                      className="w-full flex items-center gap-3 pl-8 pr-5 py-3 text-left"
+                                    >
+                                      <div className="w-1 h-5 rounded-full shrink-0" style={{ background: 'rgba(249,115,22,0.35)' }} />
+                                      <p className="text-[12px] text-white/60 flex-1 font-medium">{s.name}</p>
+                                      {s.budget && (
+                                        <p className="text-[11px] text-[#f97316]/60 mr-2">${Number(s.budget).toLocaleString('es-AR')}</p>
+                                      )}
+                                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${STATUS_BG[s.status] || 'bg-white/5 text-white/30'}`}>
+                                        {STATUS_LABEL[s.status] || s.status}
+                                      </span>
+                                      <span className="text-white/20 text-xs ml-1 transition-transform duration-200" style={{ display: 'inline-block', transform: isSubExp ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+                                    </button>
+
+                                    {/* Detalle del subproyecto */}
+                                    {isSubExp && s.description && (
+                                      <div className="pl-12 pr-5 pb-3" style={{ animation: 'fadeSlide .15s ease both' }}>
+                                        <p className="text-[12px] text-white/40 leading-relaxed">{s.description}</p>
+                                      </div>
+                                    )}
+                                    {isSubExp && !s.description && (
+                                      <div className="pl-12 pr-5 pb-3">
+                                        <p className="text-[11px] text-white/20 italic">Sin descripción</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Feedback */}
+                      <div className="border-t border-white/[0.04] px-5 py-3 flex items-center gap-2">
+                        <p className="text-[11px] text-white/25 flex-1">¿Cómo va este proyecto?</p>
+                        {(['up', 'down'] as const).map(vote => {
+                          const active = feedbacks[p.id] === vote
+                          return (
+                            <button key={vote} onClick={() => submitFeedback(p.id, vote)}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center text-base transition-all"
+                              style={active
+                                ? { background: vote === 'up' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', transform: 'scale(1.1)' }
+                                : { background: 'rgba(255,255,255,0.04)' }
+                              }>
+                              {vote === 'up' ? '👍' : '👎'}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
