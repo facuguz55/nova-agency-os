@@ -13,17 +13,21 @@ import { Plus, DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2 } from
 interface Invoice {
   id: string; invoice_number: string; amount: number; status: string
   description: string | null; due_date: string | null; paid_at: string | null
-  created_at: string; clients: { name: string; email: string | null } | null
+  created_at: string
+  clients: { name: string; email: string | null } | null
+  projects: { id: string; name: string; budget: number | null } | null
 }
 interface Stats { paid: number; pending: number; overdue: number; mrr: number }
 interface Client { id: string; name: string }
+interface Project { id: string; name: string; budget: number | null; client_id: string }
 
-const EMPTY = { client_id: '', amount: '', status: 'pending', description: '', due_date: '' }
+const EMPTY = { client_id: '', project_id: '', amount: '', status: 'pending', description: '', due_date: '' }
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [stats, setStats]       = useState<Stats>({ paid: 0, pending: 0, overdue: 0, mrr: 0 })
   const [clients, setClients]   = useState<Client[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading]   = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -35,11 +39,16 @@ export default function InvoicesPage() {
     setLoading(true)
     const p = new URLSearchParams()
     if (statusFilter) p.set('status', statusFilter)
-    const [iRes, cRes] = await Promise.all([fetch(`/api/invoices?${p}`), fetch('/api/clients')])
-    const [iData, cData] = await Promise.all([iRes.json(), cRes.json()])
+    const [iRes, cRes, pRes] = await Promise.all([
+      fetch(`/api/invoices?${p}`),
+      fetch('/api/clients'),
+      fetch('/api/projects'),
+    ])
+    const [iData, cData, pData] = await Promise.all([iRes.json(), cRes.json(), pRes.json()])
     setInvoices(iData.invoices || [])
     setStats(iData.stats || { paid: 0, pending: 0, overdue: 0, mrr: 0 })
     setClients(cData.clients || [])
+    setProjects(pData.projects || [])
     setLoading(false)
   }
 
@@ -49,6 +58,7 @@ export default function InvoicesPage() {
     setEditInvoice(inv)
     setForm({
       client_id:   '',
+      project_id:  inv.projects?.id || '',
       amount:      String(inv.amount),
       status:      inv.status,
       description: inv.description || '',
@@ -61,6 +71,21 @@ export default function InvoicesPage() {
     setEditInvoice(null)
     setForm(EMPTY)
     setShowModal(true)
+  }
+
+  // Proyectos filtrados por el cliente seleccionado
+  const projectsForClient = form.client_id
+    ? projects.filter(p => p.client_id === form.client_id)
+    : projects
+
+  function handleProjectSelect(projectId: string) {
+    const project = projects.find(p => p.id === projectId)
+    setForm(f => ({
+      ...f,
+      project_id: projectId,
+      amount: project?.budget ? String(project.budget) : f.amount,
+      description: f.description || (project ? `Proyecto: ${project.name}` : ''),
+    }))
   }
 
   async function save() {
@@ -78,7 +103,12 @@ export default function InvoicesPage() {
     } else {
       await fetch('/api/invoices', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, amount: parseFloat(form.amount), due_date: form.due_date || null }),
+        body: JSON.stringify({
+          ...form,
+          amount:     parseFloat(form.amount),
+          due_date:   form.due_date   || null,
+          project_id: form.project_id || null,
+        }),
       })
     }
     setShowModal(false); setEditInvoice(null); setForm(EMPTY); setSaving(false); load()
@@ -176,7 +206,7 @@ export default function InvoicesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[#1e2f4a]">
-                    {['#', 'Cliente', 'Descripción', 'Monto', 'Estado', 'Vence', ''].map(h => (
+                    {['#', 'Cliente', 'Proyecto', 'Descripción', 'Monto', 'Estado', 'Vence', ''].map(h => (
                       <th key={h} className="text-left px-5 py-3 text-[10px] text-[#334155] uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
@@ -186,6 +216,7 @@ export default function InvoicesPage() {
                     <tr key={inv.id} className="border-b border-[#1e2f4a]/40 hover:bg-white/[.015] transition-colors last:border-0">
                       <td className="px-5 py-3 text-xs font-mono text-[#475569]">{inv.invoice_number}</td>
                       <td className="px-5 py-3 text-sm text-white font-medium">{inv.clients?.name || '—'}</td>
+                      <td className="px-5 py-3 text-sm text-[#475569]">{inv.projects?.name || '—'}</td>
                       <td className="px-5 py-3 text-sm text-[#475569] max-w-xs truncate">{inv.description || '—'}</td>
                       <td className="px-5 py-3 text-sm font-bold text-white">${Number(inv.amount).toLocaleString()}</td>
                       <td className="px-5 py-3"><StatusBadge status={inv.status}/></td>
@@ -231,10 +262,29 @@ export default function InvoicesPage() {
             </div>
           )}
           {!editInvoice && (
-            <Select label="Cliente *" value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}>
-              <option value="">Seleccionar cliente...</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+            <>
+              <Select label="Cliente *" value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value, project_id: '' }))}>
+                <option value="">Seleccionar cliente...</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </Select>
+              <Select
+                label="Proyecto (opcional)"
+                value={form.project_id}
+                onChange={e => handleProjectSelect(e.target.value)}
+              >
+                <option value="">Sin proyecto</option>
+                {projectsForClient.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}{p.budget ? ` — $${Number(p.budget).toLocaleString()}` : ''}
+                  </option>
+                ))}
+              </Select>
+              {form.project_id && projects.find(p => p.id === form.project_id)?.budget && (
+                <p className="text-xs text-[#ff8c42]/80 -mt-2">
+                  Presupuesto del proyecto cargado automáticamente
+                </p>
+              )}
+            </>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Input label="Monto (ARS) *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} type="number" step="0.01" placeholder="200.000" />

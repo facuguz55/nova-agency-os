@@ -9,7 +9,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from('invoices')
-    .select('*, clients(name, email)')
+    .select('*, clients(name, email), projects(id, name, budget)')
     .order('created_at', { ascending: false })
 
   if (status)   query = query.eq('status', status)
@@ -43,6 +43,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabase.from('invoices').insert({
     client_id:      body.client_id,
+    project_id:     body.project_id || null,
     amount:         body.amount,
     status:         body.status   || 'pending',
     description:    body.description || null,

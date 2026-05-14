@@ -266,3 +266,9 @@ drop trigger if exists portal_roadmap_updated_at on public.portal_roadmap;
 create trigger portal_roadmap_updated_at
   before update on public.portal_roadmap
   for each row execute function public.set_updated_at();
+
+-- ── INVOICES: project_id ──────────────────────────────────────
+alter table public.invoices
+  add column if not exists project_id uuid references public.projects(id) on delete set null;
+
+create index if not exists invoices_project_idx on public.invoices(project_id);
