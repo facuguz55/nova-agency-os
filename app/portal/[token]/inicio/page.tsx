@@ -71,9 +71,11 @@ export default function PortalInicio() {
   const [data, setData]           = useState<PortalData | null>(null)
   const [loading, setLoading]     = useState(true)
   const [installPrompt, setInstallPrompt] = useState<{ prompt: () => void } | null>(null)
-  const [isIOS, setIsIOS]         = useState(false)
-  const [showIOSHint, setShowIOSHint] = useState(false)
-  const [installed, setInstalled] = useState(false)
+  const [isIOS, setIsIOS]                 = useState(false)
+  const [isIOSChrome, setIsIOSChrome]     = useState(false)
+  const [showIOSHint, setShowIOSHint]     = useState(false)
+  const [installed, setInstalled]         = useState(false)
+  const [installDismissed, setInstallDismissed] = useState(false)
 
   // feedback local (optimista)
   const [feedbacks, setFeedbacks] = useState<Record<string, 'up' | 'down' | null>>({})
@@ -91,13 +93,17 @@ export default function PortalInicio() {
   const [sent, setSent]             = useState(false)
 
   useEffect(() => {
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as { standalone?: boolean }).standalone
+    const ua  = navigator.userAgent
+    const ios = /iphone|ipad|ipod/i.test(ua) && !(window.navigator as { standalone?: boolean }).standalone
+    const iosChrome = ios && /CriOS/i.test(ua)
     setIsIOS(ios)
+    setIsIOSChrome(iosChrome)
+    setInstallDismissed(!!localStorage.getItem(`install_dismissed_${token}`))
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as unknown as { prompt: () => void }) }
     window.addEventListener('beforeinstallprompt', handler)
     window.addEventListener('appinstalled', () => setInstalled(true))
     return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
+  }, [token])
 
   useEffect(() => {
     const pin = localStorage.getItem(`portal_pin_${token}`)
@@ -262,12 +268,6 @@ export default function PortalInicio() {
             <Image src="/logo-nova-dark.png" alt="Nova Agency" width={40} height={40} className="object-cover w-full h-full" />
           </div>
           <div className="flex items-center gap-2">
-            {!installed && (installPrompt || isIOS) && (
-              <button onClick={() => { if (isIOS) { setShowIOSHint(h => !h); return }; installPrompt?.prompt(); setInstallPrompt(null) }}
-                className="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/15 text-white/50 hover:text-white transition-colors flex items-center gap-1.5">
-                <span>⬇</span> Instalar
-              </button>
-            )}
             <Link href={`/portal/${token}/bienvenida`}
               className="text-[11px] text-[#f97316] px-3 py-1.5 rounded-xl border border-[#f97316]/25 hover:border-[#f97316]/50 transition-colors font-semibold">
               Bienvenida
@@ -281,11 +281,6 @@ export default function PortalInicio() {
           </div>
         </header>
 
-        {showIOSHint && (
-          <div className="mx-5 mt-3 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-[12px] text-white/60 leading-relaxed">
-            En Safari: tocá <strong className="text-white/80">Compartir ⎙</strong> → <strong className="text-white/80">«Agregar a pantalla de inicio»</strong>
-          </div>
-        )}
 
         <div className="max-w-xl mx-auto px-5 pt-8 pb-28 space-y-7 relative">
 
@@ -300,6 +295,87 @@ export default function PortalInicio() {
               <p className="text-white/30 text-xs font-medium tracking-widest uppercase">{client.industry}</p>
             )}
           </div>
+
+          {/* Banner de instalación */}
+          {!installed && !installDismissed && (installPrompt || isIOS) && (() => {
+            const dismiss = () => {
+              localStorage.setItem(`install_dismissed_${token}`, '1')
+              setInstallDismissed(true)
+            }
+
+            // iOS Chrome — no puede instalar
+            if (isIOSChrome) return (
+              <div className="fs-2 rounded-2xl px-4 py-4 flex gap-3 items-start"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>🌐</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white/80">Abrí este portal en Safari</p>
+                  <p className="text-[11px] text-white/35 mt-0.5 leading-relaxed">Chrome en iPhone no permite instalar apps. Copiá el link y pegalo en Safari para poder guardar el portal en tu pantalla de inicio.</p>
+                </div>
+                <button onClick={dismiss} className="text-white/20 hover:text-white/50 transition-colors shrink-0 mt-0.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+            )
+
+            // iOS Safari — guía paso a paso
+            if (isIOS) return (
+              <div className="fs-2 rounded-2xl overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-lg" style={{ background: 'rgba(249,115,22,0.1)' }}>📲</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-white/90">Guardá el portal en tu iPhone</p>
+                    <p className="text-[11px] text-white/35 mt-0.5">Accedé en un tap, sin buscar el link.</p>
+                  </div>
+                  <button onClick={dismiss} className="text-white/20 hover:text-white/50 transition-colors shrink-0 mt-0.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <div className="px-4 pb-4 flex items-center gap-2">
+                  {[
+                    { icon: '⬆️', label: 'Tocá Compartir' },
+                    { icon: '→', label: null },
+                    { icon: '➕', label: 'Agregar a inicio' },
+                    { icon: '→', label: null },
+                    { icon: '✅', label: 'Agregar' },
+                  ].map((s, i) =>
+                    s.label === null
+                      ? <span key={i} className="text-white/15 text-xs">›</span>
+                      : (
+                        <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+                            style={{ background: 'rgba(255,255,255,0.05)' }}>{s.icon}</div>
+                          <p className="text-[9px] text-white/25 text-center leading-tight">{s.label}</p>
+                        </div>
+                      )
+                  )}
+                </div>
+              </div>
+            )
+
+            // Android / Chrome — prompt nativo
+            return (
+              <div className="fs-2 rounded-2xl px-4 py-4 flex items-center gap-3"
+                style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.18)' }}>
+                <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-lg" style={{ background: 'rgba(249,115,22,0.12)' }}>📲</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Instalá el portal</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">Accedé en un tap desde tu pantalla de inicio.</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => { installPrompt?.prompt(); setInstallPrompt(null); dismiss() }}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-white transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}>
+                    Instalar
+                  </button>
+                  <button onClick={dismiss} className="text-white/20 hover:text-white/50 transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Progress ring */}
           <div className="fs-2 card-glass rounded-3xl p-5 flex items-center gap-5">
