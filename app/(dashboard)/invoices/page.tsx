@@ -34,6 +34,7 @@ export default function InvoicesPage() {
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null)
   const [form, setForm]         = useState(EMPTY)
   const [saving, setSaving]     = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -90,28 +91,42 @@ export default function InvoicesPage() {
 
   async function save() {
     setSaving(true)
-    if (editInvoice) {
-      await fetch(`/api/invoices/${editInvoice.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount:      parseFloat(form.amount),
-          status:      form.status,
-          description: form.description || null,
-          due_date:    form.due_date || null,
-        }),
-      })
-    } else {
-      await fetch('/api/invoices', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          amount:     parseFloat(form.amount),
-          due_date:   form.due_date   || null,
-          project_id: form.project_id || null,
-        }),
-      })
+    setSaveError(null)
+    try {
+      let res: Response
+      if (editInvoice) {
+        res = await fetch(`/api/invoices/${editInvoice.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount:      parseFloat(form.amount),
+            status:      form.status,
+            description: form.description || null,
+            due_date:    form.due_date || null,
+          }),
+        })
+      } else {
+        res = await fetch('/api/invoices', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...form,
+            amount:     parseFloat(form.amount),
+            due_date:   form.due_date   || null,
+            project_id: form.project_id || null,
+          }),
+        })
+      }
+      if (!res.ok) {
+        const body = await res.json()
+        setSaveError(body.error || 'Error al guardar')
+        setSaving(false)
+        return
+      }
+      setShowModal(false); setEditInvoice(null); setForm(EMPTY); load()
+    } catch (e) {
+      setSaveError('Error de red')
+    } finally {
+      setSaving(false)
     }
-    setShowModal(false); setEditInvoice(null); setForm(EMPTY); setSaving(false); load()
   }
 
   async function markPaid(id: string) {
@@ -254,7 +269,7 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <Modal open={showModal} onClose={() => { setShowModal(false); setEditInvoice(null) }} title={editInvoice ? `Editar factura ${editInvoice.invoice_number}` : 'Nueva factura'}>
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditInvoice(null); setSaveError(null) }} title={editInvoice ? `Editar factura ${editInvoice.invoice_number}` : 'Nueva factura'}>
         <div className="space-y-4">
           {editInvoice && (
             <div className="px-3 py-2 bg-[#0f1d30] border border-[#1a2d45] rounded-lg">
@@ -298,11 +313,14 @@ export default function InvoicesPage() {
           </div>
           <Input label="Fecha de vencimiento" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} type="date" />
           <Textarea label="Descripción" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Servicios de marketing digital — Marzo 2026" />
+          {saveError && (
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{saveError}</p>
+          )}
           <div className="flex gap-3 pt-2">
             <Button onClick={save} disabled={saving || (!editInvoice && (!form.client_id || !form.amount)) || (!!editInvoice && !form.amount)}>
               {saving ? 'Guardando...' : editInvoice ? 'Guardar cambios' : 'Crear factura'}
             </Button>
-            <Button variant="secondary" onClick={() => { setShowModal(false); setEditInvoice(null) }}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setShowModal(false); setEditInvoice(null); setSaveError(null) }}>Cancelar</Button>
           </div>
         </div>
       </Modal>
