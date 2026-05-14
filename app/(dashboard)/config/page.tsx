@@ -2,7 +2,6 @@
 import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select } from '@/components/ui/Input'
@@ -40,8 +39,7 @@ const INT_LABEL = {
 
 export default function ConfigPage() {
   usePageTitle('Configuración')
-  const searchParams = useSearchParams()
-  const profileRef   = useRef<HTMLElement>(null)
+  const profileRef = useRef<HTMLElement>(null)
 
   /* ── Perfil de agencia ──────────────────────────── */
   const [profile, setProfile]           = useState({ agency_name: '', agency_tagline: '', agency_logo: '' })
@@ -85,10 +83,10 @@ export default function ConfigPage() {
   }, [])
 
   useEffect(() => {
-    if (searchParams.get('tab') === 'perfil' && profileRef.current) {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'perfil' && profileRef.current) {
       profileRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [searchParams])
+  }, [])
 
   async function saveProfile() {
     setSavingProfile(true)
