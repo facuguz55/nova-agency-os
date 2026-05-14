@@ -78,6 +78,9 @@ export default function PortalInicio() {
   // feedback local (optimista)
   const [feedbacks, setFeedbacks] = useState<Record<string, 'up' | 'down' | null>>({})
 
+  // roadmap drawer/sheet
+  const [roadmapOpen, setRoadmapOpen] = useState(false)
+
   // solicitud / nota / problema
   const [fabOpen, setFabOpen]       = useState(false)
   const [sheet, setSheet]           = useState<MsgType | null>(null)
@@ -222,6 +225,16 @@ export default function PortalInicio() {
           from { opacity: 0; transform: translateX(-10px); }
           to   { opacity: 1; transform: translateX(0); }
         }
+        @keyframes drawerIn {
+          from { transform: translateX(100%); }
+          to   { transform: translateX(0); }
+        }
+        @keyframes sheetIn {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        .drawer-anim { animation: drawerIn .32s cubic-bezier(.32,.72,0,1) both; }
+        .sheet-roadmap-anim { animation: sheetIn .32s cubic-bezier(.32,.72,0,1) both; }
       `}</style>
 
       <div className="portal-inicio min-h-screen bg-[#050c1a] text-white">
@@ -468,78 +481,33 @@ export default function PortalInicio() {
             </div>
           )}
 
-          {/* Roadmap del mes */}
-          {roadmap.length > 0 && (() => {
-            const currentWeek = Math.min(4, Math.ceil(new Date().getDate() / 7))
-            const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-            const monthLabel  = MONTH_NAMES[new Date().getMonth()]
-            return (
-              <div className="fs-7">
-                <div className="flex items-center justify-between px-1 mb-4">
-                  <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em]">Qué viene este mes</p>
-                  <p className="text-[10px] text-[#f97316]/60 font-semibold uppercase tracking-wider">{monthLabel}</p>
+          {/* Botón Qué viene este mes */}
+          {roadmap.length > 0 && (
+            <div className="fs-7">
+              <button
+                onClick={() => setRoadmapOpen(true)}
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all active:scale-[.98] group"
+                style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.18)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: 'rgba(249,115,22,0.12)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-white">Qué viene este mes</p>
+                    <p className="text-[11px] text-white/35 mt-0.5">Plan semana a semana</p>
+                  </div>
                 </div>
-
-                <div className="space-y-2">
-                  {roadmap.map((w, i) => {
-                    const isCurrent = w.week === currentWeek
-                    const isPast    = w.week < currentWeek
-                    const isLast    = i === roadmap.length - 1
-                    return (
-                      <div key={w.id}
-                        style={{ animation: `roadmapIn .4s ${i * 0.08}s ease both` }}
-                        className="flex gap-3">
-
-                        {/* Columna izquierda: dot + línea */}
-                        <div className="flex flex-col items-center shrink-0 w-10">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-black shrink-0 ${
-                            isCurrent ? 'text-white' : isPast ? 'text-white/20' : 'text-white/35'
-                          }`}
-                          style={isCurrent ? {
-                            background: 'linear-gradient(135deg, #f97316, #fb923c)',
-                            boxShadow: '0 0 16px rgba(249,115,22,0.4)',
-                          } : {
-                            background: isPast ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${isPast ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'}`,
-                          }}>
-                            S{w.week}
-                          </div>
-                          {!isLast && (
-                            <div className="w-px flex-1 mt-2"
-                              style={{ background: isCurrent ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.05)', minHeight: 16 }} />
-                          )}
-                        </div>
-
-                        {/* Card */}
-                        <div className={`flex-1 rounded-2xl p-4 mb-2 ${isPast ? 'opacity-45' : ''}`}
-                          style={isCurrent
-                            ? { background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.2)' }
-                            : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }
-                          }>
-                          <p className={`text-sm font-bold leading-tight ${isCurrent ? 'text-white' : isPast ? 'text-white/30' : 'text-white/55'}`}>
-                            {w.title || <span className="text-white/15 font-normal italic text-xs">Sin definir</span>}
-                          </p>
-                          {w.items.filter(Boolean).length > 0 && (
-                            <ul className="space-y-1.5 mt-2.5">
-                              {w.items.filter(Boolean).map((item, j) => (
-                                <li key={j} className="flex gap-2 items-start">
-                                  <div className={`w-1 h-1 rounded-full mt-[7px] shrink-0 ${isCurrent ? 'bg-[#f97316]' : 'bg-white/15'}`} />
-                                  <span className={`text-[12px] leading-relaxed ${isCurrent ? 'text-white/65' : isPast ? 'text-white/20' : 'text-white/35'}`}>
-                                    {item}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })()}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.6)" strokeWidth="2" strokeLinecap="round"
+                  className="group-hover:translate-x-1 transition-transform">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* Footer */}
           <p className="fs-7 text-center text-[10px] text-white/15 tracking-widest uppercase py-2">
@@ -711,6 +679,98 @@ export default function PortalInicio() {
             </div>
           </div>
         )}
+
+      {/* Roadmap drawer (PC) / sheet (móvil) */}
+      {roadmapOpen && roadmap.length > 0 && (() => {
+        const currentWeek = Math.min(4, Math.ceil(new Date().getDate() / 7))
+        const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+        const monthLabel  = MONTH_NAMES[new Date().getMonth()]
+
+        const RoadmapContent = () => (
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+              <div>
+                <p className="text-base font-bold text-white">Qué viene este mes</p>
+                <p className="text-[11px] text-[#f97316]/70 font-semibold uppercase tracking-wider mt-0.5">{monthLabel}</p>
+              </div>
+              <button onClick={() => setRoadmapOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Timeline */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-2">
+              {roadmap.map((w, i) => {
+                const isCurrent = w.week === currentWeek
+                const isPast    = w.week < currentWeek
+                const isLast    = i === roadmap.length - 1
+                return (
+                  <div key={w.id} style={{ animation: `roadmapIn .35s ${i * 0.07}s ease both` }} className="flex gap-3">
+                    <div className="flex flex-col items-center shrink-0 w-10">
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-black shrink-0 ${isCurrent ? 'text-white' : isPast ? 'text-white/20' : 'text-white/35'}`}
+                        style={isCurrent
+                          ? { background: 'linear-gradient(135deg, #f97316, #fb923c)', boxShadow: '0 0 16px rgba(249,115,22,0.4)' }
+                          : { background: isPast ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isPast ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'}` }}>
+                        S{w.week}
+                      </div>
+                      {!isLast && (
+                        <div className="w-px flex-1 mt-2" style={{ background: isCurrent ? 'rgba(249,115,22,0.2)' : 'rgba(255,255,255,0.05)', minHeight: 16 }} />
+                      )}
+                    </div>
+                    <div className={`flex-1 rounded-2xl p-4 mb-2 ${isPast ? 'opacity-45' : ''}`}
+                      style={isCurrent
+                        ? { background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)' }
+                        : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p className={`text-sm font-bold leading-tight ${isCurrent ? 'text-white' : isPast ? 'text-white/30' : 'text-white/55'}`}>
+                        {w.title}
+                      </p>
+                      {w.items.filter(Boolean).length > 0 && (
+                        <ul className="space-y-1.5 mt-2.5">
+                          {w.items.filter(Boolean).map((item, j) => (
+                            <li key={j} className="flex gap-2 items-start">
+                              <div className={`w-1 h-1 rounded-full mt-[7px] shrink-0 ${isCurrent ? 'bg-[#f97316]' : 'bg-white/15'}`} />
+                              <span className={`text-[12px] leading-relaxed ${isCurrent ? 'text-white/65' : isPast ? 'text-white/20' : 'text-white/35'}`}>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+
+        return (
+          <div className="fixed inset-0 z-50" onClick={() => setRoadmapOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+            {/* Drawer lateral — PC (md+) */}
+            <div className="hidden md:flex absolute right-0 top-0 bottom-0 w-[400px] flex-col drawer-anim"
+              style={{ background: '#070f1f', borderLeft: '1px solid rgba(255,255,255,0.07)' }}
+              onClick={e => e.stopPropagation()}>
+              <RoadmapContent />
+            </div>
+
+            {/* Sheet desde abajo — móvil */}
+            <div className="md:hidden absolute bottom-0 left-0 right-0 rounded-t-3xl sheet-roadmap-anim max-h-[85vh] flex flex-col"
+              style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center pt-3 pb-1 shrink-0">
+                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <RoadmapContent />
+              <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+            </div>
+          </div>
+        )
+      })()}
 
       </div>
     </>
