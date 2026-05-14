@@ -480,68 +480,62 @@ export default function PortalInicio() {
                   <p className="text-[10px] text-[#f97316]/60 font-semibold uppercase tracking-wider">{monthLabel}</p>
                 </div>
 
-                <div className="relative">
-                  {/* Línea vertical conectora */}
-                  <div className="absolute left-[19px] top-6 bottom-6 w-px"
-                    style={{ background: 'linear-gradient(to bottom, rgba(249,115,22,0.4), rgba(249,115,22,0.04))' }} />
+                <div className="space-y-2">
+                  {roadmap.map((w, i) => {
+                    const isCurrent = w.week === currentWeek
+                    const isPast    = w.week < currentWeek
+                    const isLast    = i === roadmap.length - 1
+                    return (
+                      <div key={w.id}
+                        style={{ animation: `roadmapIn .4s ${i * 0.08}s ease both` }}
+                        className="flex gap-3">
 
-                  <div className="space-y-3">
-                    {roadmap.map((w, i) => {
-                      const isCurrent = w.week === currentWeek
-                      const isPast    = w.week < currentWeek
-                      return (
-                        <div key={w.id}
-                          style={{ animation: `roadmapIn .4s ${i * 0.08}s ease both` }}
-                          className="flex gap-4 items-start">
-
-                          {/* Dot timeline */}
-                          <div className="shrink-0 flex flex-col items-center pt-3.5">
-                            <div className={`w-[38px] h-[38px] rounded-2xl flex items-center justify-center text-[11px] font-black transition-all ${
-                              isCurrent
-                                ? 'text-white'
-                                : isPast
-                                  ? 'bg-white/[0.04] border border-white/[0.06] text-white/20'
-                                  : 'bg-white/[0.04] border border-white/[0.07] text-white/35'
-                            }`}
-                            style={isCurrent ? {
-                              background: 'linear-gradient(135deg, #f97316, #fb923c)',
-                              boxShadow: '0 0 18px rgba(249,115,22,0.45)',
-                            } : {}}>
-                              S{w.week}
-                            </div>
-                          </div>
-
-                          {/* Card */}
-                          <div className={`flex-1 rounded-2xl p-4 transition-all ${
-                            isCurrent
-                              ? 'card-glass border-[#f97316]/20'
-                              : isPast
-                                ? 'rounded-2xl opacity-40'
-                                : 'card-glass'
+                        {/* Columna izquierda: dot + línea */}
+                        <div className="flex flex-col items-center shrink-0 w-10">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-[11px] font-black shrink-0 ${
+                            isCurrent ? 'text-white' : isPast ? 'text-white/20' : 'text-white/35'
                           }`}
-                          style={isCurrent ? { background: 'rgba(249,115,22,0.04)', border: '1px solid rgba(249,115,22,0.18)' } : {}}>
-                            <p className={`text-sm font-bold mb-2.5 leading-tight ${isCurrent ? 'text-white' : isPast ? 'text-white/30' : 'text-white/55'}`}>
-                              {w.title}
-                            </p>
-                            {w.items.filter(Boolean).length > 0 && (
-                              <ul className="space-y-1.5">
-                                {w.items.filter(Boolean).map((item, j) => (
-                                  <li key={j} className="flex gap-2.5 items-start">
-                                    <div className={`w-1 h-1 rounded-full mt-[7px] shrink-0 ${
-                                      isCurrent ? 'bg-[#f97316]' : 'bg-white/15'
-                                    }`} />
-                                    <span className={`text-[12px] leading-relaxed ${
-                                      isCurrent ? 'text-white/65' : isPast ? 'text-white/20' : 'text-white/35'
-                                    }`}>{item}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
+                          style={isCurrent ? {
+                            background: 'linear-gradient(135deg, #f97316, #fb923c)',
+                            boxShadow: '0 0 16px rgba(249,115,22,0.4)',
+                          } : {
+                            background: isPast ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${isPast ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'}`,
+                          }}>
+                            S{w.week}
                           </div>
+                          {!isLast && (
+                            <div className="w-px flex-1 mt-2"
+                              style={{ background: isCurrent ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.05)', minHeight: 16 }} />
+                          )}
                         </div>
-                      )
-                    })}
-                  </div>
+
+                        {/* Card */}
+                        <div className={`flex-1 rounded-2xl p-4 mb-2 ${isPast ? 'opacity-45' : ''}`}
+                          style={isCurrent
+                            ? { background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.2)' }
+                            : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }
+                          }>
+                          <p className={`text-sm font-bold leading-tight ${isCurrent ? 'text-white' : isPast ? 'text-white/30' : 'text-white/55'}`}>
+                            {w.title || <span className="text-white/15 font-normal italic text-xs">Sin definir</span>}
+                          </p>
+                          {w.items.filter(Boolean).length > 0 && (
+                            <ul className="space-y-1.5 mt-2.5">
+                              {w.items.filter(Boolean).map((item, j) => (
+                                <li key={j} className="flex gap-2 items-start">
+                                  <div className={`w-1 h-1 rounded-full mt-[7px] shrink-0 ${isCurrent ? 'bg-[#f97316]' : 'bg-white/15'}`} />
+                                  <span className={`text-[12px] leading-relaxed ${isCurrent ? 'text-white/65' : isPast ? 'text-white/20' : 'text-white/35'}`}>
+                                    {item}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )
