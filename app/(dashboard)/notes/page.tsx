@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -16,6 +17,7 @@ interface Client  { id: string; name: string }
 interface Project { id: string; name: string }
 
 export default function NotesPage() {
+  usePageTitle('Notas')
   const [notes, setNotes]     = useState<Note[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [projects, setProjects] = useState<Project[]>([])

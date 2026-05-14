@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -24,6 +25,7 @@ const PRIORITY_DOT: Record<string, string> = {
 }
 
 export default function CalendarPage() {
+  usePageTitle('Calendario')
   const [tasks, setTasks]     = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [date, setDate]       = useState(new Date())

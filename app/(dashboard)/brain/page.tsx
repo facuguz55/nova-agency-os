@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState, useCallback } from 'react'
 import Header from '@/components/layout/Header'
@@ -67,6 +68,7 @@ const EMPTY_MEMORY = {
 
 // ── Component ────────────────────────────────────────────────
 export default function BrainPage() {
+  usePageTitle('Brain')
   const [memories,      setMemories]      = useState<Memory[]>([])
   const [observations,  setObservations]  = useState<Observation[]>([])
   const [loading,       setLoading]       = useState(true)

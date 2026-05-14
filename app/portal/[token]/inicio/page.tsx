@@ -128,6 +128,7 @@ export default function PortalInicio() {
       .then(json => {
         if (json) {
           setData(json)
+          document.title = `Portal ${json.client.name} | Nova OS`
           const fb: Record<string, 'up' | 'down' | null> = {}
           ;(json.projects as Project[]).forEach(p => { fb[p.id] = p.feedback })
           setFeedbacks(fb)

@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -19,6 +20,7 @@ interface Client { id: string; name: string }
 const EMPTY = { name: '', client_id: '', status: 'planning', description: '', budget: '' }
 
 export default function ProjectsPage() {
+  usePageTitle('Proyectos')
   const [projects, setProjects] = useState<Project[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)

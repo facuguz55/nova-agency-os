@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -13,6 +14,7 @@ interface Server {
 }
 
 export default function ServersPage() {
+  usePageTitle('Servidores')
   const [servers, setServers] = useState<Server[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)

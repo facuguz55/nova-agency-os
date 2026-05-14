@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Header from '@/components/layout/Header'
@@ -51,6 +52,7 @@ const SUGGESTIONS = [
 ]
 
 export default function ChatPage() {
+  usePageTitle('Chat IA')
   const [messages, setMessages]             = useState<Message[]>([])
   const [input, setInput]                   = useState('')
   const [loading, setLoading]               = useState(false)

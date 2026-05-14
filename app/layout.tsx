@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Nova Agency OS',
+  title: { template: '%s | Nova OS', default: 'Nova Agency OS' },
   description: 'Sistema operativo centralizado de Nova Agency',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
     title: 'Nova OS',
   },
   icons: {
-    apple: '/icon.svg',
+    icon: '/icon.png',
+    apple: '/icon.png',
   },
 }
 

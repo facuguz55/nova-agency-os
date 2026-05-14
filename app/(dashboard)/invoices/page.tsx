@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -24,6 +25,7 @@ interface Project { id: string; name: string; budget: number | null; client_id: 
 const EMPTY = { client_id: '', project_id: '', amount: '', status: 'pending', description: '', due_date: '' }
 
 export default function InvoicesPage() {
+  usePageTitle('Facturas')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [stats, setStats]       = useState<Stats>({ paid: 0, pending: 0, overdue: 0, mrr: 0 })
   const [clients, setClients]   = useState<Client[]>([])
@@ -102,6 +104,7 @@ export default function InvoicesPage() {
             status:      form.status,
             description: form.description || null,
             due_date:    form.due_date || null,
+            project_id:  form.project_id || null,
           }),
         })
       } else {
@@ -272,8 +275,22 @@ export default function InvoicesPage() {
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditInvoice(null); setSaveError(null) }} title={editInvoice ? `Editar factura ${editInvoice.invoice_number}` : 'Nueva factura'}>
         <div className="space-y-4">
           {editInvoice && (
-            <div className="px-3 py-2 bg-[#0f1d30] border border-[#1a2d45] rounded-lg">
-              <p className="text-xs text-[#64748b]">Cliente: <span className="text-white font-medium">{editInvoice.clients?.name || '—'}</span></p>
+            <div className="space-y-3">
+              <div className="px-3 py-2 bg-[#0f1d30] border border-[#1a2d45] rounded-lg">
+                <p className="text-xs text-[#64748b]">Cliente: <span className="text-white font-medium">{editInvoice.clients?.name || '—'}</span></p>
+              </div>
+              <Select
+                label="Proyecto (opcional)"
+                value={form.project_id}
+                onChange={e => setForm(f => ({ ...f, project_id: e.target.value }))}
+              >
+                <option value="">Sin proyecto</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}{p.budget ? ` — $${Number(p.budget).toLocaleString()}` : ''}
+                  </option>
+                ))}
+              </Select>
             </div>
           )}
           {!editInvoice && (

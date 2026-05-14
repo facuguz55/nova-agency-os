@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -36,6 +37,7 @@ const EMPTY_FORM = {
 const ESTADOS: EstadoProspecto[] = ['enviado', 'respondió', 'interesado', 'no_interesa', 'cerrado']
 
 export default function ProspeccionPage() {
+  usePageTitle('Prospección')
   const [prospectos, setProspectos]         = useState<Prospecto[]>([])
   const [loading, setLoading]               = useState(true)
   const [estadoFilter, setEstadoFilter]     = useState('')

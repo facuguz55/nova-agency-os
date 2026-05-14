@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -17,6 +18,7 @@ interface Client { id: string; name: string }
 const EMPTY = { name: '', description: '', status: 'active', trigger_type: 'manual', client_id: '', notes: '' }
 
 export default function AutomationsPage() {
+  usePageTitle('Automatizaciones')
   const [automations, setAutomations] = useState<Automation[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)

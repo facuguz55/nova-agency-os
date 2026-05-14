@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -13,6 +14,7 @@ interface TKMetric { id: string; followers: number; engagement_rate: number | nu
 type Platform = 'instagram' | 'youtube' | 'tiktok'
 
 export default function MetricsPage() {
+  usePageTitle('Métricas')
   const [ig, setIg] = useState<IGMetric[]>([])
   const [yt, setYt] = useState<YTMetric[]>([])
   const [tk, setTk] = useState<TKMetric[]>([])

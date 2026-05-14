@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -24,6 +25,7 @@ const TYPE_CONFIG = {
 }
 
 export default function SolicitudesPage() {
+  usePageTitle('Solicitudes')
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState('')

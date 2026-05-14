@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -20,6 +21,7 @@ const DEFAULT_TEMPLATES = [
 ]
 
 export default function TemplatesPage() {
+  usePageTitle('Templates')
   const [templates, setTemplates] = useState<Template[]>([])
   const [clients, setClients]     = useState<Client[]>([])
   const [loading, setLoading]     = useState(true)

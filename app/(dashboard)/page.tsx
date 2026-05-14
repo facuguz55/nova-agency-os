@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -34,6 +35,7 @@ const PRIORITY_DOT: Record<string, string> = {
 const PRIORITY_LABEL: Record<string, string> = { urgent: 'Urgente', high: 'Alta' }
 
 export default function DashboardPage() {
+  usePageTitle('Inicio')
   const [data, setData]       = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [spinning, setSpinning] = useState(false)

@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -19,6 +20,7 @@ interface QuickPortal { clientId: string; portal: { token: string; pin: string; 
 const EMPTY = { name: '', email: '', industry: '', status: 'active', contact_person: '', notes: '' }
 
 export default function ClientsPage() {
+  usePageTitle('Clientes')
   const [clients, setClients]     = useState<Client[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')

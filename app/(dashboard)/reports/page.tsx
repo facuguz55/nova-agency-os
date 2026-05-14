@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -23,6 +24,7 @@ function parseMarkdown(text: string): string {
 }
 
 export default function ReportsPage() {
+  usePageTitle('Reportes')
   const [clients, setClients]     = useState<Client[]>([])
   const [selected, setSelected]   = useState<Client | null>(null)
   const [report, setReport]       = useState('')

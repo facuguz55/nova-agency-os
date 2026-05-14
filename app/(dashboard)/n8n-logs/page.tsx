@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -16,6 +17,7 @@ interface WorkflowLog {
 interface SyncResult { inserted: number; skipped: number; error?: string }
 
 export default function N8NLogsPage() {
+  usePageTitle('Logs n8n')
   const [logs, setLogs]             = useState<WorkflowLog[]>([])
   const [loading, setLoading]       = useState(true)
   const [syncing, setSyncing]       = useState(false)

@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -45,6 +46,7 @@ interface ChecklistItem { id: string; text: string; done: boolean }
 interface Comment { id: string; author: string; content: string; created_at: string }
 
 export default function TasksPage() {
+  usePageTitle('Tareas')
   const [tasks, setTasks]       = useState<Task[]>([])
   const [clients, setClients]   = useState<Client[]>([])
   const [projects, setProjects] = useState<Project[]>([])

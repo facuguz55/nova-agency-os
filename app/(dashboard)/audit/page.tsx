@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -15,6 +16,7 @@ const TYPE_ICONS: Record<string, string> = {
 }
 
 export default function AuditPage() {
+  usePageTitle('Auditoría')
   const [actions, setActions] = useState<Action[]>([])
   const [loading, setLoading] = useState(true)
   const [typeFilter, setTypeFilter] = useState('')

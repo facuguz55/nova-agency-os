@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useRef, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -38,6 +39,7 @@ const INT_LABEL = {
 
 export default function ConfigPage() {
   /* ── Equipo ─────────────────────────────────────── */
+  usePageTitle('Configuración')
   const [team, setTeam]             = useState<TeamMember[]>([])
   const [loadingTeam, setLoadingTeam] = useState(true)
   const [showModal, setShowModal]   = useState(false)

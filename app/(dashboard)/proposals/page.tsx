@@ -1,4 +1,5 @@
 'use client'
+import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
@@ -41,6 +42,7 @@ function StatusBadge({ status }: { status: string }) {
 const EMPTY_FORM = { client_id: '', service: '', budget: '', title: '', content: '' }
 
 export default function ProposalsPage() {
+  usePageTitle('Propuestas')
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [clients, setClients]     = useState<Client[]>([])
   const [loading, setLoading]     = useState(true)
