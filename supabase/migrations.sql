@@ -267,6 +267,13 @@ create trigger portal_roadmap_updated_at
   before update on public.portal_roadmap
   for each row execute function public.set_updated_at();
 
+-- ── APP CONFIG (perfil de agencia, key-value) ────────────────
+create table if not exists public.app_config (
+  key        text primary key,
+  value      text,
+  updated_at timestamptz not null default now()
+);
+
 -- ── INVOICES: project_id ──────────────────────────────────────
 alter table public.invoices
   add column if not exists project_id uuid references public.projects(id) on delete set null;

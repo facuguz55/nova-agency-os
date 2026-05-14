@@ -2,11 +2,12 @@
 import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Building2, Save, Upload } from 'lucide-react'
 import {
   getCachedItems, getDefaultItems, mergeConfig, setCacheItems,
   type SidebarItem, type StoredItem,
@@ -38,8 +39,17 @@ const INT_LABEL = {
 }
 
 export default function ConfigPage() {
-  /* ── Equipo ─────────────────────────────────────── */
   usePageTitle('Configuración')
+  const searchParams = useSearchParams()
+  const profileRef   = useRef<HTMLElement>(null)
+
+  /* ── Perfil de agencia ──────────────────────────── */
+  const [profile, setProfile]           = useState({ agency_name: '', agency_tagline: '', agency_logo: '' })
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [savedProfile, setSavedProfile]   = useState(false)
+  const [userEmail, setUserEmail]         = useState('')
+
+  /* ── Equipo ─────────────────────────────────────── */
   const [team, setTeam]             = useState<TeamMember[]>([])
   const [loadingTeam, setLoadingTeam] = useState(true)
   const [showModal, setShowModal]   = useState(false)
@@ -60,14 +70,36 @@ export default function ConfigPage() {
 
   useEffect(() => {
     loadTeam()
-    // Cargar config desde Supabase
     fetch('/api/sidebar-config')
       .then(r => r.json())
-      .then(({ items: stored }) => {
-        if (stored?.length) setItems(mergeConfig(stored))
-      })
+      .then(({ items: stored }) => { if (stored?.length) setItems(mergeConfig(stored)) })
       .catch(() => {})
+    fetch('/api/app-config')
+      .then(r => r.json())
+      .then(cfg => setProfile({ agency_name: cfg.agency_name || '', agency_tagline: cfg.agency_tagline || '', agency_logo: cfg.agency_logo || '' }))
+      .catch(() => {})
+    const { createClient } = require('@/lib/supabase/client')
+    createClient().auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
+      setUserEmail(data.user?.email || '')
+    })
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'perfil' && profileRef.current) {
+      profileRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [searchParams])
+
+  async function saveProfile() {
+    setSavingProfile(true)
+    await fetch('/api/app-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    })
+    setSavingProfile(false); setSavedProfile(true)
+    setTimeout(() => setSavedProfile(false), 2000)
+  }
 
   async function loadTeam() {
     setLoadingTeam(true)
@@ -200,6 +232,76 @@ export default function ConfigPage() {
       <Header title="Configuración" subtitle="Sidebar, equipo, integraciones y credenciales" />
 
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
+
+        {/* ── Perfil de la Agencia ──────────────────────────────── */}
+        <section ref={profileRef} className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#1a2d45] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-[#f97316]" />
+              <div>
+                <h3 className="text-sm font-semibold text-white">Perfil de la Agencia</h3>
+                <p className="text-xs text-[#4a6080] mt-0.5">Nombre, logo e identidad que aparecen en el header y el portal</p>
+              </div>
+            </div>
+            <Button size="sm" onClick={saveProfile} disabled={savingProfile}>
+              {savedProfile ? '✓ Guardado' : savingProfile ? 'Guardando...' : <><Save size={12}/> Guardar</>}
+            </Button>
+          </div>
+
+          <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Preview del logo */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[#080f1e] border-2 border-[#1a2d45] flex items-center justify-center relative group">
+                {profile.agency_logo ? (
+                  <img src={profile.agency_logo} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5 text-[#253f60]">
+                    <Upload size={20} />
+                    <span className="text-[9px] font-bold tracking-wider uppercase">Sin logo</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-[#4a6080] text-center">Pegá la URL del logo abajo</p>
+              {/* Usuario actual */}
+              <div className="w-full p-3 bg-[#080f1e] border border-[#1a2d45] rounded-xl text-center">
+                <p className="text-[9px] text-[#334155] uppercase tracking-widest mb-1">Usuario activo</p>
+                <p className="text-xs text-[#64748b] truncate">{userEmail || '—'}</p>
+              </div>
+            </div>
+
+            {/* Campos */}
+            <div className="md:col-span-2 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#64748b]">Nombre de la agencia</label>
+                <input
+                  value={profile.agency_name}
+                  onChange={e => setProfile(p => ({ ...p, agency_name: e.target.value }))}
+                  placeholder="Nova Agency"
+                  className="w-full px-3.5 py-2.5 bg-[#080f1e] border border-[#1a2d45] rounded-xl text-sm text-white placeholder-[#253f60] focus:outline-none focus:border-[#f97316]/40 transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#64748b]">Tagline / descripción corta</label>
+                <input
+                  value={profile.agency_tagline}
+                  onChange={e => setProfile(p => ({ ...p, agency_tagline: e.target.value }))}
+                  placeholder="Marketing digital · Automatización · Resultados"
+                  className="w-full px-3.5 py-2.5 bg-[#080f1e] border border-[#1a2d45] rounded-xl text-sm text-white placeholder-[#253f60] focus:outline-none focus:border-[#f97316]/40 transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#64748b]">URL del logo</label>
+                <input
+                  value={profile.agency_logo}
+                  onChange={e => setProfile(p => ({ ...p, agency_logo: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3.5 py-2.5 bg-[#080f1e] border border-[#1a2d45] rounded-xl text-sm text-white placeholder-[#253f60] focus:outline-none focus:border-[#f97316]/40 transition-colors font-mono text-xs"
+                />
+                <p className="text-[10px] text-[#334155]">Subí tu logo a imgur.com o cualquier hosting de imágenes y pegá la URL directa</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* ── Sidebar ───────────────────────────────────────────── */}
         <section className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl overflow-hidden">
