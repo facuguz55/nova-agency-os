@@ -17,12 +17,15 @@ interface Task   { id: string; title: string; status: string; priority: string; 
 interface Report { id: string; title: string; period: string; created_at: string }
 interface Member { id: string; name: string; role: string; whatsapp: string | null }
 
+interface RoadmapWeek { id: string; week: number; title: string; items: string[] }
+
 interface PortalData {
   client:   { id: string; name: string; email: string | null; industry: string | null; contact_person: string | null; notes: string | null }
   projects: Project[]
   tasks:    Task[]
   reports:  Report[]
   team:     Member[]
+  roadmap:  RoadmapWeek[]
 }
 
 type MsgType = 'new_service' | 'problem' | 'note'
@@ -149,7 +152,7 @@ export default function PortalInicio() {
   )
   if (!data) return null
 
-  const { client, projects, tasks, reports, team } = data
+  const { client, projects, tasks, reports, team, roadmap } = data
   const allSubs    = projects.flatMap(p => p.subprojects || [])
   const allItems   = [...projects, ...allSubs]
   const activeP    = allItems.filter(p => p.status === 'active').length
@@ -196,16 +199,47 @@ export default function PortalInicio() {
           to   { transform: translateY(0); }
         }
         .sheet-anim { animation: slideUp .3s cubic-bezier(.32,.72,0,1) both; }
+        @keyframes orbDrift1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          30%     { transform: translate(40px,-30px) scale(1.07); }
+          65%     { transform: translate(-20px,35px) scale(0.95); }
+        }
+        @keyframes orbDrift2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%     { transform: translate(-35px,20px) scale(1.1); }
+          75%     { transform: translate(25px,-40px) scale(0.93); }
+        }
+        @keyframes orbDrift3 {
+          0%,100% { transform: translate(-50%,-50%) scale(1); }
+          35%     { transform: translate(calc(-50% + 60px),calc(-50% - 40px)) scale(1.12); }
+          70%     { transform: translate(calc(-50% - 30px),calc(-50% + 50px)) scale(0.9); }
+        }
+        @keyframes gridPulse {
+          0%,100% { opacity: 0.012; }
+          50%     { opacity: 0.028; }
+        }
+        @keyframes roadmapIn {
+          from { opacity: 0; transform: translateX(-10px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
       `}</style>
 
       <div className="portal-inicio min-h-screen bg-[#050c1a] text-white">
 
-        {/* Orbs */}
+        {/* Orbs animados */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-10"
-            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)' }} />
-          <div className="absolute bottom-0 -left-32 w-80 h-80 rounded-full opacity-5"
-            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)' }} />
+            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', animation: 'orbDrift1 22s ease-in-out infinite' }} />
+          <div className="absolute bottom-0 -left-32 w-80 h-80 rounded-full opacity-6"
+            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', animation: 'orbDrift2 28s ease-in-out infinite' }} />
+          <div className="absolute top-1/2 left-1/2 w-[560px] h-[560px] rounded-full opacity-[0.04]"
+            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 65%)', animation: 'orbDrift3 36s ease-in-out infinite' }} />
+          <div className="absolute inset-0"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.13) 1px, transparent 1px)',
+              backgroundSize: '36px 36px',
+              animation: 'gridPulse 9s ease-in-out infinite',
+            }} />
         </div>
 
         {/* Header */}
@@ -433,6 +467,85 @@ export default function PortalInicio() {
               </div>
             </div>
           )}
+
+          {/* Roadmap del mes */}
+          {roadmap.length > 0 && (() => {
+            const currentWeek = Math.min(4, Math.ceil(new Date().getDate() / 7))
+            const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+            const monthLabel  = MONTH_NAMES[new Date().getMonth()]
+            return (
+              <div className="fs-7">
+                <div className="flex items-center justify-between px-1 mb-4">
+                  <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em]">Qué viene este mes</p>
+                  <p className="text-[10px] text-[#f97316]/60 font-semibold uppercase tracking-wider">{monthLabel}</p>
+                </div>
+
+                <div className="relative">
+                  {/* Línea vertical conectora */}
+                  <div className="absolute left-[19px] top-6 bottom-6 w-px"
+                    style={{ background: 'linear-gradient(to bottom, rgba(249,115,22,0.4), rgba(249,115,22,0.04))' }} />
+
+                  <div className="space-y-3">
+                    {roadmap.map((w, i) => {
+                      const isCurrent = w.week === currentWeek
+                      const isPast    = w.week < currentWeek
+                      return (
+                        <div key={w.id}
+                          style={{ animation: `roadmapIn .4s ${i * 0.08}s ease both` }}
+                          className="flex gap-4 items-start">
+
+                          {/* Dot timeline */}
+                          <div className="shrink-0 flex flex-col items-center pt-3.5">
+                            <div className={`w-[38px] h-[38px] rounded-2xl flex items-center justify-center text-[11px] font-black transition-all ${
+                              isCurrent
+                                ? 'text-white'
+                                : isPast
+                                  ? 'bg-white/[0.04] border border-white/[0.06] text-white/20'
+                                  : 'bg-white/[0.04] border border-white/[0.07] text-white/35'
+                            }`}
+                            style={isCurrent ? {
+                              background: 'linear-gradient(135deg, #f97316, #fb923c)',
+                              boxShadow: '0 0 18px rgba(249,115,22,0.45)',
+                            } : {}}>
+                              S{w.week}
+                            </div>
+                          </div>
+
+                          {/* Card */}
+                          <div className={`flex-1 rounded-2xl p-4 transition-all ${
+                            isCurrent
+                              ? 'card-glass border-[#f97316]/20'
+                              : isPast
+                                ? 'rounded-2xl opacity-40'
+                                : 'card-glass'
+                          }`}
+                          style={isCurrent ? { background: 'rgba(249,115,22,0.04)', border: '1px solid rgba(249,115,22,0.18)' } : {}}>
+                            <p className={`text-sm font-bold mb-2.5 leading-tight ${isCurrent ? 'text-white' : isPast ? 'text-white/30' : 'text-white/55'}`}>
+                              {w.title}
+                            </p>
+                            {w.items.filter(Boolean).length > 0 && (
+                              <ul className="space-y-1.5">
+                                {w.items.filter(Boolean).map((item, j) => (
+                                  <li key={j} className="flex gap-2.5 items-start">
+                                    <div className={`w-1 h-1 rounded-full mt-[7px] shrink-0 ${
+                                      isCurrent ? 'bg-[#f97316]' : 'bg-white/15'
+                                    }`} />
+                                    <span className={`text-[12px] leading-relaxed ${
+                                      isCurrent ? 'text-white/65' : isPast ? 'text-white/20' : 'text-white/35'
+                                    }`}>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Footer */}
           <p className="fs-7 text-center text-[10px] text-white/15 tracking-widest uppercase py-2">

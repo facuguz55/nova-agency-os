@@ -235,3 +235,22 @@ create table if not exists public.project_objectives (
   unit          text not null default '%',
   created_at    timestamptz not null default now()
 );
+
+-- ── PORTAL ROADMAP ───────────────────────────────────────────
+create table if not exists public.portal_roadmap (
+  id         uuid primary key default gen_random_uuid(),
+  client_id  uuid not null references public.clients(id) on delete cascade,
+  month      int not null check (month between 1 and 12),
+  year       int not null,
+  week       int not null check (week between 1 and 4),
+  title      text not null default '',
+  items      text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(client_id, week, month, year)
+);
+create index if not exists portal_roadmap_client_idx on public.portal_roadmap(client_id, month, year);
+drop trigger if exists portal_roadmap_updated_at on public.portal_roadmap;
+create trigger portal_roadmap_updated_at
+  before update on public.portal_roadmap
+  for each row execute function public.set_updated_at();

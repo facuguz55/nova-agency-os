@@ -19,7 +19,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 
   const cid = portal.client_id
 
-  const [clientRes, projectsRes, subprojectsRes, tasksRes, reportsRes, teamRes, objectivesRes, feedbackRes] = await Promise.all([
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear  = now.getFullYear()
+
+  const [clientRes, projectsRes, subprojectsRes, tasksRes, reportsRes, teamRes, objectivesRes, feedbackRes, roadmapRes] = await Promise.all([
     supabase.from('clients').select('id,name,email,industry,contact_person,notes,created_at').eq('id', cid).single(),
     supabase.from('projects').select('id,name,status,budget,description,created_at,updated_at').eq('client_id', cid).is('parent_id', null).order('created_at', { ascending: false }),
     supabase.from('projects').select('id,name,status,budget,description,parent_id,created_at').eq('client_id', cid).not('parent_id', 'is', null).order('created_at', { ascending: false }),
@@ -28,6 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     supabase.from('team_members').select('id,name,role,whatsapp').eq('status', 'active').order('created_at'),
     supabase.from('project_objectives').select('id,project_id,title,current_value,target_value,unit').in('project_id', []).then(() => ({ data: [] as { id: string; project_id: string; title: string; current_value: number; target_value: number; unit: string }[], error: null })),
     supabase.from('portal_feedback').select('project_id,vote').eq('client_id', cid),
+    supabase.from('portal_roadmap').select('id,week,title,items').eq('client_id', cid).eq('month', currentMonth).eq('year', currentYear).order('week'),
   ])
 
   const projectIds = (projectsRes.data || []).map(p => p.id)
@@ -45,8 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   return NextResponse.json({
     client:   clientRes.data,
     projects: topProjects,
-    tasks:    tasksRes.data   || [],
-    reports:  reportsRes.data || [],
-    team:     teamRes.data    || [],
+    tasks:    tasksRes.data     || [],
+    reports:  reportsRes.data   || [],
+    team:     teamRes.data      || [],
+    roadmap:  roadmapRes.data   || [],
   })
 }

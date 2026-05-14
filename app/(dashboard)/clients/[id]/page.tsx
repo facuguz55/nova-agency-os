@@ -9,6 +9,7 @@ import { formatDate, cn } from '@/lib/utils'
 import { Sparkles, Loader2, Globe, Copy, Check } from 'lucide-react'
 
 interface Portal { id: string; token: string; pin: string; active: boolean; created_at: string }
+interface RoadmapWeek { id?: string; week: number; title: string; items: string[] }
 
 interface Scorecard {
   score: number; nivel: string; resumen: string
@@ -37,6 +38,14 @@ export default function ClientDetailPage() {
   const [portal, setPortal]           = useState<Portal | null | undefined>(undefined)
   const [creatingPortal, setCreatingPortal] = useState(false)
   const [copied, setCopied]           = useState(false)
+  const now = new Date()
+  const [roadmapMonth] = useState(now.getMonth() + 1)
+  const [roadmapYear]  = useState(now.getFullYear())
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const emptyWeeks = (): RoadmapWeek[] => [1,2,3,4].map(w => ({ week: w, title: '', items: [] }))
+  const [roadmapData, setRoadmapData] = useState<RoadmapWeek[]>(emptyWeeks())
+  const [savingRoadmap, setSavingRoadmap] = useState(false)
+  const [roadmapSaved, setRoadmapSaved]   = useState(false)
 
   async function analyzeClient() {
     setLoadingScore(true)
@@ -59,6 +68,39 @@ export default function ClientDetailPage() {
     setPortal(json.portal ?? null)
   }
 
+  async function loadRoadmap() {
+    const res  = await fetch(`/api/clients/${id}/roadmap?month=${roadmapMonth}&year=${roadmapYear}`)
+    const json = await res.json()
+    if (json.roadmap?.length) {
+      const base = emptyWeeks()
+      json.roadmap.forEach((w: RoadmapWeek) => {
+        const idx = base.findIndex(b => b.week === w.week)
+        if (idx !== -1) base[idx] = w
+      })
+      setRoadmapData(base)
+    }
+  }
+
+  async function saveRoadmap() {
+    setSavingRoadmap(true)
+    await Promise.all(
+      roadmapData
+        .filter(w => w.title.trim() || w.items.some(i => i.trim()))
+        .map(w => fetch(`/api/clients/${id}/roadmap`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...w, month: roadmapMonth, year: roadmapYear }),
+        }))
+    )
+    setSavingRoadmap(false)
+    setRoadmapSaved(true)
+    setTimeout(() => setRoadmapSaved(false), 2500)
+  }
+
+  function updateWeek(week: number, field: 'title' | 'items', value: string | string[]) {
+    setRoadmapData(prev => prev.map(w => w.week === week ? { ...w, [field]: value } : w))
+  }
+
   async function createPortal() {
     setCreatingPortal(true)
     const res = await fetch(`/api/clients/${id}/portal`, { method: 'POST' })
@@ -74,7 +116,7 @@ export default function ClientDetailPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  useEffect(() => { load(); loadPortal() }, [id])
+  useEffect(() => { load(); loadPortal(); loadRoadmap() }, [id])
 
   async function save() {
     setSaving(true)
@@ -267,6 +309,57 @@ export default function ClientDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Roadmap del mes */}
+        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Roadmap del mes</h3>
+              <p className="text-xs text-[#475569] mt-0.5">Lo que vas a hacer semana a semana — visible en el portal del cliente</p>
+            </div>
+            <span className="text-xs font-semibold text-[#f97316]/70 bg-[#f97316]/10 px-2.5 py-1 rounded-lg">
+              {MONTH_NAMES[roadmapMonth - 1]} {roadmapYear}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {roadmapData.map((w) => (
+              <div key={w.week} className="bg-[#0f172a] border border-[#1a2d45] rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-black text-[#f97316]"
+                    style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
+                    S{w.week}
+                  </div>
+                  <input
+                    value={w.title}
+                    onChange={e => updateWeek(w.week, 'title', e.target.value)}
+                    placeholder={`Título semana ${w.week} (ej: Desarrollo del CRM)`}
+                    className="flex-1 bg-transparent text-sm text-white placeholder-[#334155] outline-none font-medium"
+                  />
+                </div>
+                <textarea
+                  value={w.items.join('\n')}
+                  onChange={e => updateWeek(w.week, 'items', e.target.value.split('\n'))}
+                  placeholder="Una tarea por línea..."
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-lg text-xs text-[#94a3b8] placeholder-[#334155] outline-none resize-none"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={saveRoadmap}
+            disabled={savingRoadmap}
+            className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ background: roadmapSaved ? 'rgba(52,211,153,0.2)' : '#f97316' }}
+          >
+            {roadmapSaved ? (
+              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg> Guardado</>
+            ) : savingRoadmap ? 'Guardando...' : 'Guardar roadmap'}
+          </button>
+        </div>
 
         {/* Portal del cliente */}
         <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
