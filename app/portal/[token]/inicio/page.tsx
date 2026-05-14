@@ -20,7 +20,7 @@ interface Member { id: string; name: string; role: string; whatsapp: string | nu
 interface RoadmapWeek { id: string; week: number; title: string; items: string[] }
 
 interface PortalData {
-  client:   { id: string; name: string; email: string | null; industry: string | null; contact_person: string | null; notes: string | null }
+  client:   { id: string; name: string; email: string | null; industry: string | null; contact_person: string | null; notes: string | null; created_at: string }
   projects: Project[]
   tasks:    Task[]
   reports:  Report[]
@@ -80,6 +80,9 @@ export default function PortalInicio() {
   // feedback local (optimista)
   const [feedbacks, setFeedbacks] = useState<Record<string, 'up' | 'down' | null>>({})
 
+  // push notifications
+  const [pushState, setPushState] = useState<'idle' | 'loading' | 'subscribed' | 'denied'>('idle')
+
   // roadmap drawer/sheet
   const [roadmapOpen, setRoadmapOpen] = useState(false)
 
@@ -94,6 +97,11 @@ export default function PortalInicio() {
 
   useEffect(() => {
     const ua  = navigator.userAgent
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+    if (Notification.permission === 'granted') setPushState('subscribed')
+    else if (Notification.permission === 'denied') setPushState('denied')
     const ios = /iphone|ipad|ipod/i.test(ua) && !(window.navigator as { standalone?: boolean }).standalone
     const iosChrome = ios && /CriOS/i.test(ua)
     setIsIOS(ios)
@@ -154,6 +162,27 @@ export default function PortalInicio() {
     }
   }
 
+  async function subscribePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    setPushState('loading')
+    try {
+      const reg  = await navigator.serviceWorker.ready
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setPushState('denied'); return }
+      const sub  = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      })
+      const pin = localStorage.getItem(`portal_pin_${token}`)
+      await fetch(`/api/portal/${token}/push-subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, subscription: sub.toJSON() }),
+      })
+      setPushState('subscribed')
+    } catch { setPushState('idle') }
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-[#050c1a] flex items-center justify-center">
       <div className="w-2 h-2 rounded-full bg-[#f97316] animate-ping" />
@@ -171,6 +200,9 @@ export default function PortalInicio() {
   const hour     = new Date().getHours()
   const greeting = hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches'
   const first    = client.name.split(' ')[0]
+  const diasJuntos = client.created_at
+    ? Math.floor((Date.now() - new Date(client.created_at).getTime()) / 86400000)
+    : null
 
   // Tareas con fecha para el calendario
   const upcoming = tasks
@@ -294,6 +326,11 @@ export default function PortalInicio() {
             {client.industry && (
               <p className="text-white/30 text-xs font-medium tracking-widest uppercase">{client.industry}</p>
             )}
+            {diasJuntos !== null && diasJuntos > 0 && (
+              <p className="text-white/20 text-[11px] font-medium mt-1.5">
+                {diasJuntos === 1 ? 'Primer día juntos' : `Llevamos ${diasJuntos} días trabajando juntos`}
+              </p>
+            )}
           </div>
 
           {/* Banner de instalación */}
@@ -376,6 +413,26 @@ export default function PortalInicio() {
               </div>
             )
           })()}
+
+          {/* Banner notificaciones push */}
+          {'Notification' in window && pushState !== 'subscribed' && pushState !== 'denied' && (
+            <div className="fs-2 rounded-2xl px-4 py-4 flex items-center gap-3"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-lg"
+                style={{ background: 'rgba(255,255,255,0.05)' }}>🔔</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white/80">Activá las notificaciones</p>
+                <p className="text-[11px] text-white/30 mt-0.5">Te avisamos cuando haya novedades de tu proyecto.</p>
+              </div>
+              <button
+                onClick={subscribePush}
+                disabled={pushState === 'loading'}
+                className="shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-bold text-white/70 border border-white/15 hover:border-white/30 hover:text-white transition-all disabled:opacity-40"
+              >
+                {pushState === 'loading' ? '...' : 'Activar'}
+              </button>
+            </div>
+          )}
 
           {/* Progress ring */}
           <div className="fs-2 card-glass rounded-3xl p-5 flex items-center gap-5">
