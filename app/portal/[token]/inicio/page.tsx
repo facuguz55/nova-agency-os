@@ -692,7 +692,9 @@ export default function PortalInicio() {
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
               <div>
                 <p className="text-base font-bold text-white">Qué viene este mes</p>
-                <p className="text-[11px] text-[#f97316]/70 font-semibold uppercase tracking-wider mt-0.5">{monthLabel}</p>
+                <p className="text-[11px] text-white/30 mt-1 leading-relaxed max-w-[240px]">
+                  Lo que vamos a hacer por vos, semana a semana.
+                </p>
               </div>
               <button onClick={() => setRoadmapOpen(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
@@ -726,6 +728,7 @@ export default function PortalInicio() {
                       style={isCurrent
                         ? { background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.2)' }
                         : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p className="text-[10px] font-semibold text-white/20 uppercase tracking-widest mb-1">Semana {w.week}</p>
                       <p className={`text-sm font-bold leading-tight ${isCurrent ? 'text-white' : isPast ? 'text-white/30' : 'text-white/55'}`}>
                         {w.title}
                       </p>
