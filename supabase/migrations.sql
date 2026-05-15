@@ -267,6 +267,16 @@ create trigger portal_roadmap_updated_at
   before update on public.portal_roadmap
   for each row execute function public.set_updated_at();
 
+-- ── IDEAS ────────────────────────────────────────────────────
+create table if not exists public.ideas (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  description text,
+  status      text not null default 'pendiente'
+                check (status in ('pendiente','en_proceso','implementada','descartada')),
+  created_at  timestamptz not null default now()
+);
+
 -- ── SNIPPETS ─────────────────────────────────────────────────
 create table if not exists public.snippets (
   id         uuid primary key default gen_random_uuid(),
