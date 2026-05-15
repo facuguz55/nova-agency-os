@@ -427,7 +427,7 @@ export default function PortalInicio() {
           })()}
 
           {/* Banner notificaciones push */}
-          {'Notification' in window && pushState !== 'subscribed' && pushState !== 'denied' && (
+          {typeof window !== 'undefined' && 'Notification' in window && pushState !== 'subscribed' && pushState !== 'denied' && (
             <div className="fs-2 rounded-2xl px-4 py-4 flex items-center gap-3"
               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-lg"
