@@ -70,6 +70,50 @@ export const TOOLS: Anthropic.Tool[] = [
     },
   },
 
+  {
+    name: 'list_subprojects',
+    description: 'Lista los subproyectos (etapas) de un proyecto específico.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_name: { type: 'string', description: 'Nombre del proyecto padre' },
+      },
+      required: ['project_name'],
+    },
+  },
+  {
+    name: 'create_subproject',
+    description: 'Crea un subproyecto (etapa/fase) dentro de un proyecto existente.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name:          { type: 'string', description: 'Nombre del subproyecto' },
+        project_name:  { type: 'string', description: 'Nombre del proyecto padre' },
+        status:        { type: 'string', enum: ['planning', 'active', 'completed', 'paused'] },
+        description:   { type: 'string' },
+        budget:        { type: 'number' },
+        add_to_budget: { type: 'boolean', description: 'Si suma al presupuesto total del proyecto' },
+      },
+      required: ['name', 'project_name'],
+    },
+  },
+  {
+    name: 'create_calendar_event',
+    description: 'Agrega un evento o recordatorio al calendario creando una tarea con fecha.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        title:        { type: 'string', description: 'Nombre del evento' },
+        due_date:     { type: 'string', description: 'Fecha del evento (YYYY-MM-DD)' },
+        description:  { type: 'string' },
+        client_name:  { type: 'string' },
+        project_name: { type: 'string' },
+        priority:     { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
+      },
+      required: ['title', 'due_date'],
+    },
+  },
+
   // ── TAREAS ──────────────────────────────────────────────────
   {
     name: 'create_task',

@@ -48,12 +48,68 @@ export async function executeTool(name: string, input: Record<string, unknown>):
       }
 
       case 'list_projects': {
-        let query = supabase.from('projects').select('name, status, description, budget, clients(name)').order('created_at', { ascending: false }).limit(20)
+        let query = supabase.from('projects').select('id, name, status, description, budget, clients(name)').is('parent_id', null).order('created_at', { ascending: false }).limit(20)
         if (input.status) query = query.eq('status', input.status as string)
         const { data, error } = await query
         if (error) return `Error: ${error.message}`
         if (!data?.length) return 'No hay proyectos registrados.'
-        return JSON.stringify(data, null, 2)
+        // Incluir subproyectos de cada proyecto
+        const withSubs = await Promise.all((data || []).map(async (p: { id: string; name: string; status: string; description: string | null; budget: number | null; clients: { name: string } | { name: string }[] | null }) => {
+          const { data: subs } = await supabase.from('projects').select('name, status, budget, description').eq('parent_id', p.id)
+          return { ...p, subproyectos: subs || [] }
+        }))
+        return JSON.stringify(withSubs, null, 2)
+      }
+
+      case 'list_subprojects': {
+        const { data: projects } = await supabase.from('projects').select('id, name').ilike('name', `%${input.project_name}%`).is('parent_id', null).limit(1)
+        if (!projects?.length) return `No encontré un proyecto llamado "${input.project_name}".`
+        const { data, error } = await supabase.from('projects').select('name, status, budget, description, add_to_budget').eq('parent_id', projects[0].id)
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `El proyecto "${projects[0].name}" no tiene subproyectos todavía.`
+        return `Subproyectos de "${projects[0].name}":\n${JSON.stringify(data, null, 2)}`
+      }
+
+      case 'create_subproject': {
+        const { data: parents } = await supabase.from('projects').select('id, name, client_id').ilike('name', `%${input.project_name}%`).is('parent_id', null).limit(1)
+        if (!parents?.length) return `No encontré un proyecto llamado "${input.project_name}".`
+        const { data, error } = await supabase.from('projects').insert({
+          name:          input.name as string,
+          parent_id:     parents[0].id,
+          client_id:     parents[0].client_id,
+          status:        (input.status as string) || 'planning',
+          description:   (input.description as string) || null,
+          budget:        (input.budget as number) || null,
+          add_to_budget: (input.add_to_budget as boolean) ?? true,
+        }).select().single()
+        if (error) return `Error al crear subproyecto: ${error.message}`
+        await logAction(supabase, `Subproyecto creado via IA: ${input.name} (dentro de ${parents[0].name})`)
+        return `✅ Subproyecto "${data.name}" creado dentro de "${parents[0].name}"`
+      }
+
+      case 'create_calendar_event': {
+        let clientId  = null
+        let projectId = null
+        if (input.client_name) {
+          const { data } = await supabase.from('clients').select('id').ilike('name', `%${input.client_name}%`).limit(1)
+          if (data?.length) clientId = data[0].id
+        }
+        if (input.project_name) {
+          const { data } = await supabase.from('projects').select('id').ilike('name', `%${input.project_name}%`).limit(1)
+          if (data?.length) projectId = data[0].id
+        }
+        const { data, error } = await supabase.from('tasks').insert({
+          title:       input.title as string,
+          description: (input.description as string) || null,
+          status:      'todo',
+          priority:    (input.priority as string) || 'medium',
+          due_date:    input.due_date as string,
+          client_id:   clientId,
+          project_id:  projectId,
+        }).select().single()
+        if (error) return `Error al crear evento: ${error.message}`
+        await logAction(supabase, `Evento de calendario creado via IA: ${input.title} — ${input.due_date}`)
+        return `✅ Evento "${data.title}" agregado al calendario para el ${input.due_date}`
       }
 
       case 'update_project': {
