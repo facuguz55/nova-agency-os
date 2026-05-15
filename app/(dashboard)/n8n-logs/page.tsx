@@ -128,7 +128,7 @@ export default function N8NLogsPage() {
             </div>
             <div className="text-center">
               <p className="text-sm text-[#475569]">No hay logs</p>
-              <p className="text-xs text-[#334155] mt-1">Hacé clic en "Sincronizar n8n" para importar las ejecuciones</p>
+              <p className="text-xs text-[#334155] mt-1">Hacé clic en &quot;Sincronizar n8n&quot; para importar las ejecuciones</p>
             </div>
             <Button onClick={() => load(true)} size="sm">
               <RefreshCw size={12}/> Sincronizar ahora

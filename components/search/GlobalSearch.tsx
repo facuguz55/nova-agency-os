@@ -121,7 +121,7 @@ export default function GlobalSearch() {
           </div>
         ) : query.length >= 2 && !loading ? (
           <div className="py-8 text-center">
-            <p className="text-sm text-[#334155]">Sin resultados para "{query}"</p>
+            <p className="text-sm text-[#334155]">Sin resultados para &quot;{query}&quot;</p>
           </div>
         ) : query.length === 0 ? (
           <div className="py-5 px-4">

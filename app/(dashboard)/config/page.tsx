@@ -2,6 +2,7 @@
 import { usePageTitle } from '@/lib/usePageTitle'
 
 import { useEffect, useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select } from '@/components/ui/Input'
@@ -78,7 +79,6 @@ export default function ConfigPage() {
       .then(cfg => setProfile({ agency_name: cfg.agency_name || '', agency_tagline: cfg.agency_tagline || '', agency_logo: cfg.agency_logo || '' }))
       .catch(() => {})
     try { setTheme((localStorage.getItem('nova-theme') as 'dark' | 'light') || 'dark') } catch {}
-    const { createClient } = require('@/lib/supabase/client')
     createClient().auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
       setUserEmail(data.user?.email || '')
     })
@@ -498,7 +498,7 @@ export default function ConfigPage() {
         <div className="space-y-4">
           {!editMember && (
             <p className="text-xs text-[#4a6080]">
-              Para acceso al sistema usá "Invite user" en Supabase Auth. Acá solo registrás el miembro en la tabla del equipo.
+              Para acceso al sistema usá &quot;Invite user&quot; en Supabase Auth. Acá solo registrás el miembro en la tabla del equipo.
             </p>
           )}
           <Input

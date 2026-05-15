@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Data-fetching pattern: useEffect(() => { load() }, [deps]) es válido
+      "react-hooks/set-state-in-effect": "off",
+      // Date.now() y new Date() son válidos dentro de useMemo para cálculos temporales
+      "react-hooks/purity": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

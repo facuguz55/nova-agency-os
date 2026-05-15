@@ -20,8 +20,6 @@ export default function TareasMobilePage() {
   const [newDueDate, setNewDueDate]   = useState('')
   const [saving, setSaving]           = useState(false)
 
-  useEffect(() => { load() }, [])
-
   async function load() {
     setLoading(true)
     const res = await fetch('/api/tasks')
@@ -29,6 +27,8 @@ export default function TareasMobilePage() {
     setTasks(data.tasks || [])
     setLoading(false)
   }
+
+  useEffect(() => { load() }, [])
 
   async function toggleTask(t: Task) {
     const newStatus = t.status === 'done' ? 'todo' : 'done'

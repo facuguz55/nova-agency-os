@@ -1,7 +1,7 @@
 'use client'
 import { usePageTitle } from '@/lib/usePageTitle'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
@@ -182,7 +182,10 @@ export default function TasksPage() {
   }
 
   const byStatus = (status: Task['status']) => tasks.filter(t => t.status === status)
-  const dueSoon  = tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) <= new Date(Date.now() + 3 * 86400000))
+  const dueSoon  = useMemo(
+    () => tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) <= new Date(Date.now() + 3 * 86400000)),
+    [tasks]
+  )
 
   return (
     <>

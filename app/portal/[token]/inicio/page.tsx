@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -195,6 +195,11 @@ export default function PortalInicio() {
     } catch { setPushState('idle') }
   }
 
+  const diasJuntos = useMemo(
+    () => data?.client?.created_at ? Math.floor((Date.now() - new Date(data.client.created_at).getTime()) / 86400000) : null,
+    [data?.client?.created_at]
+  )
+
   if (loading) return (
     <div className="min-h-screen bg-[#050c1a] flex items-center justify-center">
       <div className="w-2 h-2 rounded-full bg-[#f97316] animate-ping" />
@@ -212,9 +217,6 @@ export default function PortalInicio() {
   const hour     = new Date().getHours()
   const greeting = hour < 13 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches'
   const first    = client.name.split(' ')[0]
-  const diasJuntos = client.created_at
-    ? Math.floor((Date.now() - new Date(client.created_at).getTime()) / 86400000)
-    : null
 
   // Tareas con fecha para el calendario
   const upcoming = tasks
