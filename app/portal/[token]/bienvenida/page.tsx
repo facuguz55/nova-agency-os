@@ -46,6 +46,21 @@ export default function PortalBienvenida() {
 
         .doc-font { font-family: 'Plus Jakarta Sans', sans-serif; }
         .display-font { font-family: 'Cormorant Garamond', serif; }
+
+        @keyframes bvOrbA {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%     { transform: translate(60px,-40px) scale(1.08); }
+          70%     { transform: translate(-30px,50px) scale(0.94); }
+        }
+        @keyframes bvOrbB {
+          0%,100% { transform: translate(0,0) scale(1); }
+          35%     { transform: translate(-50px,30px) scale(1.1); }
+          75%     { transform: translate(40px,-55px) scale(0.92); }
+        }
+        @keyframes bvGrid {
+          0%,100% { opacity: 0.008; }
+          50%     { opacity: 0.018; }
+        }
       `}</style>
 
       {/* Botón imprimir */}
@@ -65,8 +80,22 @@ export default function PortalBienvenida() {
       </div>
 
       {/* Fondo pantalla — azul oscuro profundo */}
-      <div className="doc-font min-h-screen flex items-start justify-center py-12 print:py-0 print:bg-white"
+      <div className="doc-font min-h-screen flex items-start justify-center py-12 print:py-0 print:bg-white relative"
         style={{ background: 'linear-gradient(160deg, #030810 0%, #08152a 40%, #0a1a35 100%)' }}>
+
+        {/* Orbs animados — solo pantalla, no se imprimen */}
+        <div className="no-print fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full"
+            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', opacity: 0.05, animation: 'bvOrbA 26s ease-in-out infinite' }} />
+          <div className="absolute bottom-8 -left-20 w-64 h-64 rounded-full"
+            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', opacity: 0.04, animation: 'bvOrbB 32s ease-in-out infinite' }} />
+          <div className="absolute inset-0"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)',
+              backgroundSize: '44px 44px',
+              animation: 'bvGrid 12s ease-in-out infinite',
+            }} />
+        </div>
 
         {/* Documento */}
         <div

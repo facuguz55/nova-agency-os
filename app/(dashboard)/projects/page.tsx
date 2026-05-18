@@ -8,10 +8,11 @@ import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatRelative } from '@/lib/utils'
+import { Star } from 'lucide-react'
 
 interface Project {
   id: string; name: string; status: string; description: string | null
-  budget: number | null; created_at: string
+  budget: number | null; created_at: string; featured_until: string | null
   clients: { name: string; email: string | null } | null
 }
 
@@ -60,6 +61,18 @@ export default function ProjectsPage() {
     load()
   }
 
+  async function toggleFeatured(e: React.MouseEvent, p: Project) {
+    e.stopPropagation()
+    const isFeatured = p.featured_until && new Date(p.featured_until) > new Date()
+    const newValue = isFeatured ? null : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    await fetch(`/api/projects/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ featured_until: newValue }),
+    })
+    setProjects(prev => prev.map(x => x.id === p.id ? { ...x, featured_until: newValue } : x))
+  }
+
   return (
     <>
       <Header
@@ -96,17 +109,39 @@ export default function ProjectsPage() {
               <div
                 key={p.id}
                 onClick={() => router.push(`/projects/${p.id}`)}
-                className="bg-[#1e293b] border border-[#334155] hover:border-[#ff8c42]/40 rounded-xl p-4 cursor-pointer transition-all"
+                className="relative bg-[#1e293b] border rounded-xl p-4 cursor-pointer transition-all hover:border-[#ff8c42]/40"
+                style={{
+                  borderColor: p.featured_until && new Date(p.featured_until) > new Date() ? 'rgba(249,115,22,0.45)' : '#334155',
+                  boxShadow: p.featured_until && new Date(p.featured_until) > new Date() ? '0 0 20px rgba(249,115,22,0.08)' : 'none',
+                }}
               >
+                {p.featured_until && new Date(p.featured_until) > new Date() && (
+                  <span className="absolute top-3 right-12 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }}>
+                    Destacado
+                  </span>
+                )}
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white truncate flex-1">{p.name}</h3>
+                  <h3 className="text-sm font-semibold text-white truncate flex-1 pr-2">{p.name}</h3>
                   <StatusBadge status={p.status} />
                 </div>
                 <p className="text-xs text-[#475569] mb-3">{p.clients?.name || 'Sin cliente'}</p>
                 {p.description && <p className="text-xs text-[#94a3b8] mb-3 line-clamp-2">{p.description}</p>}
                 <div className="flex items-center justify-between mt-auto">
                   {p.budget ? <span className="text-xs text-[#ff8c42]">${p.budget.toLocaleString()}</span> : <span />}
-                  <span className="text-xs text-[#334155]">{formatRelative(p.created_at)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#334155]">{formatRelative(p.created_at)}</span>
+                    <button
+                      onClick={(e) => toggleFeatured(e, p)}
+                      title={p.featured_until && new Date(p.featured_until) > new Date() ? 'Quitar destacado' : 'Destacar en portal del cliente'}
+                      className="p-1 rounded-lg transition-colors"
+                      style={{
+                        color: p.featured_until && new Date(p.featured_until) > new Date() ? '#f97316' : '#334155',
+                      }}
+                    >
+                      <Star size={13} fill={p.featured_until && new Date(p.featured_until) > new Date() ? 'currentColor' : 'none'} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -9,6 +9,7 @@ interface Objective  { id: string; title: string; current_value: number; target_
 interface Subproject { id: string; name: string; status: string; budget: number | null; description: string | null }
 interface Project {
   id: string; name: string; status: string; budget: number | null; created_at: string; description: string | null
+  featured_until: string | null
   subprojects: Subproject[]
   objectives:  Objective[]
   feedback:    'up' | 'down' | null
@@ -492,7 +493,15 @@ export default function PortalInicio() {
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
+                            {p.featured_until && new Date(p.featured_until) > new Date() && (
+                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0 animate-pulse"
+                                style={{ background: 'rgba(249,115,22,0.2)', color: '#f97316', border: '1px solid rgba(249,115,22,0.35)' }}>
+                                ✦ Reciente
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-white/30 mt-0.5">
                             {p.subprojects?.length > 0 ? `${p.subprojects.length} etapa${p.subprojects.length !== 1 ? 's' : ''}` : 'Sin etapas'}
                             {totalBudget > 0 && ` · $${Number(totalBudget).toLocaleString('es-AR')}`}

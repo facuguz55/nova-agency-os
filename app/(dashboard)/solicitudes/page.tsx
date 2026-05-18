@@ -4,7 +4,7 @@ import { usePageTitle } from '@/lib/usePageTitle'
 import { useEffect, useState } from 'react'
 import Header from '@/components/layout/Header'
 import { formatDate } from '@/lib/utils'
-import { MessageSquare, Rocket, AlertTriangle, FileText, Check, RefreshCw } from 'lucide-react'
+import { MessageSquare, Rocket, AlertTriangle, FileText, Check, RefreshCw, Trash2 } from 'lucide-react'
 
 interface Message {
   id: string
@@ -46,6 +46,12 @@ export default function SolicitudesPage() {
       body: JSON.stringify({ status: 'resolved' }),
     })
     load()
+  }
+
+  async function deleteMessage(id: string) {
+    if (!confirm('¿Eliminar esta solicitud? No se puede deshacer.')) return
+    await fetch(`/api/portal-messages/${id}`, { method: 'DELETE' })
+    setMessages(prev => prev.filter(m => m.id !== id))
   }
 
   const filtered = messages.filter(m => !filter || m.type === filter)
@@ -153,15 +159,20 @@ export default function SolicitudesPage() {
                       <p className="text-sm text-[#64748b] leading-relaxed">{m.body}</p>
                     </div>
                   </div>
-                  {!done && (
-                    <div className="flex justify-end mt-4">
+                  <div className="flex justify-end gap-2 mt-4">
+                    {!done && (
                       <button onClick={() => markResolved(m.id)}
                         className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
                         style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
                         <Check size={12} /> Marcar resuelto
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <button onClick={() => deleteMessage(m.id)}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                      style={{ background: 'rgba(248,113,113,0.08)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)' }}>
+                      <Trash2 size={12} /> Eliminar
+                    </button>
+                  </div>
                 </div>
               )
             })}

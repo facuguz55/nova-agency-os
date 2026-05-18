@@ -65,6 +65,7 @@ export default function IdeasPage() {
   const [title, setTitle]     = useState('')
   const [desc, setDesc]       = useState('')
   const [adding, setAdding]   = useState(false)
+  const [addError, setAddError] = useState('')
   const [filter, setFilter]   = useState('')
 
   async function load() {
@@ -89,7 +90,15 @@ export default function IdeasPage() {
   async function add() {
     if (!title.trim()) return
     setAdding(true)
-    await supabase.from('ideas').insert({ title: title.trim(), description: desc.trim() || null, status: 'pendiente' })
+    setAddError('')
+    const { error } = await supabase
+      .from('ideas')
+      .insert({ title: title.trim(), description: desc.trim() || null, status: 'pendiente' })
+    if (error) {
+      setAddError(`No se pudo guardar: ${error.message}`)
+      setAdding(false)
+      return
+    }
     setTitle(''); setDesc(''); setAdding(false); load()
   }
 
@@ -148,6 +157,9 @@ export default function IdeasPage() {
             rows={2}
             className="w-full bg-transparent text-sm text-[#4a6080] placeholder-[#1a2d45] focus:outline-none resize-none"
           />
+          {addError && (
+            <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{addError}</p>
+          )}
           <div className="flex items-center justify-between pt-2 border-t border-[#1a2d45]">
             <p className="text-[10px] text-[#1e2f4a]">Enter para guardar</p>
             <button

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 
   const [clientRes, projectsRes, subprojectsRes, tasksRes, reportsRes, teamRes, objectivesRes, feedbackRes, roadmapRes] = await Promise.all([
     supabase.from('clients').select('id,name,email,industry,contact_person,notes,created_at').eq('id', cid).single(), // created_at para calcular días juntos
-    supabase.from('projects').select('id,name,status,budget,description,created_at,updated_at').eq('client_id', cid).is('parent_id', null).order('created_at', { ascending: false }),
+    supabase.from('projects').select('id,name,status,budget,description,created_at,updated_at,featured_until').eq('client_id', cid).is('parent_id', null).order('created_at', { ascending: false }),
     supabase.from('projects').select('id,name,status,budget,description,parent_id,created_at').eq('client_id', cid).not('parent_id', 'is', null).order('created_at', { ascending: false }),
     supabase.from('tasks').select('id,title,status,priority,due_date,assigned_to').eq('client_id', cid).order('due_date', { ascending: true }),
     supabase.from('portal_reports').select('*').eq('portal_id', portal.id).order('created_at', { ascending: false }),

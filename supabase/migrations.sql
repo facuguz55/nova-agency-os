@@ -298,3 +298,7 @@ alter table public.invoices
   add column if not exists project_id uuid references public.projects(id) on delete set null;
 
 create index if not exists invoices_project_idx on public.invoices(project_id);
+
+-- ── PROJECTS: columna featured_until (destacar proyecto en portal) ──────────
+alter table public.projects
+  add column if not exists featured_until timestamptz;
