@@ -302,3 +302,7 @@ create index if not exists invoices_project_idx on public.invoices(project_id);
 -- ── PROJECTS: columna featured_until (destacar proyecto en portal) ──────────
 alter table public.projects
   add column if not exists featured_until timestamptz;
+
+-- ── IDEAS: columna description (si no se creó con la tabla) ─────────────────
+alter table public.ideas
+  add column if not exists description text;

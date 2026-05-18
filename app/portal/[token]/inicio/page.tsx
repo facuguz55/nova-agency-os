@@ -294,15 +294,15 @@ export default function PortalInicio() {
 
         {/* Orbs animados */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-10"
+          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-20"
             style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', animation: 'orbDrift1 22s ease-in-out infinite' }} />
-          <div className="absolute bottom-0 -left-32 w-80 h-80 rounded-full opacity-6"
+          <div className="absolute bottom-0 -left-32 w-96 h-96 rounded-full opacity-[0.14]"
             style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', animation: 'orbDrift2 28s ease-in-out infinite' }} />
-          <div className="absolute top-1/2 left-1/2 w-[560px] h-[560px] rounded-full opacity-[0.04]"
+          <div className="absolute top-1/2 left-1/2 w-[640px] h-[640px] rounded-full opacity-[0.08]"
             style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 65%)', animation: 'orbDrift3 36s ease-in-out infinite' }} />
           <div className="absolute inset-0"
             style={{
-              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.13) 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px)',
               backgroundSize: '36px 36px',
               animation: 'gridPulse 9s ease-in-out infinite',
             }} />

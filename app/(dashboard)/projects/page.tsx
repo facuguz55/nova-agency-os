@@ -115,16 +115,16 @@ export default function ProjectsPage() {
                   boxShadow: p.featured_until && new Date(p.featured_until) > new Date() ? '0 0 20px rgba(249,115,22,0.08)' : 'none',
                 }}
               >
-                {p.featured_until && new Date(p.featured_until) > new Date() && (
-                  <span className="absolute top-3 right-12 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }}>
-                    Destacado
-                  </span>
-                )}
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <h3 className="text-sm font-semibold text-white truncate flex-1 pr-2">{p.name}</h3>
                   <StatusBadge status={p.status} />
                 </div>
+                {p.featured_until && new Date(p.featured_until) > new Date() && (
+                  <span className="inline-block mb-2 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }}>
+                    ⭐ Destacado en portal
+                  </span>
+                )}
                 <p className="text-xs text-[#475569] mb-3">{p.clients?.name || 'Sin cliente'}</p>
                 {p.description && <p className="text-xs text-[#94a3b8] mb-3 line-clamp-2">{p.description}</p>}
                 <div className="flex items-center justify-between mt-auto">

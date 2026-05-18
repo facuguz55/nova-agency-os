@@ -36,7 +36,26 @@ const WIZARD_QUESTIONS: WizardQuestion[] = [
   { key: 'presupuesto', q: '¿Cuál es el presupuesto?',         opts: ['Menos de $100k', '$100k – $500k', '$500k – $1M', 'Más de $1M', 'No definido'] },
   { key: 'plazo',       q: '¿En qué plazo lo necesitás?',      opts: ['1 mes', '2–3 meses', '3–6 meses', 'Más de 6 meses'] },
 ]
-const WIZARD_TRIGGERS = ['haceme preguntas', 'hacer preguntas', 'armar proyecto', 'planear proyecto', 'plan de proyecto', 'quiero armar', 'modo proyecto', 'crear proyecto', 'nuevo proyecto']
+
+function isWizardIntent(text: string): boolean {
+  const t = text.toLowerCase()
+  // Frases directas
+  const direct = [
+    'haceme preguntas', 'hacer preguntas', 'armar proyecto', 'planear proyecto',
+    'plan de proyecto', 'quiero armar', 'modo proyecto', 'crear proyecto',
+    'nuevo proyecto', 'arranquemos', 'arrancamos', 'empecemos', 'empezamos',
+    'iniciemos', 'lanzar proyecto', 'quiero lanzar', 'tengo un cliente',
+    'cliente nuevo', 'nueva cuenta', 'propuesta de proyecto', 'propuesta para',
+    'quiero proponer', 'abrir un proyecto',
+  ]
+  if (direct.some(d => t.includes(d))) return true
+  // "proyecto" + palabra de acción
+  if (t.includes('proyecto')) {
+    const acciones = ['arranc', 'empez', 'inici', 'cre', 'arm', 'plan', 'lanz', 'abr', 'nuev', 'propon']
+    if (acciones.some(a => t.includes(a))) return true
+  }
+  return false
+}
 
 function parseMarkdown(text: string): string {
   return text
@@ -109,8 +128,7 @@ export default function ChatPage() {
     const text = (overrideText ?? input).trim()
     if (!text || loading) return
 
-    const lower = text.toLowerCase()
-    const isWizardTrigger = !wizard && WIZARD_TRIGGERS.some(t => lower.includes(t))
+    const isWizardTrigger = !wizard && isWizardIntent(text)
 
     setInput('')
     setInterim('')

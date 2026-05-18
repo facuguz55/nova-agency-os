@@ -91,9 +91,16 @@ export default function IdeasPage() {
     if (!title.trim()) return
     setAdding(true)
     setAddError('')
-    const { error } = await supabase
+    let { error } = await supabase
       .from('ideas')
       .insert({ title: title.trim(), description: desc.trim() || null, status: 'pendiente' })
+    // Si la columna description no existe todavía, reintenta sin ella
+    if (error?.message.includes('description')) {
+      const retry = await supabase
+        .from('ideas')
+        .insert({ title: title.trim(), status: 'pendiente' })
+      error = retry.error
+    }
     if (error) {
       setAddError(`No se pudo guardar: ${error.message}`)
       setAdding(false)

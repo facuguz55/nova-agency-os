@@ -85,15 +85,15 @@ export default function PortalBienvenida() {
 
         {/* Orbs animados — solo pantalla, no se imprimen */}
         <div className="no-print fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full"
-            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', opacity: 0.05, animation: 'bvOrbA 26s ease-in-out infinite' }} />
-          <div className="absolute bottom-8 -left-20 w-64 h-64 rounded-full"
-            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', opacity: 0.04, animation: 'bvOrbB 32s ease-in-out infinite' }} />
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full"
+            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', opacity: 0.18, animation: 'bvOrbA 26s ease-in-out infinite' }} />
+          <div className="absolute bottom-8 -left-20 w-80 h-80 rounded-full"
+            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', opacity: 0.12, animation: 'bvOrbB 32s ease-in-out infinite' }} />
           <div className="absolute inset-0"
             style={{
-              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)',
-              backgroundSize: '44px 44px',
-              animation: 'bvGrid 12s ease-in-out infinite',
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px)',
+              backgroundSize: '36px 36px',
+              animation: 'bvGrid 9s ease-in-out infinite',
             }} />
         </div>
 
