@@ -28,35 +28,6 @@ interface SpeechRecognitionInstance extends EventTarget {
   onend: (() => void) | null
 }
 
-// ─── Wizard de proyectos ────────────────────────────────────────────────────
-interface WizardQuestion { key: string; q: string; opts: string[] }
-const WIZARD_QUESTIONS: WizardQuestion[] = [
-  { key: 'tipo',        q: '¿Qué tipo de proyecto es?',        opts: ['Redes Sociales', 'Sitio Web / App', 'Diseño Gráfico', 'Marketing Digital', 'Branding', 'Otro'] },
-  { key: 'objetivo',    q: '¿Cuál es el objetivo principal?',  opts: ['Más seguidores', 'Más ventas', 'Mejorar imagen de marca', 'Lanzar un producto', 'Presencia digital', 'Otro'] },
-  { key: 'presupuesto', q: '¿Cuál es el presupuesto?',         opts: ['Menos de $100k', '$100k – $500k', '$500k – $1M', 'Más de $1M', 'No definido'] },
-  { key: 'plazo',       q: '¿En qué plazo lo necesitás?',      opts: ['1 mes', '2–3 meses', '3–6 meses', 'Más de 6 meses'] },
-]
-
-function isWizardIntent(text: string): boolean {
-  const t = text.toLowerCase()
-  // Frases directas
-  const direct = [
-    'haceme preguntas', 'hacer preguntas', 'armar proyecto', 'planear proyecto',
-    'plan de proyecto', 'quiero armar', 'modo proyecto', 'crear proyecto',
-    'nuevo proyecto', 'arranquemos', 'arrancamos', 'empecemos', 'empezamos',
-    'iniciemos', 'lanzar proyecto', 'quiero lanzar', 'tengo un cliente',
-    'cliente nuevo', 'nueva cuenta', 'propuesta de proyecto', 'propuesta para',
-    'quiero proponer', 'abrir un proyecto',
-  ]
-  if (direct.some(d => t.includes(d))) return true
-  // "proyecto" + palabra de acción
-  if (t.includes('proyecto')) {
-    const acciones = ['arranc', 'empez', 'inici', 'cre', 'arm', 'plan', 'lanz', 'abr', 'nuev', 'propon']
-    if (acciones.some(a => t.includes(a))) return true
-  }
-  return false
-}
-
 function parseMarkdown(text: string): string {
   return text
     .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
@@ -95,9 +66,6 @@ export default function ChatPage() {
   const inputBeforeVoice = useRef('')
   const shouldRestartRef = useRef(false)
 
-  // Wizard de proyectos
-  const [wizard, setWizard] = useState<{ step: number; answers: Record<string, string> } | null>(null)
-
   const bottomRef = useRef<HTMLDivElement>(null)
   const textRef   = useRef<HTMLTextAreaElement>(null)
 
@@ -128,29 +96,14 @@ export default function ChatPage() {
     const text = (overrideText ?? input).trim()
     if (!text || loading) return
 
-    const isWizardTrigger = !wizard && isWizardIntent(text)
-
     setInput('')
     setInterim('')
+    setLoading(true)
 
     const userMsg: Message = { role: 'user', content: text, timestamp: new Date().toISOString() }
     setMessages(p => [...p, userMsg])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
-    if (isWizardTrigger) {
-      // Activar wizard sin llamar a la API
-      const activationMsg: Message = {
-        role: 'assistant',
-        content: '¡Buenísimo! Voy a hacerte algunas preguntas rápidas para armar el plan del proyecto. Elegí la opción que mejor aplique.',
-        timestamp: new Date().toISOString(),
-      }
-      setMessages(p => [...p, activationMsg])
-      setWizard({ step: 0, answers: {} })
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-      return
-    }
-
-    setLoading(true)
     const historyForAPI = messages.slice(-20).map(m => ({ role: m.role, content: m.content }))
 
     try {
@@ -170,65 +123,6 @@ export default function ChatPage() {
     }
 
     setLoading(false)
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-  }
-
-  async function handleWizardOption(option: string) {
-    if (!wizard) return
-    const currentQ = WIZARD_QUESTIONS[wizard.step]
-    const newAnswers = { ...wizard.answers, [currentQ.key]: option }
-
-    // Mostrar respuesta del usuario en el chat
-    const userMsg: Message = { role: 'user', content: option, timestamp: new Date().toISOString() }
-    setMessages(p => [...p, userMsg])
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-
-    const nextStep = wizard.step + 1
-
-    if (nextStep < WIZARD_QUESTIONS.length) {
-      // Avanzar al siguiente paso
-      const nextQ = WIZARD_QUESTIONS[nextStep]
-      const questionMsg: Message = {
-        role: 'assistant',
-        content: nextQ.q,
-        timestamp: new Date().toISOString(),
-      }
-      setMessages(p => [...p, questionMsg])
-      setWizard({ step: nextStep, answers: newAnswers })
-    } else {
-      // Todas las preguntas respondidas — compilar y enviar a Claude
-      setWizard(null)
-      setLoading(true)
-
-      const compiled = `Armá el plan de proyecto con esta información:
-- Tipo de proyecto: ${newAnswers.tipo}
-- Objetivo principal: ${newAnswers.objetivo}
-- Presupuesto aproximado: ${newAnswers.presupuesto}
-- Plazo: ${newAnswers.plazo}
-
-Generá un plan detallado con etapas, tareas clave y recomendaciones de estrategia para Nova Agency.`
-
-      const historyForAPI = messages.slice(-20).map(m => ({ role: m.role, content: m.content }))
-
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: compiled, history: historyForAPI }),
-        })
-        const { response, error } = await res.json()
-        setMessages(p => [...p, {
-          role: 'assistant',
-          content: error ? `Error: ${error}` : response,
-          timestamp: new Date().toISOString(),
-        }])
-      } catch {
-        setMessages(p => [...p, { role: 'assistant', content: 'Error de conexión.', timestamp: new Date().toISOString() }])
-      }
-
-      setLoading(false)
-    }
-
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
@@ -319,28 +213,16 @@ Generá un plan detallado con etapas, tareas clave y recomendaciones de estrateg
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`
   }
 
-  const currentWizardQ = wizard ? WIZARD_QUESTIONS[wizard.step] : null
-
   return (
     <>
       <Header
         title="IA Chat"
         subtitle="Claude Haiku — Asistente de Nova Agency"
         actions={
-          <div className="flex items-center gap-2">
-            {wizard && (
-              <button
-                onClick={() => setWizard(null)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#f97316]/10 hover:bg-[#f97316]/20 text-[#f97316] border border-[#f97316]/25 rounded-xl transition-all"
-              >
-                Salir del modo proyecto
-              </button>
-            )}
-            <button onClick={loadHistory} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#111e33] hover:bg-[#1a2d4a] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-xl transition-all">
-              <RefreshCw size={11} />
-              Historial
-            </button>
-          </div>
+          <button onClick={loadHistory} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#111e33] hover:bg-[#1a2d4a] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-xl transition-all">
+            <RefreshCw size={11} />
+            Historial
+          </button>
         }
       />
 
@@ -360,9 +242,6 @@ Generá un plan detallado con etapas, tareas clave y recomendaciones de estrateg
                 <p className="text-white font-bold text-lg mb-1">Nova AI</p>
                 <p className="text-[#475569] text-sm leading-relaxed">
                   Asistente consultivo. Preguntame sobre clientes, proyectos, métricas o automatizaciones.
-                </p>
-                <p className="text-[#2a3d56] text-xs mt-2">
-                  Tip: escribí <span className="text-[#f97316]/70">&ldquo;haceme preguntas&rdquo;</span> para armar un plan de proyecto
                 </p>
                 {voiceSupported && (
                   <p className="text-[#334155] text-xs mt-2 flex items-center justify-center gap-1">
@@ -433,57 +312,6 @@ Generá un plan detallado con etapas, tareas clave y recomendaciones de estrateg
           <div ref={bottomRef} />
         </div>
 
-        {/* Wizard panel — aparece encima del input cuando está activo */}
-        {currentWizardQ && !loading && (
-          <div className="shrink-0 px-6 pb-3 pt-4 border-t border-[#1e2f4a] bg-[#080f1e]/90">
-            {/* Progress + botón salir */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex gap-1">
-                {WIZARD_QUESTIONS.map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-1 rounded-full transition-all"
-                    style={{
-                      width: i === wizard!.step ? 20 : 8,
-                      background: i < wizard!.step ? '#f97316' : i === wizard!.step ? '#ff8c42' : '#1e2f4a',
-                    }}
-                  />
-                ))}
-              </div>
-              <span className="text-[10px] text-[#334155] ml-1">
-                Pregunta {wizard!.step + 1} de {WIZARD_QUESTIONS.length}
-              </span>
-              <button
-                onClick={() => setWizard(null)}
-                title="Salir del modo proyecto"
-                className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-[#475569] hover:text-white hover:bg-[#1e2f4a] transition-all"
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-                Salir
-              </button>
-            </div>
-
-            {/* Pregunta */}
-            <p className="text-sm font-semibold text-white mb-3">{currentWizardQ.q}</p>
-
-            {/* Opciones */}
-            <div className="flex flex-wrap gap-2">
-              {currentWizardQ.opts.map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => handleWizardOption(opt)}
-                  className="px-3 py-2 text-xs font-medium rounded-xl border transition-all hover:border-[#ff8c42]/50 hover:bg-[#ff8c42]/8 hover:text-white active:scale-95"
-                  style={{ background: '#0e1a2e', borderColor: '#1e2f4a', color: '#94a3b8' }}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Input area */}
         <div className="shrink-0 px-6 pb-6 pt-3 bg-[#080f1e]/80 backdrop-blur-sm border-t border-[#1e2f4a]">
 
@@ -527,13 +355,7 @@ Generá un plan detallado con etapas, tareas clave y recomendaciones de estrateg
                   }
                 }}
                 onKeyDown={onKey}
-                placeholder={
-                  wizard
-                    ? 'Elegí una opción de arriba o escribí tu respuesta...'
-                    : isListening
-                      ? 'Hablá... el mic para solo, después enviás vos'
-                      : 'Escribí o usá el micrófono... (Enter para enviar)'
-                }
+                placeholder={isListening ? 'Hablá... el mic para solo, después enviás vos' : 'Escribí o usá el micrófono... (Enter para enviar)'}
                 rows={1}
                 readOnly={isListening}
                 className="w-full bg-transparent text-white text-sm placeholder-[#334155] resize-none focus:outline-none max-h-40"
