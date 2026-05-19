@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const supabase = await createClient()
   const body = await req.json()
-  const { client_id, project_id, template, extra_info, brand_color1, brand_color2, has_brand_colors } = body
+  const { client_id, project_id, template, format, extra_info, brand_color1, brand_color2, has_brand_colors } = body
 
   // Update brand colors on client if provided
   if (has_brand_colors !== undefined) {
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     client_id,
     project_id: project_id || null,
     template,
+    format: format || 'vertical',
     props: { extra_info: extra_info || '' },
     status: 'pending',
     progress: 0,

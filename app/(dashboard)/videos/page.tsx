@@ -49,6 +49,7 @@ export default function VideosPage() {
   const [clientId, setClientId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [template, setTemplate] = useState('prospecto')
+  const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
   const [extraInfo, setExtraInfo] = useState('')
   const [brandColor1, setBrandColor1] = useState('#ff8c42')
   const [brandColor2, setBrandColor2] = useState('#f97316')
@@ -115,6 +116,7 @@ export default function VideosPage() {
         client_id: clientId,
         project_id: projectId || null,
         template,
+        format,
         extra_info: extraInfo,
         brand_color1: hasBrandColors ? brandColor1 : null,
         brand_color2: hasBrandColors ? brandColor2 : null,
@@ -223,6 +225,31 @@ export default function VideosPage() {
                 {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </Select>
             )}
+
+            {/* Format */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-[#94a3b8]">Formato</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { value: 'vertical',   label: '9:16', sub: 'Reels/TikTok' },
+                  { value: 'square',     label: '1:1',  sub: 'Feed' },
+                  { value: 'horizontal', label: '16:9', sub: 'YouTube' },
+                ] as const).map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setFormat(f.value)}
+                    className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${
+                      format === f.value
+                        ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]'
+                        : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
+                    }`}
+                  >
+                    <div className="font-bold">{f.label}</div>
+                    <div className="text-[10px] mt-0.5 opacity-70">{f.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Template */}
             <div className="space-y-2">
