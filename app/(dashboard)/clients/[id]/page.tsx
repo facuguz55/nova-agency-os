@@ -35,6 +35,8 @@ export default function ClientDetailPage() {
   const [saving, setSaving]       = useState(false)
   const [scorecard, setScorecard]     = useState<Scorecard | null>(null)
   const [loadingScore, setLoadingScore] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [portal, setPortal]           = useState<Portal | null | undefined>(undefined)
   const [creatingPortal, setCreatingPortal] = useState(false)
   const [copied, setCopied]           = useState(false)
@@ -60,6 +62,22 @@ export default function ClientDetailPage() {
     const json = await res.json()
     setData(json)
     setForm(json.client)
+    setPhotoUrl(json.client?.photo_url ?? null)
+  }
+
+  async function uploadPhoto(file: File) {
+    setUploadingPhoto(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`/api/clients/${id}/photo`, { method: 'POST', body: fd })
+    const { photo_url } = await res.json()
+    if (photo_url) setPhotoUrl(photo_url)
+    setUploadingPhoto(false)
+  }
+
+  async function deletePhoto() {
+    await fetch(`/api/clients/${id}/photo`, { method: 'DELETE' })
+    setPhotoUrl(null)
   }
 
   async function loadPortal() {
@@ -167,6 +185,46 @@ export default function ClientDetailPage() {
       />
 
       <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+
+        {/* Foto del cliente */}
+        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-4">
+          <p className="text-xs font-semibold text-[#94a3b8] mb-3">Foto / Logo del cliente</p>
+          <div className="flex items-center gap-4">
+            {/* Preview */}
+            <div className="w-20 h-20 rounded-xl border border-[#334155] bg-[#0e1a2e] overflow-hidden flex items-center justify-center flex-shrink-0">
+              {photoUrl
+                ? <img src={photoUrl} alt="foto cliente" className="w-full h-full object-cover" />
+                : <span className="text-2xl">🏢</span>
+              }
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }}
+                />
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                  uploadingPhoto
+                    ? 'border-[#334155] text-[#475569] cursor-not-allowed'
+                    : 'border-[#ff8c42]/40 text-[#ff8c42] bg-[#ff8c42]/8 hover:bg-[#ff8c42]/15'
+                }`}>
+                  {uploadingPhoto ? '⏳ Subiendo...' : '📷 Subir foto'}
+                </span>
+              </label>
+              {photoUrl && (
+                <button onClick={deletePhoto} className="text-[11px] text-[#475569] hover:text-[#f87171] transition-colors text-left">
+                  Eliminar foto
+                </button>
+              )}
+              <p className="text-[10px] text-[#334155] leading-tight">
+                Se usa como fondo sutil en los videos generados y para extraer colores de marca.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Scorecard IA */}
         {scorecard && (

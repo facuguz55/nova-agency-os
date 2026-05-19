@@ -58,6 +58,24 @@ export default function VideosPage() {
   const [showColorConfig, setShowColorConfig] = useState(false)
   const [generating, setGenerating] = useState(false)
 
+  // Color extraction state
+  const [extractUrl, setExtractUrl] = useState('')
+  const [extracting, setExtracting] = useState(false)
+  const [extractedColors, setExtractedColors] = useState<string[]>([])
+
+  async function extractColors() {
+    if (!extractUrl) return
+    setExtracting(true)
+    setExtractedColors([])
+    try {
+      const res = await fetch(`/api/extract-colors?url=${encodeURIComponent(extractUrl)}`)
+      const { colors } = await res.json()
+      setExtractedColors(colors || [])
+    } finally {
+      setExtracting(false)
+    }
+  }
+
   // Re-generate state
   const [regenJobId, setRegenJobId] = useState<string | null>(null)
   const [regenInstructions, setRegenInstructions] = useState('')
@@ -190,30 +208,69 @@ export default function VideosPage() {
                 </div>
 
                 {hasBrandColors && (
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <p className="text-[10px] text-[#64748b] mb-1">Color 1</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={brandColor1}
-                          onChange={e => setBrandColor1(e.target.value)}
-                          className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
-                        />
-                        <span className="text-xs text-[#94a3b8] font-mono">{brandColor1}</span>
+                  <div className="space-y-3">
+                    {/* Color pickers */}
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <p className="text-[10px] text-[#64748b] mb-1.5">Color 1 (principal)</p>
+                        <div className="flex items-center gap-2">
+                          <label className="relative cursor-pointer">
+                            <input type="color" value={brandColor1} onChange={e => setBrandColor1(e.target.value)} className="sr-only" />
+                            <div className="w-10 h-10 rounded-lg border-2 border-white/10 shadow-lg" style={{ background: brandColor1 }} />
+                          </label>
+                          <span className="text-[11px] text-[#64748b] font-mono">{brandColor1}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-[#64748b] mb-1.5">Color 2 (acento)</p>
+                        <div className="flex items-center gap-2">
+                          <label className="relative cursor-pointer">
+                            <input type="color" value={brandColor2} onChange={e => setBrandColor2(e.target.value)} className="sr-only" />
+                            <div className="w-10 h-10 rounded-lg border-2 border-white/10 shadow-lg" style={{ background: brandColor2 }} />
+                          </label>
+                          <span className="text-[11px] text-[#64748b] font-mono">{brandColor2}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] text-[#64748b] mb-1">Color 2</p>
-                      <div className="flex items-center gap-2">
+
+                    {/* Extract from URL */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-[#475569]">Extraer colores desde una web</p>
+                      <div className="flex gap-1.5">
                         <input
-                          type="color"
-                          value={brandColor2}
-                          onChange={e => setBrandColor2(e.target.value)}
-                          className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+                          type="text"
+                          value={extractUrl}
+                          onChange={e => setExtractUrl(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && extractColors()}
+                          placeholder="ej: rightbotines.com.ar"
+                          className="flex-1 bg-[#0a1628] border border-[#1e2f4a] rounded-lg px-2.5 py-1.5 text-[11px] text-[#94a3b8] placeholder-[#334155] focus:outline-none focus:border-[#ff8c42]/40"
                         />
-                        <span className="text-xs text-[#94a3b8] font-mono">{brandColor2}</span>
+                        <button
+                          onClick={extractColors}
+                          disabled={extracting || !extractUrl}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#ff8c42]/10 border border-[#ff8c42]/30 text-[#ff8c42] text-[11px] font-semibold hover:bg-[#ff8c42]/20 disabled:opacity-40 transition-colors whitespace-nowrap"
+                        >
+                          {extracting ? '...' : 'Extraer'}
+                        </button>
                       </div>
+
+                      {/* Extracted swatches */}
+                      {extractedColors.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] text-[#334155]">Clic para aplicar → color 1 · shift+clic → color 2</p>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {extractedColors.map(c => (
+                              <button
+                                key={c}
+                                title={c}
+                                onClick={e => e.shiftKey ? setBrandColor2(c) : setBrandColor1(c)}
+                                className="w-8 h-8 rounded-lg border-2 border-white/10 hover:border-white/40 hover:scale-110 transition-all shadow"
+                                style={{ background: c }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
