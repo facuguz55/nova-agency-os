@@ -75,9 +75,9 @@ export default function PortalBienvenida() {
 
         {/* Cuadrícula de puntos en movimiento — solo pantalla, no se imprime */}
         <div className="no-print fixed inset-0 pointer-events-none" style={{ zIndex: 0,
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.14) 1.5px, transparent 1.5px)',
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
           backgroundSize: '40px 40px',
-          animation: 'bvGridScroll 6s linear infinite',
+          animation: 'bvGridScroll 8s linear infinite',
         }} />
 
         {/* Documento */}
