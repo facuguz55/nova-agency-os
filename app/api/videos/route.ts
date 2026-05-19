@@ -30,8 +30,7 @@ export async function POST(req: Request) {
     client_id,
     project_id: project_id || null,
     template,
-    format: format || 'vertical',
-    props: { extra_info: extra_info || '' },
+    props: { extra_info: extra_info || '', format: format || 'vertical' },
     status: 'pending',
     progress: 0,
   }).select().single()
