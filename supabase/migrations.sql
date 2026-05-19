@@ -306,3 +306,36 @@ alter table public.projects
 -- ── IDEAS: columna description (si no se creó con la tabla) ─────────────────
 alter table public.ideas
   add column if not exists description text;
+
+-- ── VIDEO JOBS (generación de videos con Remotion + Claude) ──────────────────
+create table if not exists public.video_jobs (
+  id            uuid primary key default gen_random_uuid(),
+  client_id     uuid references public.clients(id) on delete set null,
+  project_id    uuid references public.projects(id) on delete set null,
+  template      text not null,
+  props         jsonb default '{}',
+  status        text not null default 'pending',
+  progress      integer default 0,
+  output_url    text,
+  error         text,
+  created_at    timestamptz not null default now(),
+  completed_at  timestamptz
+);
+
+-- Colores de marca en clientes
+alter table public.clients add column if not exists brand_color1     text;
+alter table public.clients add column if not exists brand_color2     text;
+alter table public.clients add column if not exists has_brand_colors boolean default false;
+
+-- RLS
+alter table public.video_jobs enable row level security;
+create policy if not exists "allow_all_video_jobs" on public.video_jobs
+  for all using (true) with check (true);
+
+-- Bucket de Storage para los MP4 generados
+insert into storage.buckets (id, name, public)
+values ('videos', 'videos', true)
+on conflict do nothing;
+
+create policy if not exists "allow_all_videos_storage" on storage.objects
+  for all using (bucket_id = 'videos') with check (bucket_id = 'videos');
