@@ -255,24 +255,21 @@ export default function PortalInicio() {
           to   { transform: translateY(0); }
         }
         .sheet-anim { animation: slideUp .3s cubic-bezier(.32,.72,0,1) both; }
-        @keyframes orbDrift1 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          30%     { transform: translate(40px,-30px) scale(1.07); }
-          65%     { transform: translate(-20px,35px) scale(0.95); }
+        @keyframes meshFlow1 {
+          0%   { background-position: 0% 0%; }
+          33%  { background-position: 100% 50%; }
+          66%  { background-position: 50% 100%; }
+          100% { background-position: 0% 0%; }
         }
-        @keyframes orbDrift2 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          40%     { transform: translate(-35px,20px) scale(1.1); }
-          75%     { transform: translate(25px,-40px) scale(0.93); }
-        }
-        @keyframes orbDrift3 {
-          0%,100% { transform: translate(-50%,-50%) scale(1); }
-          35%     { transform: translate(calc(-50% + 60px),calc(-50% - 40px)) scale(1.12); }
-          70%     { transform: translate(calc(-50% - 30px),calc(-50% + 50px)) scale(0.9); }
+        @keyframes meshFlow2 {
+          0%   { background-position: 100% 100%; }
+          33%  { background-position: 0% 50%; }
+          66%  { background-position: 50% 0%; }
+          100% { background-position: 100% 100%; }
         }
         @keyframes gridPulse {
-          0%,100% { opacity: 0.012; }
-          50%     { opacity: 0.028; }
+          0%,100% { opacity: 0.18; }
+          50%     { opacity: 0.28; }
         }
         @keyframes roadmapIn {
           from { opacity: 0; transform: translateX(-10px); }
@@ -292,19 +289,26 @@ export default function PortalInicio() {
 
       <div className="portal-inicio min-h-screen bg-[#050c1a] text-white">
 
-        {/* Orbs animados */}
+        {/* Fondo animado general — gradiente que fluye por toda la pantalla */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-20"
-            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', animation: 'orbDrift1 22s ease-in-out infinite' }} />
-          <div className="absolute bottom-0 -left-32 w-96 h-96 rounded-full opacity-[0.14]"
-            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', animation: 'orbDrift2 28s ease-in-out infinite' }} />
-          <div className="absolute top-1/2 left-1/2 w-[640px] h-[640px] rounded-full opacity-[0.08]"
-            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 65%)', animation: 'orbDrift3 36s ease-in-out infinite' }} />
+          {/* Capa naranja-cálida */}
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(135deg, rgba(249,115,22,0.22) 0%, transparent 45%, rgba(251,146,60,0.12) 80%, transparent 100%)',
+            backgroundSize: '300% 300%',
+            animation: 'meshFlow1 20s ease infinite',
+          }} />
+          {/* Capa azul-fría complementaria */}
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(225deg, rgba(59,130,246,0.14) 0%, transparent 45%, rgba(99,102,241,0.1) 80%, transparent 100%)',
+            backgroundSize: '300% 300%',
+            animation: 'meshFlow2 28s ease infinite',
+          }} />
+          {/* Grilla de puntos sutil */}
           <div className="absolute inset-0"
             style={{
-              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px)',
-              backgroundSize: '36px 36px',
-              animation: 'gridPulse 9s ease-in-out infinite',
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
+              backgroundSize: '32px 32px',
+              animation: 'gridPulse 10s ease-in-out infinite',
             }} />
         </div>
 
@@ -482,7 +486,22 @@ export default function PortalInicio() {
                   const subsBudget = (p.subprojects || []).reduce((a, s) => a + (Number(s.budget) || 0), 0)
                   const totalBudget = (Number(p.budget) || 0) + subsBudget
                   return (
-                    <div key={p.id} className="card-glass rounded-2xl overflow-hidden transition-all duration-200">
+                    <div key={p.id} className="rounded-2xl overflow-hidden transition-all duration-200"
+                      style={p.featured_until && new Date(p.featured_until) > new Date()
+                        ? { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(249,115,22,0.45)', boxShadow: '0 0 28px rgba(249,115,22,0.15), inset 0 0 28px rgba(249,115,22,0.04)' }
+                        : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }
+                      }>
+
+                      {/* Barra de acento para proyectos destacados */}
+                      {p.featured_until && new Date(p.featured_until) > new Date() && (
+                        <div className="flex items-center gap-2 px-5 py-2.5"
+                          style={{ background: 'linear-gradient(90deg, rgba(249,115,22,0.25) 0%, rgba(249,115,22,0.06) 60%, transparent 100%)', borderBottom: '1px solid rgba(249,115,22,0.2)' }}>
+                          <div className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse shrink-0"
+                            style={{ boxShadow: '0 0 8px rgba(249,115,22,0.8)' }} />
+                          <span className="text-[11px] font-black uppercase tracking-[.2em] text-[#f97316]">Nuevo · Recién lanzado</span>
+                        </div>
+                      )}
+
                       {/* Header clickeable */}
                       <button
                         onClick={() => toggleProject(p.id)}
@@ -493,15 +512,7 @@ export default function PortalInicio() {
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
-                            {p.featured_until && new Date(p.featured_until) > new Date() && (
-                              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0 animate-pulse"
-                                style={{ background: 'rgba(249,115,22,0.2)', color: '#f97316', border: '1px solid rgba(249,115,22,0.35)' }}>
-                                ✦ Reciente
-                              </span>
-                            )}
-                          </div>
+                          <p className="text-sm font-semibold text-white/90 truncate">{p.name}</p>
                           <p className="text-[11px] text-white/30 mt-0.5">
                             {p.subprojects?.length > 0 ? `${p.subprojects.length} etapa${p.subprojects.length !== 1 ? 's' : ''}` : 'Sin etapas'}
                             {totalBudget > 0 && ` · $${Number(totalBudget).toLocaleString('es-AR')}`}
