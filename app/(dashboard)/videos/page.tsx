@@ -150,7 +150,7 @@ export default function VideosPage() {
 
       <div className="flex-1 p-6 flex gap-6 overflow-hidden">
         {/* ── Left: Form ── */}
-        <div className="w-[360px] flex-shrink-0 space-y-5">
+        <div className="w-[360px] flex-shrink-0 space-y-5 overflow-y-auto pr-1">
           <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-semibold text-white">Nuevo video</h2>
 
@@ -227,7 +227,7 @@ export default function VideosPage() {
             {/* Template */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-[#94a3b8]">Tipo de video *</p>
-              <div className="grid grid-cols-1 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {TEMPLATES.map(t => (
                   <button
                     key={t.value}
