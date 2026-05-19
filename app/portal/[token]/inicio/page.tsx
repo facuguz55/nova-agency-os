@@ -280,7 +280,7 @@ export default function PortalInicio() {
         {/* Fondo — cuadrícula de líneas en movimiento */}
         <div className="fixed inset-0 pointer-events-none"
           style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px)',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)',
             backgroundSize: '56px 56px',
             animation: 'gridScroll 14s linear infinite',
             filter: 'blur(0.4px)',
