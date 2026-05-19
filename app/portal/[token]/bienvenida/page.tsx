@@ -47,19 +47,9 @@ export default function PortalBienvenida() {
         .doc-font { font-family: 'Plus Jakarta Sans', sans-serif; }
         .display-font { font-family: 'Cormorant Garamond', serif; }
 
-        @keyframes bvOrbA {
-          0%,100% { transform: translate(0,0) scale(1); }
-          40%     { transform: translate(60px,-40px) scale(1.08); }
-          70%     { transform: translate(-30px,50px) scale(0.94); }
-        }
-        @keyframes bvOrbB {
-          0%,100% { transform: translate(0,0) scale(1); }
-          35%     { transform: translate(-50px,30px) scale(1.1); }
-          75%     { transform: translate(40px,-55px) scale(0.92); }
-        }
-        @keyframes bvGrid {
-          0%,100% { opacity: 0.008; }
-          50%     { opacity: 0.018; }
+        @keyframes bvGridScroll {
+          from { background-position: 0 0; }
+          to   { background-position: 40px 40px; }
         }
       `}</style>
 
@@ -83,19 +73,12 @@ export default function PortalBienvenida() {
       <div className="doc-font min-h-screen flex items-start justify-center py-12 print:py-0 print:bg-white relative"
         style={{ background: 'linear-gradient(160deg, #030810 0%, #08152a 40%, #0a1a35 100%)' }}>
 
-        {/* Orbs animados — solo pantalla, no se imprimen */}
-        <div className="no-print fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full"
-            style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)', opacity: 0.18, animation: 'bvOrbA 26s ease-in-out infinite' }} />
-          <div className="absolute bottom-8 -left-20 w-80 h-80 rounded-full"
-            style={{ background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)', opacity: 0.12, animation: 'bvOrbB 32s ease-in-out infinite' }} />
-          <div className="absolute inset-0"
-            style={{
-              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px)',
-              backgroundSize: '36px 36px',
-              animation: 'bvGrid 9s ease-in-out infinite',
-            }} />
-        </div>
+        {/* Cuadrícula de puntos en movimiento — solo pantalla, no se imprime */}
+        <div className="no-print fixed inset-0 pointer-events-none" style={{ zIndex: 0,
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.14) 1.5px, transparent 1.5px)',
+          backgroundSize: '40px 40px',
+          animation: 'bvGridScroll 6s linear infinite',
+        }} />
 
         {/* Documento */}
         <div

@@ -255,21 +255,9 @@ export default function PortalInicio() {
           to   { transform: translateY(0); }
         }
         .sheet-anim { animation: slideUp .3s cubic-bezier(.32,.72,0,1) both; }
-        @keyframes meshFlow1 {
-          0%   { background-position: 0% 0%; }
-          33%  { background-position: 100% 50%; }
-          66%  { background-position: 50% 100%; }
-          100% { background-position: 0% 0%; }
-        }
-        @keyframes meshFlow2 {
-          0%   { background-position: 100% 100%; }
-          33%  { background-position: 0% 50%; }
-          66%  { background-position: 50% 0%; }
-          100% { background-position: 100% 100%; }
-        }
-        @keyframes gridPulse {
-          0%,100% { opacity: 0.18; }
-          50%     { opacity: 0.28; }
+        @keyframes gridScroll {
+          from { background-position: 0 0; }
+          to   { background-position: 40px 40px; }
         }
         @keyframes roadmapIn {
           from { opacity: 0; transform: translateX(-10px); }
@@ -289,28 +277,14 @@ export default function PortalInicio() {
 
       <div className="portal-inicio min-h-screen bg-[#050c1a] text-white">
 
-        {/* Fondo animado general — gradiente que fluye por toda la pantalla */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          {/* Capa naranja-cálida */}
-          <div className="absolute inset-0" style={{
-            background: 'linear-gradient(135deg, rgba(249,115,22,0.22) 0%, transparent 45%, rgba(251,146,60,0.12) 80%, transparent 100%)',
-            backgroundSize: '300% 300%',
-            animation: 'meshFlow1 20s ease infinite',
-          }} />
-          {/* Capa azul-fría complementaria */}
-          <div className="absolute inset-0" style={{
-            background: 'linear-gradient(225deg, rgba(59,130,246,0.14) 0%, transparent 45%, rgba(99,102,241,0.1) 80%, transparent 100%)',
-            backgroundSize: '300% 300%',
-            animation: 'meshFlow2 28s ease infinite',
-          }} />
-          {/* Grilla de puntos sutil */}
-          <div className="absolute inset-0"
-            style={{
-              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
-              backgroundSize: '32px 32px',
-              animation: 'gridPulse 10s ease-in-out infinite',
-            }} />
-        </div>
+        {/* Fondo — cuadrícula de puntos en movimiento */}
+        <div className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1.5px, transparent 1.5px)',
+            backgroundSize: '40px 40px',
+            animation: 'gridScroll 6s linear infinite',
+          }}
+        />
 
         {/* Header */}
         <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050c1a]/80 backdrop-blur-xl px-5 flex items-center justify-between"
