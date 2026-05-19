@@ -17,13 +17,13 @@ interface VideoJob {
 }
 
 const TEMPLATES = [
-  { value: 'prospecto',  label: 'A — Prospecto',        desc: 'Presentá Nova a un nuevo cliente potencial' },
-  { value: 'proyecto',   label: 'B — Proyecto',          desc: 'Resumen de un proyecto activo o terminado' },
-  { value: 'trayecto',   label: 'C — Trayecto Nova',     desc: 'Historia y evolución de Nova Agency' },
-  { value: 'propuesta',  label: 'D — Propuesta de precio', desc: 'Precio y servicios para el cliente' },
-  { value: 'onboarding', label: 'E — Onboarding',        desc: 'Bienvenida para nuevos clientes' },
-  { value: 'resultados', label: 'F — Resultados',        desc: 'Métricas y resultados obtenidos' },
-  { value: 'servicio',   label: 'G — Servicio',          desc: 'Descripción de un servicio específico' },
+  { value: 'prospecto',  emoji: '🎯', label: 'Captación',    desc: 'Presentá Nova a un potencial cliente — hook poderoso + por qué elegirnos' },
+  { value: 'resultados', emoji: '📈', label: 'Resultados',   desc: 'Métricas reales del cliente — números, crecimiento, impacto concreto' },
+  { value: 'servicio',   emoji: '⚡', label: 'Servicio',     desc: 'Explicá un servicio específico — qué es, cómo funciona y qué resuelve' },
+  { value: 'propuesta',  emoji: '💰', label: 'Propuesta',    desc: 'Precio y paquetes para el cliente — claro, directo y con valor percibido' },
+  { value: 'onboarding', emoji: '🤝', label: 'Bienvenida',   desc: 'Para nuevos clientes — cómo trabajamos, qué esperar, próximos pasos' },
+  { value: 'proyecto',   emoji: '📊', label: 'Proyecto',     desc: 'Avance o resumen de un proyecto activo — logros y próximos pasos' },
+  { value: 'trayecto',   emoji: '🚀', label: 'Historia Nova', desc: 'El origen y evolución de Nova Agency — recorrido, valores, visión' },
 ]
 
 const STATUS_STYLES: Record<string, string> = {
@@ -31,10 +31,11 @@ const STATUS_STYLES: Record<string, string> = {
   rendering: 'bg-[#2d1f00] text-[#ff8c42] border-[#5a3500]',
   done:      'bg-[#0f2d1a] text-[#4ade80] border-[#1a5a2a]',
   error:     'bg-[#2d0f0f] text-[#f87171] border-[#5a1a1a]',
+  cancelled: 'bg-[#1e1e2e] text-[#6b7280] border-[#374151]',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'En cola', rendering: 'Renderizando...', done: 'Listo', error: 'Error',
+  pending: 'En cola', rendering: 'Renderizando...', done: 'Listo', error: 'Error', cancelled: 'Cancelado',
 }
 
 export default function VideosPage() {
@@ -52,7 +53,7 @@ export default function VideosPage() {
   const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
   const [extraInfo, setExtraInfo] = useState('')
   const [brandColor1, setBrandColor1] = useState('#ff8c42')
-  const [brandColor2, setBrandColor2] = useState('#f97316')
+  const [brandColor2, setBrandColor2] = useState('#6366f1')
   const [hasBrandColors, setHasBrandColors] = useState(false)
   const [showColorConfig, setShowColorConfig] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -98,7 +99,7 @@ export default function VideosPage() {
     if (!client) return
     setHasBrandColors(client.has_brand_colors)
     setBrandColor1(client.brand_color1 || '#ff8c42')
-    setBrandColor2(client.brand_color2 || '#f97316')
+    setBrandColor2(client.brand_color2 || '#6366f1')
     setShowColorConfig(!client.has_brand_colors)
     setProjectId('')
   }, [clientId, clients])
@@ -125,6 +126,15 @@ export default function VideosPage() {
     })
     setExtraInfo('')
     setGenerating(false)
+    pollJobs()
+  }
+
+  async function cancelJob(jobId: string) {
+    await fetch(`/api/videos/${jobId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancel: true }),
+    })
     pollJobs()
   }
 
@@ -265,8 +275,8 @@ export default function VideosPage() {
                         : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
                     }`}
                   >
-                    <div className="font-semibold">{t.label}</div>
-                    <div className={`text-[10px] mt-0.5 ${template === t.value ? 'text-[#ff8c42]/70' : 'text-[#334155]'}`}>{t.desc}</div>
+                    <div className="font-semibold">{t.emoji} {t.label}</div>
+                    <div className={`text-[10px] mt-0.5 leading-tight ${template === t.value ? 'text-[#ff8c42]/70' : 'text-[#334155]'}`}>{t.desc}</div>
                   </button>
                 ))}
               </div>
@@ -317,12 +327,23 @@ export default function VideosPage() {
                     )}
                   </div>
                   <p className="text-xs text-[#475569] mt-0.5">
-                    {TEMPLATES.find(t => t.value === job.template)?.label || job.template}
+                    {(() => { const t = TEMPLATES.find(t => t.value === job.template); return t ? `${t.emoji} ${t.label}` : job.template })()}
                   </p>
                 </div>
-                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap ${STATUS_STYLES[job.status] || STATUS_STYLES.pending}`}>
-                  {STATUS_LABELS[job.status] || job.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap ${STATUS_STYLES[job.status] || STATUS_STYLES.pending}`}>
+                    {STATUS_LABELS[job.status] || job.status}
+                  </span>
+                  {(job.status === 'pending' || job.status === 'rendering') && (
+                    <button
+                      onClick={() => cancelJob(job.id)}
+                      title="Cancelar job"
+                      className="w-6 h-6 flex items-center justify-center rounded-full bg-[#2d0f0f] border border-[#5a1a1a] text-[#f87171] hover:bg-[#3d1515] text-xs transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Progress bar */}

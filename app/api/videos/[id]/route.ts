@@ -18,6 +18,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const supabase = await createClient()
   const body = await req.json()
 
+  // Cancel job
+  if (body.cancel) {
+    const { data, error } = await supabase
+      .from('video_jobs')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .in('status', ['pending', 'rendering'])
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ job: data })
+  }
+
   // If regenerating: create a new job with updated extra_info
   if (body.regenerate) {
     const { data: original } = await supabase.from('video_jobs').select('*').eq('id', id).single()
