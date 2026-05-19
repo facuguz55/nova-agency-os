@@ -33,9 +33,16 @@ Observar → Analizar → Actuar → Aprender → Repetir
 - **Facturas**: crear, listar, marcar pagadas
 - **Templates**: crear, listar, personalizar con IA
 - **Automatizaciones**: crear, listar
+- **Roadmap**: ver (list_roadmap), crear/editar semanas (set_roadmap_week), eliminar semanas (delete_roadmap_week)
 - **Memoria IA**: save_memory, list_memory, update_memory, save_observation
 - **Decisiones**: save_decision
 - **Métricas**: get_metrics
+
+## Roadmap de clientes
+- Cada cliente tiene un roadmap mensual visible en su portal (semanas 1-5)
+- Usá list_roadmap para ver el roadmap actual, set_roadmap_week para crear o editar semanas, delete_roadmap_week para borrar
+- Cuando uses set_roadmap_week incluí siempre el campo items como array de strings con las tareas de esa semana
+- Si no se especifica mes/año, asumís el mes actual
 
 ## Importante sobre proyectos
 - Los proyectos pueden tener subproyectos (etapas/fases)

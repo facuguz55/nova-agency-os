@@ -390,6 +390,83 @@ export async function executeTool(name: string, input: Record<string, unknown>):
         return `✅ Decisión guardada en memoria (ID: ${data.id})`
       }
 
+      // ── ROADMAP ───────────────────────────────────────────
+      case 'list_roadmap': {
+        const { data: clients } = await supabase.from('clients').select('id, name').ilike('name', `%${input.client_name}%`).limit(1)
+        if (!clients?.length) return `No encontré un cliente llamado "${input.client_name}".`
+        const now   = new Date()
+        const month = (input.month as number) || (now.getMonth() + 1)
+        const year  = (input.year  as number) || now.getFullYear()
+        const { data, error } = await supabase
+          .from('portal_roadmap')
+          .select('id, week, title, items')
+          .eq('client_id', clients[0].id)
+          .eq('month', month)
+          .eq('year', year)
+          .order('week')
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No hay roadmap cargado para "${clients[0].name}" en ${month}/${year}.`
+        return `Roadmap de "${clients[0].name}" — ${month}/${year}:\n${JSON.stringify(data, null, 2)}`
+      }
+
+      case 'set_roadmap_week': {
+        const { data: clients } = await supabase.from('clients').select('id, name').ilike('name', `%${input.client_name}%`).limit(1)
+        if (!clients?.length) return `No encontré un cliente llamado "${input.client_name}".`
+        const now   = new Date()
+        const month = (input.month as number) || (now.getMonth() + 1)
+        const year  = (input.year  as number) || now.getFullYear()
+        const week  = input.week as number
+
+        // Buscar si ya existe esa semana para hacer upsert
+        const { data: existing } = await supabase
+          .from('portal_roadmap')
+          .select('id')
+          .eq('client_id', clients[0].id)
+          .eq('month', month)
+          .eq('year', year)
+          .eq('week', week)
+          .single()
+
+        const payload = {
+          client_id: clients[0].id,
+          month,
+          year,
+          week,
+          title: input.title as string,
+          items: (input.items as string[]) || [],
+        }
+
+        if (existing) {
+          const { error } = await supabase.from('portal_roadmap').update({ title: payload.title, items: payload.items }).eq('id', existing.id)
+          if (error) return `Error al actualizar semana: ${error.message}`
+          await logAction(supabase, `Roadmap S${week} actualizada via IA para ${clients[0].name}`)
+          return `✅ Semana ${week} del roadmap de "${clients[0].name}" actualizada — "${payload.title}" con ${payload.items.length} item(s).`
+        } else {
+          const { error } = await supabase.from('portal_roadmap').insert(payload)
+          if (error) return `Error al crear semana: ${error.message}`
+          await logAction(supabase, `Roadmap S${week} creada via IA para ${clients[0].name}`)
+          return `✅ Semana ${week} creada en el roadmap de "${clients[0].name}" — "${payload.title}" con ${payload.items.length} item(s).`
+        }
+      }
+
+      case 'delete_roadmap_week': {
+        const { data: clients } = await supabase.from('clients').select('id, name').ilike('name', `%${input.client_name}%`).limit(1)
+        if (!clients?.length) return `No encontré un cliente llamado "${input.client_name}".`
+        const now   = new Date()
+        const month = (input.month as number) || (now.getMonth() + 1)
+        const year  = (input.year  as number) || now.getFullYear()
+        const { error } = await supabase
+          .from('portal_roadmap')
+          .delete()
+          .eq('client_id', clients[0].id)
+          .eq('month', month)
+          .eq('year', year)
+          .eq('week', input.week as number)
+        if (error) return `Error al eliminar semana: ${error.message}`
+        await logAction(supabase, `Roadmap S${input.week} eliminada via IA para ${clients[0].name}`)
+        return `✅ Semana ${input.week} del roadmap de "${clients[0].name}" eliminada.`
+      }
+
       // ── MÉTRICAS ──────────────────────────────────────────
       case 'get_metrics': {
         const { data, error } = await supabase.from('latest_metrics').select('*').single()

@@ -334,6 +334,51 @@ export const TOOLS: Anthropic.Tool[] = [
     },
   },
 
+  // ── ROADMAP ─────────────────────────────────────────────────
+  {
+    name: 'list_roadmap',
+    description: 'Muestra el roadmap mensual de un cliente (semanas y sus items).',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        client_name: { type: 'string', description: 'Nombre del cliente' },
+        month:       { type: 'number', description: 'Mes (1-12). Default: mes actual' },
+        year:        { type: 'number', description: 'Año. Default: año actual' },
+      },
+      required: ['client_name'],
+    },
+  },
+  {
+    name: 'set_roadmap_week',
+    description: 'Crea o actualiza una semana del roadmap de un cliente. Usá para agregar o editar semanas.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        client_name: { type: 'string', description: 'Nombre del cliente' },
+        week:        { type: 'number', description: 'Número de semana (1-5)' },
+        title:       { type: 'string', description: 'Título de la semana (ej: "Lanzamiento de redes")' },
+        items:       { type: 'array', items: { type: 'string' }, description: 'Lista de tareas o entregables de esa semana' },
+        month:       { type: 'number', description: 'Mes (1-12). Default: mes actual' },
+        year:        { type: 'number', description: 'Año. Default: año actual' },
+      },
+      required: ['client_name', 'week', 'title'],
+    },
+  },
+  {
+    name: 'delete_roadmap_week',
+    description: 'Elimina una semana del roadmap de un cliente.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        client_name: { type: 'string', description: 'Nombre del cliente' },
+        week:        { type: 'number', description: 'Número de semana a eliminar (1-5)' },
+        month:       { type: 'number', description: 'Mes (1-12). Default: mes actual' },
+        year:        { type: 'number', description: 'Año. Default: año actual' },
+      },
+      required: ['client_name', 'week'],
+    },
+  },
+
   // ── MÉTRICAS ────────────────────────────────────────────────
   {
     name: 'get_metrics',
