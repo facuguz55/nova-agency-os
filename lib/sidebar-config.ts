@@ -2,7 +2,7 @@ import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
   Zap, Terminal, Settings, ScrollText,
   CheckSquare, DollarSign, FileText, CalendarDays,
-  Brain, Inbox, Scissors, Lightbulb, type LucideIcon,
+  Brain, Inbox, Scissors, Lightbulb, Video, type LucideIcon,
 } from 'lucide-react'
 
 export interface SidebarItem {
@@ -19,6 +19,7 @@ export const ALL_ITEMS: Omit<SidebarItem, 'visible'>[] = [
   { href: '/chat',         label: 'IA Chat',          Icon: MessageSquareText, group: 'General' },
   { href: '/clients',      label: 'Clientes',         Icon: Users,             group: 'Trabajo' },
   { href: '/projects',     label: 'Proyectos',        Icon: FolderKanban,      group: 'Trabajo' },
+  { href: '/videos',       label: 'Videos',           Icon: Video,             group: 'Trabajo' },
   { href: '/tasks',        label: 'Tareas',           Icon: CheckSquare,       group: 'Trabajo' },
   { href: '/calendar',     label: 'Calendario',       Icon: CalendarDays,      group: 'Trabajo' },
   { href: '/invoices',     label: 'Facturación',      Icon: DollarSign,        group: 'Negocio' },
