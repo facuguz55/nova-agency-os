@@ -436,7 +436,7 @@ Generá un plan detallado con etapas, tareas clave y recomendaciones de estrateg
         {/* Wizard panel — aparece encima del input cuando está activo */}
         {currentWizardQ && !loading && (
           <div className="shrink-0 px-6 pb-3 pt-4 border-t border-[#1e2f4a] bg-[#080f1e]/90">
-            {/* Progress */}
+            {/* Progress + botón salir */}
             <div className="flex items-center gap-2 mb-3">
               <div className="flex gap-1">
                 {WIZARD_QUESTIONS.map((_, i) => (
@@ -453,6 +453,16 @@ Generá un plan detallado con etapas, tareas clave y recomendaciones de estrateg
               <span className="text-[10px] text-[#334155] ml-1">
                 Pregunta {wizard!.step + 1} de {WIZARD_QUESTIONS.length}
               </span>
+              <button
+                onClick={() => setWizard(null)}
+                title="Salir del modo proyecto"
+                className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-[#475569] hover:text-white hover:bg-[#1e2f4a] transition-all"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+                Salir
+              </button>
             </div>
 
             {/* Pregunta */}
