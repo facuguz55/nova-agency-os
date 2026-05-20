@@ -51,6 +51,7 @@ export default function VideosPage() {
   const [projectId, setProjectId] = useState('')
   const [template, setTemplate] = useState('prospecto')
   const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
+  const [duration, setDuration] = useState(180) // frames por slide
   const [extraInfo, setExtraInfo] = useState('')
   const [brandColors, setBrandColors] = useState<string[]>([])
   const [hasBrandColors, setHasBrandColors] = useState(false)
@@ -138,6 +139,7 @@ export default function VideosPage() {
         project_id: projectId || null,
         template,
         format,
+        frames_per_slide: duration,
         extra_info: extraInfo,
         brand_colors: hasBrandColors && brandColors.length ? brandColors : null,
         has_brand_colors: hasBrandColors,
@@ -305,6 +307,32 @@ export default function VideosPage() {
                 {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </Select>
             )}
+
+            {/* Duration */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-[#94a3b8]">Duración por slide</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {([
+                  { frames: 120, label: '4s', sub: 'Rápido' },
+                  { frames: 150, label: '5s', sub: 'Corto' },
+                  { frames: 180, label: '6s', sub: 'Normal' },
+                  { frames: 240, label: '8s', sub: 'Largo' },
+                ] as const).map(d => (
+                  <button
+                    key={d.frames}
+                    onClick={() => setDuration(d.frames)}
+                    className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${
+                      duration === d.frames
+                        ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]'
+                        : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
+                    }`}
+                  >
+                    <div className="font-bold">{d.label}</div>
+                    <div className="text-[10px] mt-0.5 opacity-70">{d.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Format */}
             <div className="space-y-2">

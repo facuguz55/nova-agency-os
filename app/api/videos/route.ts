@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const supabase = await createClient()
   const body = await req.json()
-  const { client_id, project_id, template, format, extra_info, brand_colors, has_brand_colors } = body
+  const { client_id, project_id, template, format, frames_per_slide, extra_info, brand_colors, has_brand_colors } = body
 
   if (has_brand_colors !== undefined && brand_colors?.length) {
     await supabase.from('clients').update({
@@ -29,7 +29,12 @@ export async function POST(req: Request) {
     client_id,
     project_id: project_id || null,
     template,
-    props: { extra_info: extra_info || '', format: format || 'vertical', brand_colors: brand_colors || null },
+    props: {
+      extra_info: extra_info || '',
+      format: format || 'vertical',
+      frames_per_slide: frames_per_slide || 180,
+      brand_colors: brand_colors || null,
+    },
     status: 'pending',
     progress: 0,
   }).select().single()
