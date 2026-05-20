@@ -52,10 +52,8 @@ export default function VideosPage() {
   const [template, setTemplate] = useState('prospecto')
   const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
   const [extraInfo, setExtraInfo] = useState('')
-  const [brandColor1, setBrandColor1] = useState('#ff8c42')
-  const [brandColor2, setBrandColor2] = useState('#6366f1')
+  const [brandColors, setBrandColors] = useState<string[]>([])
   const [hasBrandColors, setHasBrandColors] = useState(false)
-  const [showColorConfig, setShowColorConfig] = useState(false)
   const [generating, setGenerating] = useState(false)
 
   // Color extraction state
@@ -110,15 +108,19 @@ export default function VideosPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
+  function toggleColor(c: string) {
+    setBrandColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+  }
+
   // Sync brand colors from selected client
   useEffect(() => {
     if (!clientId) return
     const client = clients.find(c => c.id === clientId)
     if (!client) return
     setHasBrandColors(client.has_brand_colors)
-    setBrandColor1(client.brand_color1 || '#ff8c42')
-    setBrandColor2(client.brand_color2 || '#6366f1')
-    setShowColorConfig(!client.has_brand_colors)
+    const saved = [client.brand_color1, client.brand_color2].filter(Boolean) as string[]
+    setBrandColors(client.has_brand_colors && saved.length ? saved : [])
+    setExtractedColors([])
     setProjectId('')
   }, [clientId, clients])
 
@@ -137,8 +139,7 @@ export default function VideosPage() {
         template,
         format,
         extra_info: extraInfo,
-        brand_color1: hasBrandColors ? brandColor1 : null,
-        brand_color2: hasBrandColors ? brandColor2 : null,
+        brand_colors: hasBrandColors && brandColors.length ? brandColors : null,
         has_brand_colors: hasBrandColors,
       }),
     })
@@ -200,7 +201,7 @@ export default function VideosPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[#64748b]">Colores de marca</span>
                   <button
-                    onClick={() => { setHasBrandColors(!hasBrandColors); setShowColorConfig(!hasBrandColors) }}
+                    onClick={() => setHasBrandColors(v => !v)}
                     className={`relative w-10 h-5 rounded-full transition-colors ${hasBrandColors ? 'bg-[#ff8c42]' : 'bg-[#334155]'}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${hasBrandColors ? 'left-5' : 'left-0.5'}`} />
@@ -209,33 +210,42 @@ export default function VideosPage() {
 
                 {hasBrandColors && (
                   <div className="space-y-3">
-                    {/* Color pickers */}
-                    <div className="flex gap-3">
-                      <div className="flex-1">
-                        <p className="text-[10px] text-[#64748b] mb-1.5">Color 1 (principal)</p>
-                        <div className="flex items-center gap-2">
-                          <label className="relative cursor-pointer">
-                            <input type="color" value={brandColor1} onChange={e => setBrandColor1(e.target.value)} className="sr-only" />
-                            <div className="w-10 h-10 rounded-lg border-2 border-white/10 shadow-lg" style={{ background: brandColor1 }} />
-                          </label>
-                          <span className="text-[11px] text-[#64748b] font-mono">{brandColor1}</span>
-                        </div>
+                    {/* Selected colors */}
+                    <div>
+                      <p className="text-[10px] text-[#64748b] mb-2">Paleta seleccionada</p>
+                      <div className="flex gap-2 flex-wrap items-center">
+                        {brandColors.map((c, i) => (
+                          <div key={i} className="relative group">
+                            <div className="w-9 h-9 rounded-xl border-2 border-white/20 shadow-md" style={{ background: c }} title={c} />
+                            <button
+                              onClick={() => setBrandColors(prev => prev.filter((_, j) => j !== i))}
+                              className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#0e1a2e] border border-[#334155] text-[#94a3b8] text-[10px] hidden group-hover:flex items-center justify-center leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        {/* Manual add */}
+                        <label className="cursor-pointer" title="Agregar color manual">
+                          <input
+                            type="color"
+                            defaultValue="#ff8c42"
+                            onChange={e => toggleColor(e.target.value)}
+                            className="sr-only"
+                          />
+                          <div className="w-9 h-9 rounded-xl border-2 border-dashed border-[#334155] flex items-center justify-center text-[#475569] hover:border-[#ff8c42]/50 hover:text-[#ff8c42] transition-colors text-lg font-light">
+                            +
+                          </div>
+                        </label>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] text-[#64748b] mb-1.5">Color 2 (acento)</p>
-                        <div className="flex items-center gap-2">
-                          <label className="relative cursor-pointer">
-                            <input type="color" value={brandColor2} onChange={e => setBrandColor2(e.target.value)} className="sr-only" />
-                            <div className="w-10 h-10 rounded-lg border-2 border-white/10 shadow-lg" style={{ background: brandColor2 }} />
-                          </label>
-                          <span className="text-[11px] text-[#64748b] font-mono">{brandColor2}</span>
-                        </div>
-                      </div>
+                      {brandColors.length === 0 && (
+                        <p className="text-[10px] text-[#334155] mt-1.5">Extraé colores de una URL o agregá manualmente con el +</p>
+                      )}
                     </div>
 
                     {/* Extract from URL */}
                     <div className="space-y-2">
-                      <p className="text-[10px] text-[#475569]">Extraer colores desde una web</p>
+                      <p className="text-[10px] text-[#475569]">Extraer desde una web</p>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
@@ -254,20 +264,23 @@ export default function VideosPage() {
                         </button>
                       </div>
 
-                      {/* Extracted swatches */}
+                      {/* Extracted swatches — click to toggle */}
                       {extractedColors.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-[10px] text-[#334155]">Clic para aplicar → color 1 · shift+clic → color 2</p>
+                          <p className="text-[10px] text-[#334155]">Clic para agregar · clic de nuevo para quitar</p>
                           <div className="flex gap-1.5 flex-wrap">
-                            {extractedColors.map(c => (
-                              <button
-                                key={c}
-                                title={c}
-                                onClick={e => e.shiftKey ? setBrandColor2(c) : setBrandColor1(c)}
-                                className="w-8 h-8 rounded-lg border-2 border-white/10 hover:border-white/40 hover:scale-110 transition-all shadow"
-                                style={{ background: c }}
-                              />
-                            ))}
+                            {extractedColors.map(c => {
+                              const selected = brandColors.includes(c)
+                              return (
+                                <button
+                                  key={c}
+                                  title={c}
+                                  onClick={() => toggleColor(c)}
+                                  className={`w-9 h-9 rounded-xl border-2 transition-all shadow ${selected ? 'border-white scale-110 shadow-white/20' : 'border-white/10 hover:border-white/40 hover:scale-105'}`}
+                                  style={{ background: c }}
+                                />
+                              )
+                            })}
                           </div>
                         </div>
                       )}

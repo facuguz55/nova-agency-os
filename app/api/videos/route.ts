@@ -15,14 +15,13 @@ export async function GET() {
 export async function POST(req: Request) {
   const supabase = await createClient()
   const body = await req.json()
-  const { client_id, project_id, template, format, extra_info, brand_color1, brand_color2, has_brand_colors } = body
+  const { client_id, project_id, template, format, extra_info, brand_colors, has_brand_colors } = body
 
-  // Update brand colors on client if provided
-  if (has_brand_colors !== undefined) {
+  if (has_brand_colors !== undefined && brand_colors?.length) {
     await supabase.from('clients').update({
       has_brand_colors,
-      ...(brand_color1 ? { brand_color1 } : {}),
-      ...(brand_color2 ? { brand_color2 } : {}),
+      ...(brand_colors[0] ? { brand_color1: brand_colors[0] } : {}),
+      ...(brand_colors[1] ? { brand_color2: brand_colors[1] } : {}),
     }).eq('id', client_id)
   }
 
@@ -30,7 +29,7 @@ export async function POST(req: Request) {
     client_id,
     project_id: project_id || null,
     template,
-    props: { extra_info: extra_info || '', format: format || 'vertical' },
+    props: { extra_info: extra_info || '', format: format || 'vertical', brand_colors: brand_colors || null },
     status: 'pending',
     progress: 0,
   }).select().single()
