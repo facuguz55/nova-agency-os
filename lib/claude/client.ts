@@ -48,6 +48,10 @@ Observar → Analizar → Actuar → Aprender → Repetir
 - Los proyectos pueden tener subproyectos (etapas/fases)
 - Cuando listés proyectos, ya vienen con sus subproyectos incluidos
 - Para ver subproyectos de un proyecto específico usá list_subprojects
+- Cuando el usuario dice "hoy hice X", "terminé X", "entregué X" → creá el proyecto con status: 'completed', incluí en la descripción qué se hizo y para qué cliente
+- Cuando dice "estoy haciendo X" o "empecé X" → status: 'active'
+- Cuando dice "voy a hacer X" o "quiero arrancar X" → status: 'planning'
+- Siempre vinculá al cliente si lo menciona. Si el cliente no existe, crealo primero.
 
 ## Reglas de acción
 - Ejecutá acciones directamente sin pedir confirmación (todo es reversible)
@@ -159,12 +163,17 @@ async function getRelevantContext(message: string): Promise<string> {
       parts.push(`Observaciones activas sin resolver:\n${JSON.stringify(activeObs, null, 2)}`)
     }
 
+    // ── Siempre: fecha y hora actual ─────────────────────────
+    const now = new Date()
+    const fechaActual = now.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    const horaActual  = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    parts.push(`Fecha y hora actual: ${fechaActual}, ${horaActual}`)
+
     // ── Siempre: resumen rápido del estado del sistema ───────
-    const now = new Date().toISOString()
     const { count: overdueTasks } = await supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
-      .lt('due_date', now)
+      .lt('due_date', now.toISOString())
       .neq('status', 'done')
     const { count: pendingInvoices } = await supabase
       .from('invoices')

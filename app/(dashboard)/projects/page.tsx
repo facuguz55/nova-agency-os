@@ -7,7 +7,7 @@ import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
-import { formatRelative } from '@/lib/utils'
+import { formatDateFull } from '@/lib/utils'
 import { Star } from 'lucide-react'
 
 interface Project {
@@ -125,12 +125,19 @@ export default function ProjectsPage() {
                     ⭐ Destacado en portal
                   </span>
                 )}
-                <p className="text-xs text-[#475569] mb-3">{p.clients?.name || 'Sin cliente'}</p>
+                {/* Cliente — chip visible */}
+                <div className="mb-2">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                    {p.clients?.name || 'Sin cliente'}
+                  </span>
+                </div>
                 {p.description && <p className="text-xs text-[#94a3b8] mb-3 line-clamp-2">{p.description}</p>}
                 <div className="flex items-center justify-between mt-auto">
                   {p.budget ? <span className="text-xs text-[#ff8c42]">${p.budget.toLocaleString()}</span> : <span />}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#334155]">{formatRelative(p.created_at)}</span>
+                    <span className="text-[11px] text-[#475569]">{formatDateFull(p.created_at)}</span>
                     <button
                       onClick={(e) => toggleFeatured(e, p)}
                       title={p.featured_until && new Date(p.featured_until) > new Date() ? 'Quitar destacado' : 'Destacar en portal del cliente'}

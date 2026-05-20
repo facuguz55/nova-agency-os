@@ -492,6 +492,9 @@ export default function PortalInicio() {
                             {p.subprojects?.length > 0 ? `${p.subprojects.length} etapa${p.subprojects.length !== 1 ? 's' : ''}` : 'Sin etapas'}
                             {totalBudget > 0 && ` · $${Number(totalBudget).toLocaleString('es-AR')}`}
                           </p>
+                          <p className="text-[10px] text-white/20 mt-0.5">
+                            {new Date(p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
                         </div>
                         <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
                           {STATUS_LABEL[p.status] || p.status}

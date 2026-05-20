@@ -15,6 +15,13 @@ export function formatRelative(date: string | Date) {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }
 
+export function formatDateFull(date: string | Date): string {
+  const d = new Date(date)
+  const absolute = format(d, "d MMM yyyy", { locale: es })
+  const relative = formatDistanceToNow(d, { addSuffix: true, locale: es })
+  return `${absolute} · ${relative}`
+}
+
 export function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`

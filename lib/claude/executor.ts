@@ -48,7 +48,7 @@ export async function executeTool(name: string, input: Record<string, unknown>):
       }
 
       case 'list_projects': {
-        let query = supabase.from('projects').select('id, name, status, description, budget, clients(name)').is('parent_id', null).order('created_at', { ascending: false }).limit(20)
+        let query = supabase.from('projects').select('id, name, status, description, budget, created_at, clients(name)').is('parent_id', null).order('created_at', { ascending: false }).limit(20)
         if (input.status) query = query.eq('status', input.status as string)
         const { data, error } = await query
         if (error) return `Error: ${error.message}`
