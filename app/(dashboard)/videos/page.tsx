@@ -53,6 +53,7 @@ export default function VideosPage() {
   const [template, setTemplate] = useState('prospecto')
   const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
   const [totalDuration, setTotalDuration] = useState<number | null>(null) // null = auto
+  const [technicality, setTechnicality] = useState<'con' | 'sin'>('con')
   const [extraInfo, setExtraInfo] = useState('')
   const [brandColors, setBrandColors] = useState<string[]>([])
   const [hasBrandColors, setHasBrandColors] = useState(false)
@@ -110,8 +111,25 @@ export default function VideosPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
-  function toggleColor(c: string) {
+  function toggleColor(c: string, fromExtraction = false) {
+    const isAdding = !brandColors.includes(c)
     setBrandColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+    // Si viene de colores extraídos: activar hasBrandColors y guardar en el cliente
+    if (fromExtraction && isAdding) {
+      setHasBrandColors(true)
+      const newColors = [...brandColors, c]
+      if (clientId) {
+        fetch(`/api/clients/${clientId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            has_brand_colors: true,
+            brand_color1: newColors[0] || null,
+            brand_color2: newColors[1] || null,
+          }),
+        })
+      }
+    }
   }
 
   // Sync brand colors from selected client
@@ -141,6 +159,7 @@ export default function VideosPage() {
         template,
         format,
         total_duration_seconds: totalDuration,
+        technicality,
         extra_info: extraInfo,
         brand_colors: hasBrandColors && brandColors.length ? brandColors : null,
         has_brand_colors: hasBrandColors,
@@ -278,7 +297,7 @@ export default function VideosPage() {
                                 <button
                                   key={c}
                                   title={c}
-                                  onClick={() => toggleColor(c)}
+                                  onClick={() => toggleColor(c, true)}
                                   className={`w-9 h-9 rounded-xl border-2 transition-all shadow ${selected ? 'border-white scale-110 shadow-white/20' : 'border-white/10 hover:border-white/40 hover:scale-105'}`}
                                   style={{ background: c }}
                                 />
@@ -380,6 +399,27 @@ export default function VideosPage() {
                     <div className={`text-[10px] mt-0.5 leading-tight ${template === t.value ? 'text-[#ff8c42]/70' : 'text-[#334155]'}`}>{t.desc}</div>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Tecnicismo */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-[#94a3b8]">Lenguaje</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setTechnicality('con')}
+                  className={`text-center px-3 py-2.5 rounded-xl border text-xs transition-all ${technicality === 'con' ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]' : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'}`}
+                >
+                  <div className="font-bold">🧠 Técnico</div>
+                  <div className="text-[10px] mt-0.5 opacity-70">CTR, funnel, KPI...</div>
+                </button>
+                <button
+                  onClick={() => setTechnicality('sin')}
+                  className={`text-center px-3 py-2.5 rounded-xl border text-xs transition-all ${technicality === 'sin' ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]' : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'}`}
+                >
+                  <div className="font-bold">💬 Simple</div>
+                  <div className="text-[10px] mt-0.5 opacity-70">Sin jerga técnica</div>
+                </button>
               </div>
             </div>
 
