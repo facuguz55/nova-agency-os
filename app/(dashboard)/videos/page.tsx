@@ -24,6 +24,7 @@ const TEMPLATES = [
   { value: 'onboarding', emoji: '🤝', label: 'Bienvenida',   desc: 'Para nuevos clientes — cómo trabajamos, qué esperar, próximos pasos' },
   { value: 'proyecto',   emoji: '📊', label: 'Proyecto',     desc: 'Avance o resumen de un proyecto activo — logros y próximos pasos' },
   { value: 'trayecto',   emoji: '🚀', label: 'Historia Nova', desc: 'El origen y evolución de Nova Agency — recorrido, valores, visión' },
+  { value: 'sesion',    emoji: '📝', label: 'Sesión de hoy', desc: 'Resumen de lo trabajado hoy — tareas, decisiones y próximos pasos' },
 ]
 
 const STATUS_STYLES: Record<string, string> = {
@@ -51,7 +52,7 @@ export default function VideosPage() {
   const [projectId, setProjectId] = useState('')
   const [template, setTemplate] = useState('prospecto')
   const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
-  const [duration, setDuration] = useState(180) // frames por slide
+  const [totalDuration, setTotalDuration] = useState<number | null>(null) // null = auto
   const [extraInfo, setExtraInfo] = useState('')
   const [brandColors, setBrandColors] = useState<string[]>([])
   const [hasBrandColors, setHasBrandColors] = useState(false)
@@ -139,7 +140,7 @@ export default function VideosPage() {
         project_id: projectId || null,
         template,
         format,
-        frames_per_slide: duration,
+        total_duration_seconds: totalDuration,
         extra_info: extraInfo,
         brand_colors: hasBrandColors && brandColors.length ? brandColors : null,
         has_brand_colors: hasBrandColors,
@@ -310,19 +311,21 @@ export default function VideosPage() {
 
             {/* Duration */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-[#94a3b8]">Duración por slide</p>
-              <div className="grid grid-cols-4 gap-1.5">
+              <p className="text-xs font-medium text-[#94a3b8]">Duración del clip</p>
+              <div className="grid grid-cols-3 gap-1.5">
                 {([
-                  { frames: 120, label: '4s', sub: 'Rápido' },
-                  { frames: 150, label: '5s', sub: 'Corto' },
-                  { frames: 180, label: '6s', sub: 'Normal' },
-                  { frames: 240, label: '8s', sub: 'Largo' },
+                  { value: null, label: 'Auto', sub: 'Según texto' },
+                  { value: 20,   label: '20s',  sub: 'Muy corto' },
+                  { value: 30,   label: '30s',  sub: 'Corto' },
+                  { value: 45,   label: '45s',  sub: 'Normal' },
+                  { value: 60,   label: '60s',  sub: 'Largo' },
+                  { value: 90,   label: '90s',  sub: 'Muy largo' },
                 ] as const).map(d => (
                   <button
-                    key={d.frames}
-                    onClick={() => setDuration(d.frames)}
+                    key={String(d.value)}
+                    onClick={() => setTotalDuration(d.value)}
                     className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${
-                      duration === d.frames
+                      totalDuration === d.value
                         ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]'
                         : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
                     }`}
