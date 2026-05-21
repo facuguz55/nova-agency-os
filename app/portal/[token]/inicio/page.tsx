@@ -7,12 +7,13 @@ import Image from 'next/image'
 
 interface Objective  { id: string; title: string; current_value: number; target_value: number; unit: string }
 interface Subproject { id: string; name: string; status: string; budget: number | null; description: string | null }
+interface Satisfaction { rating: number; comment: string | null; phrases: string[] | null }
 interface Project {
   id: string; name: string; status: string; budget: number | null; created_at: string; description: string | null
   featured_until: string | null
   subprojects: Subproject[]
   objectives:  Objective[]
-  feedback:    'up' | 'down' | null
+  satisfaction: Satisfaction | null
 }
 interface Task   { id: string; title: string; status: string; priority: string; due_date: string | null; assigned_to: string | null }
 interface Report { id: string; title: string; period: string; created_at: string }
@@ -78,8 +79,15 @@ export default function PortalInicio() {
   const [installed, setInstalled]         = useState(false)
   const [installDismissed, setInstallDismissed] = useState(false)
 
-  // feedback local (optimista)
-  const [feedbacks, setFeedbacks]     = useState<Record<string, 'up' | 'down' | null>>({})
+  // rating / satisfacción
+  const [ratings, setRatings]           = useState<Record<string, Satisfaction | null>>({})
+  const [ratingOpen,  setRatingOpen]    = useState<string | null>(null)  // project_id abierto
+  const [ratingVal,   setRatingVal]     = useState<number>(0)
+  const [ratingPhrases, setRatingPhrases] = useState<string[]>([])
+  const [ratingComment, setRatingComment] = useState('')
+  const [ratingSaving,  setRatingSaving]  = useState(false)
+  const [ratingDone,    setRatingDone]    = useState<Record<string, boolean>>({})
+
   const [expandedP,  setExpandedP]    = useState<string | null>(null)
   const [expandedS,  setExpandedS]    = useState<string | null>(null)
 
@@ -141,23 +149,42 @@ export default function PortalInicio() {
         if (json) {
           setData(json)
           document.title = `Portal ${json.client.name} | Nova OS`
-          const fb: Record<string, 'up' | 'down' | null> = {}
-          ;(json.projects as Project[]).forEach(p => { fb[p.id] = p.feedback })
-          setFeedbacks(fb)
+          const sat: Record<string, Satisfaction | null> = {}
+          ;(json.projects as Project[]).forEach(p => { sat[p.id] = p.satisfaction ?? null })
+          setRatings(sat)
         }
       })
       .finally(() => setLoading(false))
   }, [token, router])
 
-  async function submitFeedback(projectId: string, vote: 'up' | 'down') {
-    const prev = feedbacks[projectId]
-    const next = prev === vote ? null : vote
-    setFeedbacks(f => ({ ...f, [projectId]: next }))
+  async function submitRating(projectId: string) {
+    if (!ratingVal) return
+    setRatingSaving(true)
     const pin = localStorage.getItem(`portal_pin_${token}`)
-    await fetch(`/api/portal/${token}/feedback`, {
+    const res = await fetch(`/api/portal/${token}/feedback`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin, project_id: projectId, vote: next ?? vote }),
+      body: JSON.stringify({ pin, project_id: projectId, rating: ratingVal, comment: ratingComment || null, phrases: ratingPhrases }),
     })
+    setRatingSaving(false)
+    if (res.ok) {
+      setRatings(r => ({ ...r, [projectId]: { rating: ratingVal, comment: ratingComment || null, phrases: ratingPhrases } }))
+      setRatingDone(d => ({ ...d, [projectId]: true }))
+      setTimeout(() => {
+        setRatingOpen(null)
+        setRatingVal(0)
+        setRatingPhrases([])
+        setRatingComment('')
+      }, 1400)
+    }
+  }
+
+  function openRating(projectId: string) {
+    const existing = ratings[projectId]
+    setRatingVal(existing?.rating ?? 0)
+    setRatingPhrases(existing?.phrases ?? [])
+    setRatingComment(existing?.comment ?? '')
+    setRatingDone(d => ({ ...d, [projectId]: false }))
+    setRatingOpen(projectId)
   }
 
   async function submitMessage() {
@@ -563,22 +590,31 @@ export default function PortalInicio() {
                         </div>
                       )}
 
-                      {/* Feedback */}
-                      <div className="border-t border-white/[0.04] px-5 py-3 flex items-center gap-2">
-                        <p className="text-[11px] text-white/25 flex-1">¿Cómo va este proyecto?</p>
-                        {(['up', 'down'] as const).map(vote => {
-                          const active = feedbacks[p.id] === vote
-                          return (
-                            <button key={vote} onClick={() => submitFeedback(p.id, vote)}
-                              className="w-8 h-8 rounded-xl flex items-center justify-center text-base transition-all"
-                              style={active
-                                ? { background: vote === 'up' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)', transform: 'scale(1.1)' }
-                                : { background: 'rgba(255,255,255,0.04)' }
-                              }>
-                              {vote === 'up' ? '👍' : '👎'}
-                            </button>
-                          )
-                        })}
+                      {/* Rating de satisfacción */}
+                      <div className="border-t border-white/[0.04] px-5 py-3">
+                        {ratings[p.id]?.rating ? (
+                          <button onClick={() => openRating(p.id)}
+                            className="w-full flex items-center gap-3 group">
+                            <div className="flex gap-0.5">
+                              {Array.from({ length: 10 }).map((_, i) => (
+                                <div key={i} className="w-2 h-2 rounded-full transition-all"
+                                  style={{ background: i < (ratings[p.id]?.rating ?? 0)
+                                    ? (ratings[p.id]!.rating >= 9 ? '#f97316' : ratings[p.id]!.rating >= 7 ? '#34d399' : ratings[p.id]!.rating >= 5 ? '#fbbf24' : '#f87171')
+                                    : 'rgba(255,255,255,0.08)'
+                                  }} />
+                              ))}
+                            </div>
+                            <span className="text-[11px] text-white/30 group-hover:text-white/50 transition-colors">
+                              {ratings[p.id]!.rating}/10 · Editar
+                            </span>
+                          </button>
+                        ) : (
+                          <button onClick={() => openRating(p.id)}
+                            className="w-full flex items-center gap-2 group">
+                            <span className="text-[11px] text-white/25 group-hover:text-white/40 transition-colors">⭐ ¿Cómo calificás este proyecto?</span>
+                            <span className="text-[10px] text-[#f97316]/50 ml-auto group-hover:text-[#f97316]/80 transition-colors">Dar feedback →</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -717,6 +753,141 @@ export default function PortalInicio() {
           </p>
 
         </div>
+
+        {/* Modal de rating de satisfacción */}
+        {ratingOpen && (() => {
+          const proj = projects.find(p => p.id === ratingOpen)
+          if (!proj) return null
+          const done = ratingDone[ratingOpen]
+
+          const PHRASES = [
+            'Todo excelente 🔥',
+            'Buena comunicación ⚡',
+            'Los resultados me gustaron 📈',
+            'Cumplieron los tiempos ⏱',
+            'Me sorprendieron 🚀',
+            'Muy profesionales 💼',
+            'Podría mejorar la comunicación 💬',
+            'Esperaba más resultados 🤔',
+          ]
+
+          const ratingColor = (n: number) =>
+            n >= 9 ? '#f97316' :
+            n >= 7 ? '#34d399' :
+            n >= 5 ? '#fbbf24' : '#f87171'
+
+          const togglePhrase = (ph: string) =>
+            setRatingPhrases(prev =>
+              prev.includes(ph) ? prev.filter(x => x !== ph) : [...prev, ph]
+            )
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-end" onClick={() => setRatingOpen(null)}>
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+              <div className="sheet-anim relative w-full rounded-t-3xl max-w-xl mx-auto overflow-hidden"
+                style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
+                onClick={e => e.stopPropagation()}>
+                <div className="flex justify-center pt-3 pb-1">
+                  <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
+                </div>
+
+                <div className="px-5 pb-6 pt-2 space-y-5">
+                  {/* Header */}
+                  <div className="flex items-center justify-between py-1">
+                    <div>
+                      <p className="text-[11px] text-white/25 uppercase tracking-widest">Feedback del proyecto</p>
+                      <p className="text-base font-bold text-white mt-0.5 truncate max-w-[240px]">{proj.name}</p>
+                    </div>
+                    <button onClick={() => setRatingOpen(null)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.05)' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Selector 1–10 */}
+                  <div>
+                    <p className="text-[11px] text-white/30 mb-3">
+                      {ratingVal === 0 ? 'Tocá un número del 1 al 10' : `Tu calificación: ${ratingVal}/10`}
+                    </p>
+                    <div className="flex gap-1.5">
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                        <button key={n} onClick={() => setRatingVal(n)}
+                          className="flex-1 h-10 rounded-xl font-black text-sm transition-all active:scale-95"
+                          style={ratingVal === n
+                            ? { background: ratingColor(n), color: '#fff', boxShadow: `0 0 14px ${ratingColor(n)}66` }
+                            : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }
+                          }>
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    {ratingVal > 0 && (
+                      <p className="text-center text-[11px] mt-2"
+                        style={{ color: ratingColor(ratingVal) }}>
+                        {ratingVal >= 9 ? '¡Nos alegra mucho! 🔥' :
+                         ratingVal >= 7 ? 'Muy bueno, gracias 🙌' :
+                         ratingVal >= 5 ? 'Gracias, trabajamos para mejorar' :
+                         'Lamentamos eso, contanos más 👇'}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Frases pre-armadas */}
+                  {ratingVal > 0 && (
+                    <div>
+                      <p className="text-[11px] text-white/25 mb-2.5">Elegí lo que aplica (opcional)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {PHRASES.map(ph => (
+                          <button key={ph} onClick={() => togglePhrase(ph)}
+                            className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-all"
+                            style={ratingPhrases.includes(ph)
+                              ? { background: `${ratingColor(ratingVal)}22`, color: ratingColor(ratingVal), border: `1px solid ${ratingColor(ratingVal)}55` }
+                              : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.40)', border: '1px solid rgba(255,255,255,0.08)' }
+                            }>
+                            {ph}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Comentario libre */}
+                  {ratingVal > 0 && (
+                    <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
+                      rows={2} placeholder="¿Querés agregar algo? (opcional)"
+                      className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  )}
+
+                  {/* Botón enviar */}
+                  <button onClick={() => submitRating(ratingOpen!)}
+                    disabled={!ratingVal || ratingSaving || done}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ background: done ? 'rgba(52,211,153,0.25)' : ratingVal ? `linear-gradient(135deg, ${ratingColor(ratingVal)}, ${ratingColor(ratingVal)}cc)` : 'rgba(255,255,255,0.05)' }}>
+                    {done ? (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        ¡Gracias por tu feedback!
+                      </>
+                    ) : ratingSaving ? 'Guardando...' : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                        Enviar feedback
+                      </>
+                    )}
+                  </button>
+
+                  <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* FAB — botón circular fijo abajo a la derecha */}
         {!sheet && !fabOpen && (

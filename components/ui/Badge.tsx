@@ -13,6 +13,7 @@ const STATUS_STYLES: Record<string, string> = {
   pending:     'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   executed:    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   canceled:    'bg-[#1a2d45] text-[#4a6080] border-[#1a2d45]',
+  partial:     'bg-amber-400/10 text-amber-300 border-amber-400/20',
   online:      'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   offline:     'bg-red-500/10 text-red-400 border-red-500/20',
   unreachable: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
@@ -54,6 +55,7 @@ const STATUS_LABELS: Record<string, string> = {
   rejected:    'RECHAZADO',
   overdue:     'VENCIDO',
   paid:        'PAGADO',
+  partial:     'PARCIAL',
 }
 
 interface BadgeProps { status: string; className?: string }
