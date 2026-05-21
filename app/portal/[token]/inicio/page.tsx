@@ -87,6 +87,7 @@ export default function PortalInicio() {
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSaving,  setRatingSaving]  = useState(false)
   const [ratingDone,    setRatingDone]    = useState<Record<string, boolean>>({})
+  const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false)
 
   const [expandedP,  setExpandedP]    = useState<string | null>(null)
   const [expandedS,  setExpandedS]    = useState<string | null>(null)
@@ -754,6 +755,50 @@ export default function PortalInicio() {
 
         </div>
 
+        {/* Sheet picker de proyecto para feedback */}
+        {feedbackPickerOpen && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setFeedbackPickerOpen(false)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="sheet-anim relative w-full rounded-t-3xl max-w-xl mx-auto overflow-hidden"
+              style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div className="px-5 pb-6 pt-3 space-y-3">
+                <p className="text-[11px] font-bold text-white/30 uppercase tracking-[.18em] mb-1">¿Sobre qué proyecto?</p>
+                {projects.map(p => {
+                  const sat = ratings[p.id]
+                  return (
+                    <button key={p.id}
+                      onClick={() => { setFeedbackPickerOpen(false); openRating(p.id) }}
+                      className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all active:scale-[.98]"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shrink-0"
+                        style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
+                        {p.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                        {sat?.rating
+                          ? <p className="text-[11px] mt-0.5" style={{ color: sat.rating >= 9 ? '#f97316' : sat.rating >= 7 ? '#34d399' : sat.rating >= 5 ? '#fbbf24' : '#f87171' }}>
+                              Ya calificaste: {sat.rating}/10 · Editar
+                            </p>
+                          : <p className="text-[11px] text-white/25 mt-0.5">Sin calificar aún</p>
+                        }
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round">
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </button>
+                  )
+                })}
+                <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal de rating de satisfacción */}
         {ratingOpen && (() => {
           const proj = projects.find(p => p.id === ratingOpen)
@@ -889,22 +934,46 @@ export default function PortalInicio() {
           )
         })()}
 
-        {/* FAB — botón circular fijo abajo a la derecha */}
-        {!sheet && !fabOpen && (
-          <button
-            onClick={() => setFabOpen(true)}
-            className="fixed z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform active:scale-95"
-            style={{
-              bottom: 'calc(env(safe-area-inset-bottom) + 24px)',
-              right: '20px',
-              background: 'linear-gradient(135deg, #f97316, #fb923c)',
-              boxShadow: '0 8px 32px rgba(249,115,22,0.45)',
-            }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
+        {/* FABs — botones fijos abajo a la derecha */}
+        {!sheet && !fabOpen && !ratingOpen && (
+          <div className="fixed z-30 flex items-center gap-3"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 24px)', right: '20px' }}>
+
+            {/* Botón feedback */}
+            {projects.length > 0 && (
+              <button
+                onClick={() => {
+                  if (projects.length === 1) {
+                    openRating(projects[0].id)
+                  } else {
+                    setFeedbackPickerOpen(true)
+                  }
+                }}
+                className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95"
+                style={{
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                }}
+              >
+                <span className="text-lg leading-none">⭐</span>
+              </button>
+            )}
+
+            {/* Botón + */}
+            <button
+              onClick={() => setFabOpen(true)}
+              className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #f97316, #fb923c)',
+                boxShadow: '0 8px 32px rgba(249,115,22,0.45)',
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
         )}
 
         {/* Sheet — selector de tipo */}
