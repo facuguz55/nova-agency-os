@@ -877,8 +877,7 @@ export default function PortalInicio() {
               }}
             >
               <span className="text-lg leading-none">⭐</span>
-              </button>
-            )}
+            </button>
 
             {/* Botón + */}
             <button
