@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className="h-full">
       <body className="h-full bg-[#080f1e] text-[#e2e8f0] antialiased">
         <div id="app-root" className="h-full">{children}</div>
+        <Analytics />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('nova-theme');
