@@ -15,9 +15,38 @@ interface Client {
   status: string; contact_person: string | null; notes: string | null; created_at: string
 }
 
+interface SatisfactionData {
+  perClient: Record<string, { avg: number; count: number; latest: string }>
+  globalAvg: number | null
+  totalCount: number
+}
+
 interface QuickPortal { clientId: string; portal: { token: string; pin: string; active: boolean } | null; loading: boolean }
 
 const EMPTY = { name: '', email: '', industry: '', status: 'active', contact_person: '', notes: '' }
+
+function ratingColor(n: number) {
+  if (n >= 9) return '#f97316'
+  if (n >= 7) return '#34d399'
+  if (n >= 5) return '#fbbf24'
+  return '#f87171'
+}
+
+function RatingDots({ avg, count }: { avg: number; count: number }) {
+  const filled = Math.round(avg)
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex gap-0.5">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="w-1.5 h-1.5 rounded-full"
+            style={{ background: i < filled ? ratingColor(avg) : 'rgba(255,255,255,0.08)' }} />
+        ))}
+      </div>
+      <span className="text-[11px] font-bold" style={{ color: ratingColor(avg) }}>{avg}</span>
+      {count > 1 && <span className="text-[10px] text-[#334155]">({count})</span>}
+    </div>
+  )
+}
 
 export default function ClientsPage() {
   usePageTitle('Clientes')
@@ -30,6 +59,7 @@ export default function ClientsPage() {
   const [saving, setSaving]       = useState(false)
   const [quickPortal, setQuickPortal] = useState<QuickPortal | null>(null)
   const [copied, setCopied]       = useState(false)
+  const [satisfaction, setSatisfaction] = useState<SatisfactionData | null>(null)
   const router = useRouter()
 
   async function openPortal(e: React.MouseEvent, clientId: string) {
@@ -45,9 +75,14 @@ export default function ClientsPage() {
     const p = new URLSearchParams()
     if (statusFilter) p.set('status', statusFilter)
     if (search) p.set('search', search)
-    const res = await fetch(`/api/clients?${p}`)
-    const { clients: data } = await res.json()
+    const [clientsRes, satRes] = await Promise.all([
+      fetch(`/api/clients?${p}`),
+      fetch('/api/clients/satisfaction'),
+    ])
+    const { clients: data } = await clientsRes.json()
+    const satData = await satRes.json()
     setClients(data || [])
+    setSatisfaction(satData.totalCount !== undefined ? satData : null)
     setLoading(false)
   }
 
@@ -70,6 +105,37 @@ export default function ClientsPage() {
       />
 
       <div className="flex-1 p-6 space-y-4 bg-grid overflow-y-auto">
+
+        {/* Stat general de satisfacción */}
+        {satisfaction && satisfaction.totalCount > 0 && (
+          <div className="flex items-center gap-4 px-5 py-3.5 bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `${ratingColor(satisfaction.globalAvg!)}15`, border: `1px solid ${ratingColor(satisfaction.globalAvg!)}25` }}>
+                <span className="text-base">⭐</span>
+              </div>
+              <div>
+                <p className="text-[10px] text-[#334155] uppercase tracking-widest font-semibold">Satisfacción general</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xl font-black" style={{ color: ratingColor(satisfaction.globalAvg!) }}>
+                    {satisfaction.globalAvg}/10
+                  </span>
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} className="w-2 h-2 rounded-full"
+                        style={{ background: i < Math.round(satisfaction.globalAvg!) ? ratingColor(satisfaction.globalAvg!) : 'rgba(255,255,255,0.06)' }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-black text-white">{satisfaction.totalCount}</p>
+              <p className="text-[10px] text-[#334155]">ratings recibidos</p>
+            </div>
+          </div>
+        )}
+
         {/* Filtros */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
@@ -113,7 +179,7 @@ export default function ClientsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#1e2f4a]">
-                  {['Nombre', 'Email', 'Industria', 'Contacto', 'Estado', 'Hace'].map(h => (
+                  {['Nombre', 'Email', 'Industria', 'Contacto', 'Estado', 'Rating', 'Hace'].map(h => (
                     <th key={h} className="text-left px-5 py-3.5 text-[10px] text-[#334155] uppercase tracking-widest font-semibold">{h}</th>
                   ))}
                   <th className="w-8"/>
@@ -138,6 +204,12 @@ export default function ClientsPage() {
                     <td className="px-5 py-4 text-sm text-[#475569]">{c.industry || '—'}</td>
                     <td className="px-5 py-4 text-sm text-[#475569]">{c.contact_person || '—'}</td>
                     <td className="px-5 py-4"><StatusBadge status={c.status}/></td>
+                    <td className="px-5 py-4">
+                      {satisfaction?.perClient[c.id]
+                        ? <RatingDots avg={satisfaction.perClient[c.id].avg} count={satisfaction.perClient[c.id].count} />
+                        : <span className="text-[11px] text-[#1e2f4a]">—</span>
+                      }
+                    </td>
                     <td className="px-5 py-4 text-xs text-[#334155]">{formatRelative(c.created_at)}</td>
                     <td className="px-3 relative">
                       <div className="flex items-center gap-1">
