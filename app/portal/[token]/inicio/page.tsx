@@ -87,7 +87,7 @@ export default function PortalInicio() {
   const [ratingComment, setRatingComment] = useState('')
   const [ratingSaving,  setRatingSaving]  = useState(false)
   const [ratingDone,    setRatingDone]    = useState<Record<string, boolean>>({})
-  const [feedbackPickerOpen, setFeedbackPickerOpen] = useState(false)
+
 
   const [expandedP,  setExpandedP]    = useState<string | null>(null)
   const [expandedS,  setExpandedS]    = useState<string | null>(null)
@@ -158,18 +158,24 @@ export default function PortalInicio() {
       .finally(() => setLoading(false))
   }, [token, router])
 
-  async function submitRating(projectId: string) {
+  async function submitRating(key: string) {
     if (!ratingVal) return
     setRatingSaving(true)
     const pin = localStorage.getItem(`portal_pin_${token}`)
     const res = await fetch(`/api/portal/${token}/feedback`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin, project_id: projectId, rating: ratingVal, comment: ratingComment || null, phrases: ratingPhrases }),
+      body: JSON.stringify({
+        pin,
+        project_id: key === '__general__' ? null : key,
+        rating: ratingVal,
+        comment: ratingComment || null,
+        phrases: ratingPhrases,
+      }),
     })
     setRatingSaving(false)
     if (res.ok) {
-      setRatings(r => ({ ...r, [projectId]: { rating: ratingVal, comment: ratingComment || null, phrases: ratingPhrases } }))
-      setRatingDone(d => ({ ...d, [projectId]: true }))
+      setRatings(r => ({ ...r, [key]: { rating: ratingVal, comment: ratingComment || null, phrases: ratingPhrases } }))
+      setRatingDone(d => ({ ...d, [key]: true }))
       setTimeout(() => {
         setRatingOpen(null)
         setRatingVal(0)
@@ -591,32 +597,6 @@ export default function PortalInicio() {
                         </div>
                       )}
 
-                      {/* Rating de satisfacción */}
-                      <div className="border-t border-white/[0.04] px-5 py-3">
-                        {ratings[p.id]?.rating ? (
-                          <button onClick={() => openRating(p.id)}
-                            className="w-full flex items-center gap-3 group">
-                            <div className="flex gap-0.5">
-                              {Array.from({ length: 10 }).map((_, i) => (
-                                <div key={i} className="w-2 h-2 rounded-full transition-all"
-                                  style={{ background: i < (ratings[p.id]?.rating ?? 0)
-                                    ? (ratings[p.id]!.rating >= 9 ? '#f97316' : ratings[p.id]!.rating >= 7 ? '#34d399' : ratings[p.id]!.rating >= 5 ? '#fbbf24' : '#f87171')
-                                    : 'rgba(255,255,255,0.08)'
-                                  }} />
-                              ))}
-                            </div>
-                            <span className="text-[11px] text-white/30 group-hover:text-white/50 transition-colors">
-                              {ratings[p.id]!.rating}/10 · Editar
-                            </span>
-                          </button>
-                        ) : (
-                          <button onClick={() => openRating(p.id)}
-                            className="w-full flex items-center gap-2 group">
-                            <span className="text-[11px] text-white/25 group-hover:text-white/40 transition-colors">⭐ ¿Cómo calificás este proyecto?</span>
-                            <span className="text-[10px] text-[#f97316]/50 ml-auto group-hover:text-[#f97316]/80 transition-colors">Dar feedback →</span>
-                          </button>
-                        )}
-                      </div>
                     </div>
                   )
                 })}
@@ -755,55 +735,9 @@ export default function PortalInicio() {
 
         </div>
 
-        {/* Sheet picker de proyecto para feedback */}
-        {feedbackPickerOpen && (
-          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setFeedbackPickerOpen(false)}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="sheet-anim relative w-full rounded-t-3xl max-w-xl mx-auto overflow-hidden"
-              style={{ background: '#0a1628', border: '1px solid rgba(255,255,255,0.08)' }}
-              onClick={e => e.stopPropagation()}>
-              <div className="flex justify-center pt-3 pb-1">
-                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }} />
-              </div>
-              <div className="px-5 pb-6 pt-3 space-y-3">
-                <p className="text-[11px] font-bold text-white/30 uppercase tracking-[.18em] mb-1">¿Sobre qué proyecto?</p>
-                {projects.map(p => {
-                  const sat = ratings[p.id]
-                  return (
-                    <button key={p.id}
-                      onClick={() => { setFeedbackPickerOpen(false); openRating(p.id) }}
-                      className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all active:scale-[.98]"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shrink-0"
-                        style={{ background: 'rgba(249,115,22,0.12)', color: '#f97316' }}>
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 text-left min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{p.name}</p>
-                        {sat?.rating
-                          ? <p className="text-[11px] mt-0.5" style={{ color: sat.rating >= 9 ? '#f97316' : sat.rating >= 7 ? '#34d399' : sat.rating >= 5 ? '#fbbf24' : '#f87171' }}>
-                              Ya calificaste: {sat.rating}/10 · Editar
-                            </p>
-                          : <p className="text-[11px] text-white/25 mt-0.5">Sin calificar aún</p>
-                        }
-                      </div>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round">
-                        <path d="M9 18l6-6-6-6"/>
-                      </svg>
-                    </button>
-                  )
-                })}
-                <div style={{ height: 'env(safe-area-inset-bottom)' }} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de rating de satisfacción */}
-        {ratingOpen && (() => {
-          const proj = projects.find(p => p.id === ratingOpen)
-          if (!proj) return null
-          const done = ratingDone[ratingOpen]
+        {/* Modal de feedback general */}
+        {ratingOpen === '__general__' && (() => {
+          const done = ratingDone['__general__']
 
           const PHRASES = [
             'Todo excelente 🔥',
@@ -816,15 +750,11 @@ export default function PortalInicio() {
             'Esperaba más resultados 🤔',
           ]
 
-          const ratingColor = (n: number) =>
-            n >= 9 ? '#f97316' :
-            n >= 7 ? '#34d399' :
-            n >= 5 ? '#fbbf24' : '#f87171'
+          const rc = (n: number) =>
+            n >= 9 ? '#f97316' : n >= 7 ? '#34d399' : n >= 5 ? '#fbbf24' : '#f87171'
 
           const togglePhrase = (ph: string) =>
-            setRatingPhrases(prev =>
-              prev.includes(ph) ? prev.filter(x => x !== ph) : [...prev, ph]
-            )
+            setRatingPhrases(prev => prev.includes(ph) ? prev.filter(x => x !== ph) : [...prev, ph])
 
           return (
             <div className="fixed inset-0 z-50 flex items-end" onClick={() => setRatingOpen(null)}>
@@ -840,8 +770,8 @@ export default function PortalInicio() {
                   {/* Header */}
                   <div className="flex items-center justify-between py-1">
                     <div>
-                      <p className="text-[11px] text-white/25 uppercase tracking-widest">Feedback del proyecto</p>
-                      <p className="text-base font-bold text-white mt-0.5 truncate max-w-[240px]">{proj.name}</p>
+                      <p className="text-base font-bold text-white">¿Cómo calificás nuestro servicio?</p>
+                      <p className="text-[11px] text-white/25 mt-0.5">Tu opinión nos ayuda a mejorar</p>
                     </div>
                     <button onClick={() => setRatingOpen(null)}
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-colors"
@@ -862,7 +792,7 @@ export default function PortalInicio() {
                         <button key={n} onClick={() => setRatingVal(n)}
                           className="flex-1 h-10 rounded-xl font-black text-sm transition-all active:scale-95"
                           style={ratingVal === n
-                            ? { background: ratingColor(n), color: '#fff', boxShadow: `0 0 14px ${ratingColor(n)}66` }
+                            ? { background: rc(n), color: '#fff', boxShadow: `0 0 14px ${rc(n)}66` }
                             : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }
                           }>
                           {n}
@@ -870,26 +800,25 @@ export default function PortalInicio() {
                       ))}
                     </div>
                     {ratingVal > 0 && (
-                      <p className="text-center text-[11px] mt-2"
-                        style={{ color: ratingColor(ratingVal) }}>
+                      <p className="text-center text-[11px] mt-2" style={{ color: rc(ratingVal) }}>
                         {ratingVal >= 9 ? '¡Nos alegra mucho! 🔥' :
                          ratingVal >= 7 ? 'Muy bueno, gracias 🙌' :
-                         ratingVal >= 5 ? 'Gracias, trabajamos para mejorar' :
+                         ratingVal >= 5 ? 'Gracias, vamos a mejorar' :
                          'Lamentamos eso, contanos más 👇'}
                       </p>
                     )}
                   </div>
 
-                  {/* Frases pre-armadas */}
+                  {/* Frases */}
                   {ratingVal > 0 && (
                     <div>
-                      <p className="text-[11px] text-white/25 mb-2.5">Elegí lo que aplica (opcional)</p>
+                      <p className="text-[11px] text-white/25 mb-2.5">¿Por qué? (opcional)</p>
                       <div className="flex flex-wrap gap-2">
                         {PHRASES.map(ph => (
                           <button key={ph} onClick={() => togglePhrase(ph)}
                             className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-all"
                             style={ratingPhrases.includes(ph)
-                              ? { background: `${ratingColor(ratingVal)}22`, color: ratingColor(ratingVal), border: `1px solid ${ratingColor(ratingVal)}55` }
+                              ? { background: `${rc(ratingVal)}22`, color: rc(ratingVal), border: `1px solid ${rc(ratingVal)}55` }
                               : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.40)', border: '1px solid rgba(255,255,255,0.08)' }
                             }>
                             {ph}
@@ -899,31 +828,23 @@ export default function PortalInicio() {
                     </div>
                   )}
 
-                  {/* Comentario libre */}
+                  {/* Descripción */}
                   {ratingVal > 0 && (
                     <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
-                      rows={2} placeholder="¿Querés agregar algo? (opcional)"
+                      rows={3} placeholder="Contanos más (opcional)..."
                       className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none resize-none"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
                   )}
 
-                  {/* Botón enviar */}
-                  <button onClick={() => submitRating(ratingOpen!)}
+                  {/* Enviar */}
+                  <button onClick={() => submitRating('__general__')}
                     disabled={!ratingVal || ratingSaving || done}
                     className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                    style={{ background: done ? 'rgba(52,211,153,0.25)' : ratingVal ? `linear-gradient(135deg, ${ratingColor(ratingVal)}, ${ratingColor(ratingVal)}cc)` : 'rgba(255,255,255,0.05)' }}>
+                    style={{ background: done ? 'rgba(52,211,153,0.25)' : ratingVal ? `linear-gradient(135deg, ${rc(ratingVal)}, ${rc(ratingVal)}cc)` : 'rgba(255,255,255,0.05)' }}>
                     {done ? (
-                      <>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-                        ¡Gracias por tu feedback!
-                      </>
+                      <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>¡Gracias por tu feedback!</>
                     ) : ratingSaving ? 'Guardando...' : (
-                      <>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                        </svg>
-                        Enviar feedback
-                      </>
+                      <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Enviar feedback</>
                     )}
                   </button>
 
@@ -940,23 +861,22 @@ export default function PortalInicio() {
             style={{ bottom: 'calc(env(safe-area-inset-bottom) + 24px)', right: '20px' }}>
 
             {/* Botón feedback */}
-            {projects.length > 0 && (
-              <button
-                onClick={() => {
-                  if (projects.length === 1) {
-                    openRating(projects[0].id)
-                  } else {
-                    setFeedbackPickerOpen(true)
-                  }
-                }}
-                className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95"
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-                }}
-              >
-                <span className="text-lg leading-none">⭐</span>
+            <button
+              onClick={() => {
+                setRatingVal(ratings['__general__']?.rating ?? 0)
+                setRatingPhrases(ratings['__general__']?.phrases ?? [])
+                setRatingComment(ratings['__general__']?.comment ?? '')
+                setRatingDone(d => ({ ...d, '__general__': false }))
+                setRatingOpen('__general__')
+              }}
+              className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95"
+              style={{
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+              }}
+            >
+              <span className="text-lg leading-none">⭐</span>
               </button>
             )}
 
