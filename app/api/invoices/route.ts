@@ -18,11 +18,28 @@ export async function GET(req: Request) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Suma de pagos parciales registrados (facturas no completamente pagadas)
+  const { data: partialPayments } = await supabase
+    .from('invoice_payments')
+    .select('invoice_id, amount')
+
+  // Agrupar pagos por factura
+  const paymentSums: Record<string, number> = {}
+  for (const p of partialPayments || []) {
+    paymentSums[p.invoice_id] = (paymentSums[p.invoice_id] || 0) + Number(p.amount)
+  }
+
   // Calcular MRR y totales
   const all = data || []
   const paid    = all.filter(i => i.status === 'paid').reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
   const pending = all.filter(i => i.status === 'pending').reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
   const overdue = all.filter(i => i.status === 'overdue').reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
+
+  // Cobrado real = facturas pagadas completas + pagos parciales de facturas aún no saldadas
+  const partialCobrado = all
+    .filter(i => i.status !== 'paid')
+    .reduce((s: number, i: { id: string }) => s + (paymentSums[i.id] || 0), 0)
+  const cobrado = paid + partialCobrado
 
   // MRR: facturas pagadas en los últimos 30 días
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -30,7 +47,7 @@ export async function GET(req: Request) {
     .filter(i => i.status === 'paid' && i.paid_at && i.paid_at > thirtyDaysAgo)
     .reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
 
-  return NextResponse.json({ invoices: all, stats: { paid, pending, overdue, mrr } })
+  return NextResponse.json({ invoices: all, stats: { paid, cobrado, pending, overdue, mrr } })
 }
 
 export async function POST(req: Request) {

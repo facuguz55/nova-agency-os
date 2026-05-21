@@ -21,7 +21,7 @@ interface Invoice {
   projects: { id: string; name: string; budget: number | null } | null
   paid_amount?: number
 }
-interface Stats { paid: number; pending: number; overdue: number; mrr: number }
+interface Stats { paid: number; cobrado: number; pending: number; overdue: number; mrr: number }
 interface Client { id: string; name: string }
 interface Project { id: string; name: string; budget: number | null; client_id: string }
 
@@ -30,7 +30,7 @@ const EMPTY = { client_id: '', project_id: '', amount: '', status: 'pending', de
 export default function InvoicesPage() {
   usePageTitle('Facturas')
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [stats, setStats]       = useState<Stats>({ paid: 0, pending: 0, overdue: 0, mrr: 0 })
+  const [stats, setStats]       = useState<Stats>({ paid: 0, cobrado: 0, pending: 0, overdue: 0, mrr: 0 })
   const [clients, setClients]   = useState<Client[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading]   = useState(true)
@@ -271,7 +271,7 @@ export default function InvoicesPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard label="MRR (30 días)" value={`$${formatNumber(stats.mrr)}`} icon={<TrendingUp size={16}/>} color="orange" sub="facturado este mes" />
-          <StatCard label="Total cobrado"  value={`$${formatNumber(stats.paid)}`}    icon={<CheckCircle2 size={16}/>} color="green"  sub="histórico" />
+          <StatCard label="Total cobrado"  value={`$${formatNumber(stats.cobrado ?? stats.paid)}`} icon={<CheckCircle2 size={16}/>} color="green"  sub="incl. pagos parciales" />
           <StatCard label="Por cobrar"     value={`$${formatNumber(stats.pending)}`} icon={<Clock size={16}/>}        color="blue"   sub="pendiente" />
           <StatCard label="Vencido"        value={`$${formatNumber(stats.overdue)}`} icon={<AlertTriangle size={16}/>} color="purple" sub="overdue" />
         </div>
@@ -281,16 +281,18 @@ export default function InvoicesPage() {
           <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-4">
             <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mb-3">Proyección — si cobrás todo lo pendiente</p>
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-lg font-black text-white">${formatNumber(stats.paid + stats.pending + stats.overdue)}</span>
+              <span className="text-lg font-black text-white">${formatNumber((stats.cobrado ?? stats.paid) + stats.pending + stats.overdue)}</span>
               <span className="text-xs text-[#4a6080]">total potencial</span>
             </div>
             <div className="h-2 rounded-full bg-[#1a2d45] overflow-hidden flex">
-              {stats.paid > 0 && <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.round(stats.paid/(stats.paid+stats.pending+stats.overdue)*100)}%` }}/>}
-              {stats.pending > 0 && <div className="h-full bg-blue-400 transition-all" style={{ width: `${Math.round(stats.pending/(stats.paid+stats.pending+stats.overdue)*100)}%` }}/>}
-              {stats.overdue > 0 && <div className="h-full bg-red-400 transition-all" style={{ width: `${Math.round(stats.overdue/(stats.paid+stats.pending+stats.overdue)*100)}%` }}/>}
+              {(() => { const c = stats.cobrado ?? stats.paid; const total = c + stats.pending + stats.overdue; return total > 0 ? <>
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.round(c/total*100)}%` }}/>
+                <div className="h-full bg-blue-400 transition-all"    style={{ width: `${Math.round(stats.pending/total*100)}%` }}/>
+                <div className="h-full bg-red-400 transition-all"     style={{ width: `${Math.round(stats.overdue/total*100)}%` }}/>
+              </> : null })()}
             </div>
             <div className="flex gap-4 mt-2 text-[11px]">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Cobrado ${formatNumber(stats.paid)}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Cobrado ${formatNumber(stats.cobrado ?? stats.paid)}</span>
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block"/>Pendiente ${formatNumber(stats.pending)}</span>
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>Vencido ${formatNumber(stats.overdue)}</span>
             </div>
@@ -647,7 +649,7 @@ export default function InvoicesPage() {
         <div className="space-y-5">
           <p className="text-xs text-[#4a6080]">División 50/50 entre Facundo y Mauricio</p>
           {[
-            { label: 'Ya cobrado', value: stats.paid, color: '#22c55e', sub: 'facturas pagadas' },
+            { label: 'Ya cobrado', value: stats.cobrado ?? stats.paid, color: '#22c55e', sub: 'incl. parciales' },
             { label: 'Por cobrar', value: stats.pending, color: '#60a5fa', sub: 'facturas pendientes' },
             { label: 'Vencido',    value: stats.overdue, color: '#f87171', sub: 'facturas vencidas' },
             { label: 'Total potencial', value: stats.paid + stats.pending + stats.overdue, color: '#f97316', sub: 'si cobrás todo', bold: true },
