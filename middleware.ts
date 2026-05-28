@@ -1,13 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     {
       cookies: {
         getAll() {
@@ -26,11 +25,13 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage    = request.nextUrl.pathname.startsWith('/login')
-  const isApiConfirm  = request.nextUrl.pathname.startsWith('/api/confirm')
-  const isApiRoute    = request.nextUrl.pathname.startsWith('/api/')
-  const isPortal      = request.nextUrl.pathname.startsWith('/portal')
-  const isInvoicePrint = request.nextUrl.pathname.startsWith('/invoice-print')
+  const { pathname } = request.nextUrl
+
+  const isAuthPage     = pathname.startsWith('/login')
+  const isApiConfirm   = pathname.startsWith('/api/confirm')
+  const isApiRoute     = pathname.startsWith('/api/')
+  const isPortal       = pathname.startsWith('/portal')
+  const isInvoicePrint = pathname.startsWith('/invoice-print')
 
   if (!user && !isAuthPage && !isApiConfirm && !isApiRoute && !isPortal && !isInvoicePrint) {
     const url = request.nextUrl.clone()
@@ -48,5 +49,16 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    /*
+     * Aplica a todas las rutas EXCEPTO:
+     * - _next/static  (archivos estáticos de Next.js)
+     * - _next/image   (optimización de imágenes)
+     * - favicon.ico
+     * - sw.js         (service worker de la PWA — IMPORTANTE: sin esto se rompe el portal)
+     * - manifest.json (PWA manifest)
+     * - archivos de imagen (svg, png, jpg, jpeg, gif, webp, ico)
+     */
+    '/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 }
