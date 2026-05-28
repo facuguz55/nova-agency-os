@@ -38,7 +38,13 @@ export default function PortalPinPage() {
     const json = await res.json()
     if (json.ok) {
       localStorage.setItem(`portal_pin_${token}`, pin)
-      router.push(`/portal/${token}/inicio`)
+      // Redirigir según si ya aceptó los T&C
+      if (json.tos_accepted) {
+        localStorage.setItem(`portal_tos_${token}`, '1')
+        router.push(`/portal/${token}/inicio`)
+      } else {
+        router.push(`/portal/${token}/terminos`)
+      }
     } else {
       setShake(true)
       setTimeout(() => setShake(false), 500)

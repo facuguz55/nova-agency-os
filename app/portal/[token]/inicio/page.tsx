@@ -137,6 +137,11 @@ export default function PortalInicio() {
   useEffect(() => {
     const pin = localStorage.getItem(`portal_pin_${token}`)
     if (!pin) { router.replace(`/portal/${token}`); return }
+
+    // Guard: si no aceptó T&C, redirigir a terminos
+    const tos = localStorage.getItem(`portal_tos_${token}`)
+    if (!tos) { router.replace(`/portal/${token}/terminos`); return }
+
     fetch(`/api/portal/${token}/data?pin=${pin}`)
       .then(r => {
         if (r.status === 401 || r.status === 404) {

@@ -8,7 +8,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
 
   const { data, error } = await supabase
     .from('client_portals')
-    .select('id, pin, active')
+    .select('id, pin, active, tos_accepted_at')
     .eq('token', token)
     .single()
 
@@ -16,5 +16,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!data.active)   return NextResponse.json({ ok: false, error: 'Portal inactivo' }, { status: 403 })
   if (data.pin !== pin) return NextResponse.json({ ok: false, error: 'PIN incorrecto' }, { status: 401 })
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, tos_accepted: !!data.tos_accepted_at })
 }
