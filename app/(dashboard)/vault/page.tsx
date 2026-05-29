@@ -474,7 +474,7 @@ function CredentialsTab({ entityId }: { entityId: string }) {
                   <div>
                     <p className="text-sm font-semibold text-white">{item.service_name}</p>
                     {item.service_url && (
-                      <a href={item.service_url} target="_blank" rel="noopener noreferrer"
+                      <a href={/^https?:\/\//i.test(item.service_url) ? item.service_url : '#'} target="_blank" rel="noopener noreferrer"
                         className="text-[10px] text-[#334155] hover:text-[#f97316] transition-colors truncate block max-w-[200px]">
                         {item.service_url}
                       </a>
@@ -674,7 +674,7 @@ function SocialTab({ entityId }: { entityId: string }) {
               {item.email_used && <CredRow label="Email" value={item.email_used} reveal={false} />}
               {item.phone_used && <CredRow label="Teléfono" value={item.phone_used} reveal={false} />}
               {item.url && (
-                <a href={item.url} target="_blank" rel="noopener noreferrer"
+                <a href={/^https?:\/\//i.test(item.url) ? item.url : '#'} target="_blank" rel="noopener noreferrer"
                   className="text-[10px] text-[#334155] hover:text-[#f97316] transition-colors truncate block">
                   {item.url}
                 </a>

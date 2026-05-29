@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createVaultServerClient } from '@/lib/supabase/vault-server'
+import { requireVaultAuth, isAuthError } from '@/lib/vault-auth'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireVaultAuth()
+  if (isAuthError(auth)) return auth
+
   const { id } = await params
   const supabase = createVaultServerClient()
 
@@ -25,12 +29,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireVaultAuth()
+  if (isAuthError(auth)) return auth
+
   const { id } = await params
   const body = await req.json()
+  const { name, avatar_url, notes } = body
+
   const supabase = createVaultServerClient()
   const { data, error } = await supabase
     .from('vault_entities')
-    .update(body)
+    .update({ name, avatar_url, notes })
     .eq('id', id)
     .select()
     .single()
@@ -40,6 +49,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireVaultAuth()
+  if (isAuthError(auth)) return auth
+
   const { id } = await params
   const supabase = createVaultServerClient()
   const { error } = await supabase.from('vault_entities').delete().eq('id', id)

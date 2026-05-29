@@ -1,6 +1,14 @@
 -- ============================================================
 -- NOVA AGENCY VAULT — Supabase separado
 -- Ejecutar en el proyecto vault de Supabase
+--
+-- SEGURIDAD:
+-- - Acceso solo via service-role key desde API routes autenticadas.
+-- - La anon key de este proyecto NUNCA se expone al browser.
+-- - Los campos de contraseñas se guardan en texto plano en DB
+--   (el cifrado en tránsito lo provee Supabase/TLS). Si se requiere
+--   cifrado en reposo, activar pgsodium en Supabase y usar
+--   pgsodium.crypto_aead_det_encrypt antes de insertar.
 -- ============================================================
 
 -- Extensión para UUID
@@ -10,14 +18,14 @@ create extension if not exists "uuid-ossp";
 -- ENTIDADES (Facundo, Mauricio, Agencia, Clientes)
 -- ============================================================
 create table if not exists vault_entities (
-  id          uuid primary key default uuid_generate_v4(),
-  type        text not null check (type in ('facundo', 'mauricio', 'agencia', 'cliente')),
-  name        text not null,
-  avatar_url  text,
-  client_ref_id text,           -- ID del cliente en el Supabase principal (solo para type='cliente')
-  notes       text,
-  created_at  timestamptz default now(),
-  updated_at  timestamptz default now()
+  id            uuid primary key default uuid_generate_v4(),
+  type          text not null check (type in ('facundo', 'mauricio', 'agencia', 'cliente')),
+  name          text not null,
+  avatar_url    text,
+  client_ref_id text,
+  notes         text,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
 );
 
 -- Insertar las 3 entidades fijas
@@ -58,8 +66,8 @@ create table if not exists vault_financials (
   id          uuid primary key default uuid_generate_v4(),
   entity_id   uuid not null references vault_entities(id) on delete cascade,
   type        text not null check (type in ('cbu', 'alias', 'cuenta_bancaria', 'tarjeta_credito', 'tarjeta_debito', 'billetera_virtual', 'crypto', 'efectivo', 'otro')),
-  label       text not null,       -- ej: "Cuenta Galicia", "Tarjeta Visa Naranja"
-  value       text,                -- CBU, alias, número, dirección crypto
+  label       text not null,
+  value       text,
   bank_name   text,
   currency    text default 'ARS',
   notes       text,
@@ -71,19 +79,19 @@ create table if not exists vault_financials (
 -- CREDENCIALES Y ACCESOS
 -- ============================================================
 create table if not exists vault_credentials (
-  id           uuid primary key default uuid_generate_v4(),
-  entity_id    uuid not null references vault_entities(id) on delete cascade,
-  category     text not null check (category in ('red_social', 'email', 'banco', 'hosting', 'dominio', 'saas', 'tienda', 'gobierno', 'otro')),
-  service_name text not null,      -- ej: "Instagram Nova", "Gmail Agencia"
-  service_url  text,
-  username     text,
-  email_used   text,
-  password     text,
-  phone_2fa    text,
+  id             uuid primary key default uuid_generate_v4(),
+  entity_id      uuid not null references vault_entities(id) on delete cascade,
+  category       text not null check (category in ('red_social', 'email', 'banco', 'hosting', 'dominio', 'saas', 'tienda', 'gobierno', 'otro')),
+  service_name   text not null,
+  service_url    text,
+  username       text,
+  email_used     text,
+  password       text,
+  phone_2fa      text,
   recovery_email text,
-  notes        text,
-  created_at   timestamptz default now(),
-  updated_at   timestamptz default now()
+  notes          text,
+  created_at     timestamptz default now(),
+  updated_at     timestamptz default now()
 );
 
 -- ============================================================
@@ -145,7 +153,9 @@ create trigger trg_vault_social_updated
   for each row execute function update_updated_at();
 
 -- ============================================================
--- RLS — habilitar pero permitir todo (uso interno)
+-- RLS — habilitado y cerrado al público.
+-- Solo el service-role key puede acceder (bypasea RLS).
+-- La anon key no tiene acceso a ninguna tabla.
 -- ============================================================
 alter table vault_entities    enable row level security;
 alter table vault_personal    enable row level security;
@@ -153,8 +163,6 @@ alter table vault_financials  enable row level security;
 alter table vault_credentials enable row level security;
 alter table vault_social      enable row level security;
 
-create policy "allow_all_vault_entities"    on vault_entities    for all using (true) with check (true);
-create policy "allow_all_vault_personal"    on vault_personal    for all using (true) with check (true);
-create policy "allow_all_vault_financials"  on vault_financials  for all using (true) with check (true);
-create policy "allow_all_vault_credentials" on vault_credentials for all using (true) with check (true);
-create policy "allow_all_vault_social"      on vault_social      for all using (true) with check (true);
+-- Sin políticas = acceso denegado para anon y authenticated.
+-- El service-role key bypasea RLS desde las API routes.
+-- No agregar políticas permisivas aquí.

@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createVaultServerClient } from '@/lib/supabase/vault-server'
+import { requireVaultAuth, isAuthError } from '@/lib/vault-auth'
 
 type Params = { params: Promise<{ entityId: string }> }
 
 export async function GET(_req: Request, { params }: Params) {
+  const auth = await requireVaultAuth()
+  if (isAuthError(auth)) return auth
+
   const { entityId } = await params
   const supabase = createVaultServerClient()
   const { data, error } = await supabase
@@ -17,12 +21,17 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function POST(req: Request, { params }: Params) {
+  const auth = await requireVaultAuth()
+  if (isAuthError(auth)) return auth
+
   const { entityId } = await params
   const body = await req.json()
+  const { type, label, value, bank_name, currency, notes } = body
+
   const supabase = createVaultServerClient()
   const { data, error } = await supabase
     .from('vault_financials')
-    .insert({ ...body, entity_id: entityId })
+    .insert({ type, label, value, bank_name, currency, notes, entity_id: entityId })
     .select()
     .single()
 
@@ -31,6 +40,9 @@ export async function POST(req: Request, { params }: Params) {
 }
 
 export async function DELETE(req: Request, { params }: Params) {
+  const auth = await requireVaultAuth()
+  if (isAuthError(auth)) return auth
+
   const { entityId } = await params
   const { id } = await req.json()
   const supabase = createVaultServerClient()
