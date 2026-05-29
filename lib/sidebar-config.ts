@@ -2,7 +2,7 @@ import {
   LayoutDashboard, MessageSquareText, Users, FolderKanban,
   Zap, Terminal, Settings, ScrollText,
   CheckSquare, DollarSign, FileText, CalendarDays,
-  Brain, Inbox, Scissors, Lightbulb, Video, type LucideIcon,
+  Brain, Inbox, Scissors, Lightbulb, Video, ShieldCheck, type LucideIcon,
 } from 'lucide-react'
 
 export interface SidebarItem {
@@ -31,6 +31,7 @@ export const ALL_ITEMS: Omit<SidebarItem, 'visible'>[] = [
   { href: '/brain',        label: 'IA Brain',         Icon: Brain,             group: 'Automatización' },
   { href: '/n8n-logs',     label: 'n8n Logs',         Icon: Terminal,          group: 'Sistema' },
   { href: '/audit',        label: 'Audit Log',        Icon: ScrollText,        group: 'Sistema' },
+  { href: '/vault',        label: 'Vault',            Icon: ShieldCheck,       group: 'Sistema' },
   { href: '/config',       label: 'Configuración',    Icon: Settings,          group: 'Sistema' },
 ]
 
