@@ -108,9 +108,20 @@ export interface VaultSocial {
   updated_at: string
 }
 
+export interface VaultCustomField {
+  id: string
+  entity_id: string
+  label: string
+  value: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface VaultEntityFull extends VaultEntity {
   personal: VaultPersonal | null
   financials: VaultFinancial[]
   credentials: VaultCredential[]
   socials: VaultSocial[]
+  custom: VaultCustomField[]
 }
