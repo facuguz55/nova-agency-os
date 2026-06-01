@@ -86,7 +86,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         .agency-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 14px; }
 
-        .inv-number-area { text-align: right; }
+        .inv-number-area { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
         .inv-label {
           font-size: 10px; font-weight: 700; text-transform: uppercase;
           letter-spacing: .12em; color: rgba(255,255,255,0.3); margin-bottom: 6px;
@@ -95,10 +95,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           font-family: 'Cormorant Garamond', serif;
           font-size: 36px; font-weight: 700;
           color: white; letter-spacing: -1px; line-height: 1;
+          margin-bottom: 10px;
         }
         .status-badge {
           display: inline-flex; align-items: center; gap: 5px;
-          margin-top: 10px; padding: 5px 12px; border-radius: 99px;
+          padding: 5px 12px; border-radius: 99px;
           font-size: 10px; font-weight: 700; letter-spacing: .08em;
         }
         .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
@@ -110,7 +111,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         }
 
         /* Body */
-        .inv-body { padding: 40px 48px; flex: 1; }
+        .inv-body { padding: 28px 48px 36px; flex: 1; }
 
         .billing-grid {
           display: grid; grid-template-columns: 1fr 1fr;
