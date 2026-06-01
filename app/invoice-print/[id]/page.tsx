@@ -56,16 +56,19 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         .invoice {
           background: white;
-          width: 1020px;
+          width: 620px;
+          min-height: 877px;
           border-radius: 16px;
           overflow: hidden;
           box-shadow: 0 48px 96px rgba(0,0,0,0.7), 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
+          display: flex;
+          flex-direction: column;
         }
 
         /* Header dark */
         .inv-header {
           background: #060d18;
-          padding: 40px 64px 36px;
+          padding: 40px 48px 36px;
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
@@ -107,11 +110,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         }
 
         /* Body */
-        .inv-body { padding: 40px 64px; }
+        .inv-body { padding: 40px 48px; }
 
         .billing-grid {
           display: grid; grid-template-columns: 1fr 1fr;
-          gap: 64px; margin-bottom: 36px;
+          gap: 40px; margin-bottom: 36px;
         }
         .field-label {
           font-size: 9px; font-weight: 700; text-transform: uppercase;
@@ -177,7 +180,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           .inv-footer { background: #060d18 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
         }
-        @page { margin: 0; size: A4 landscape; }
+        @page { margin: 0; size: A4 portrait; }
       `}</style>
 
       <div className="wrapper">
@@ -259,7 +262,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          <hr className="divider" style={{ margin: '0 64px' }} />
+          <hr className="divider" style={{ margin: '0 48px' }} />
 
           {/* Footer */}
           <div className="inv-footer">
