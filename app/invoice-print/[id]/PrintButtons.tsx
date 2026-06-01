@@ -27,24 +27,37 @@ export default function PrintButtons({ invoiceId }: Props) {
 
   async function handleDownload() {
     setDownloading(true)
+    const element = document.querySelector('.invoice') as HTMLElement
+    if (!element) { setDownloading(false); return }
+
+    // Quitar sombra antes de capturar para evitar halo blanco
+    const prevShadow = element.style.boxShadow
+    element.style.boxShadow = 'none'
+
     try {
       const html2pdf = (await import('html2pdf.js')).default
-      const element  = document.querySelector('.invoice') as HTMLElement
-      if (!element) return
 
       const opt = {
         margin:      0,
         filename:    `factura-${invoiceId}.pdf`,
-        image:       { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+        image:       { type: 'png' as const },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: element.offsetWidth,
+          windowWidth: element.offsetWidth,
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       }
 
       await html2pdf().set(opt).from(element).save()
     } catch (e) {
       console.error(e)
+    } finally {
+      element.style.boxShadow = prevShadow
+      setDownloading(false)
     }
-    setDownloading(false)
   }
 
   function esc(str: string): string {

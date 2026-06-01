@@ -58,9 +58,9 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           background: white;
           width: 620px;
           min-height: 877px;
-          border-radius: 16px;
+          border-radius: 0;
           overflow: hidden;
-          box-shadow: 0 48px 96px rgba(0,0,0,0.7), 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
+          box-shadow: 0 48px 96px rgba(0,0,0,0.7), 0 12px 32px rgba(0,0,0,0.4);
           display: flex;
           flex-direction: column;
         }
@@ -110,7 +110,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         }
 
         /* Body */
-        .inv-body { padding: 40px 48px; }
+        .inv-body { padding: 40px 48px; flex: 1; }
 
         .billing-grid {
           display: grid; grid-template-columns: 1fr 1fr;
