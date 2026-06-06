@@ -415,10 +415,10 @@ export default function TasksPage() {
           </div>
         ) : (
           /* Vista lista */
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl overflow-hidden animate-fade-up">
+          <div className="panel overflow-hidden animate-fade-up">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[rgba(255,255,255,0.07)]">
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Tarea', 'Estado', 'Prioridad', 'Asignado', 'Vence', ''].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-[10px] text-[var(--text-4)] uppercase tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>{h}</th>
                   ))}
@@ -558,7 +558,7 @@ export default function TasksPage() {
             </p>
             <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
               {comments.map(c => (
-                <div key={c.id} className="bg-white/[.03] border border-[rgba(255,255,255,0.07)] rounded-xl px-3 py-2">
+                <div key={c.id} className="bg-white/[.03] rounded-xl px-3 py-2" style={{ border: '1px solid var(--border)' }}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[10px] font-semibold text-[var(--amber)]">{c.author}</span>
                     <span className="text-[10px] text-[var(--text-4)]">{new Date(c.created_at).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
