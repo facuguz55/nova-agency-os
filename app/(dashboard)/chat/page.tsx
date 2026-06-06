@@ -90,8 +90,9 @@ export default function ChatPage() {
   const inputBeforeVoice = useRef('')
   const shouldRestartRef = useRef(false)
 
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const textRef   = useRef<HTMLTextAreaElement>(null)
+  const bottomRef   = useRef<HTMLDivElement>(null)
+  const textRef     = useRef<HTMLTextAreaElement>(null)
+  const loadedRef   = useRef(false)
 
   useEffect(() => {
     const SR = (window as unknown as Record<string, unknown>).SpeechRecognition
@@ -123,7 +124,11 @@ export default function ChatPage() {
     setMessages([])
   }
 
-  useEffect(() => { loadHistory() }, [])
+  useEffect(() => {
+    if (loadedRef.current) return
+    loadedRef.current = true
+    loadHistory()
+  }, [])
 
   async function send(e?: React.FormEvent, overrideText?: string) {
     e?.preventDefault()

@@ -3,22 +3,22 @@
 
 /* ─── TOKENS ─────────────────────────────────────────── */
 :root {
-  --bg:          #080808;
-  --surface-0:   #0d0d0d;
+  --bg:          #030303;
+  --surface-0:   #0a0a0a;
   --surface-1:   #111111;
-  --surface-2:   #161616;
-  --surface-3:   #1c1c1c;
-  --border:      rgba(255,255,255,0.07);
-  --border-hi:   rgba(255,255,255,0.12);
-  --border-focus: rgba(245,158,11,0.35);
+  --surface-2:   #181818;
+  --surface-3:   #202020;
+  --border:      rgba(255,255,255,0.09);
+  --border-hi:   rgba(255,255,255,0.16);
+  --border-focus: rgba(245,158,11,0.4);
   --amber:       #f59e0b;
   --amber-hi:    #fbbf24;
   --amber-dim:   rgba(245,158,11,0.15);
-  --amber-glow:  rgba(245,158,11,0.08);
-  --text:        #f0f0f0;
-  --text-2:      #a0a0a0;
-  --text-3:      #555555;
-  --text-4:      #333333;
+  --amber-glow:  rgba(245,158,11,0.09);
+  --text:        #efefef;
+  --text-2:      #aaaaaa;
+  --text-3:      #616161;
+  --text-4:      #383838;
   --emerald:     #10b981;
   --blue:        #3b82f6;
   --red:         #ef4444;

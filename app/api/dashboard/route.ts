@@ -45,22 +45,20 @@ export async function GET() {
       .limit(20),
     supabase.from('projects').select('status'),
     supabase.from('tasks').select('priority, status').neq('status', 'done'),
-    // Últimos 6 meses — facturas pagadas (para el gráfico)
+    // Últimos 6 meses — todas las facturas pagadas (filtramos por fecha en código)
     supabase.from('invoices')
-      .select('amount, status, paid_at, created_at')
+      .select('amount, status, paid_at, updated_at, created_at')
       .eq('status', 'paid')
-      .gte('paid_at', sixMonthsAgo.toISOString()),
-    // Facturas pendientes de cobro
+      .gte('created_at', sixMonthsAgo.toISOString()),
+    // Facturas pendientes de cobro (cualquier mes)
     supabase.from('invoices')
-      .select('amount')
+      .select('amount, status, created_at, due_date')
       .in('status', ['sent', 'pending', 'draft'])
       .not('amount', 'is', null),
-    // Facturas pagadas este mes
+    // Todas las facturas pagadas para calcular "este mes" en código
     supabase.from('invoices')
-      .select('amount')
-      .eq('status', 'paid')
-      .gte('paid_at', thisMonthStart)
-      .lt('paid_at', nextMonthStart),
+      .select('amount, paid_at, updated_at, created_at')
+      .eq('status', 'paid'),
   ])
 
   const wfSuccess = workflowStats?.filter(w => w.status === 'success').length || 0
@@ -84,9 +82,11 @@ export async function GET() {
     revenueByMonth[key] = 0
   }
 
+  // Para gráfico: usar paid_at si existe, sino updated_at, sino created_at
   for (const inv of (recentInvoices || [])) {
-    if (inv.paid_at) {
-      const d = new Date(inv.paid_at)
+    const dateStr = inv.paid_at || inv.updated_at || inv.created_at
+    if (dateStr) {
+      const d = new Date(dateStr)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       if (key in revenueByMonth) revenueByMonth[key] += Number(inv.amount) || 0
     }
@@ -99,10 +99,17 @@ export async function GET() {
 
   const total6m = Object.values(revenueByMonth).reduce((s, v) => s + v, 0)
 
-  // Cobrado este mes
-  const thisMonth = (thisMonthInvoices || []).reduce((s, i) => s + (Number(i.amount) || 0), 0)
+  // Cobrado este mes: usar paid_at si existe, sino updated_at, sino created_at
+  const thisMonthStart_d = new Date(thisMonthStart)
+  const nextMonthStart_d = new Date(nextMonthStart)
+  const thisMonth = (thisMonthInvoices || []).reduce((s, i) => {
+    const dateStr = i.paid_at || i.updated_at || i.created_at
+    if (!dateStr) return s
+    const d = new Date(dateStr)
+    return d >= thisMonthStart_d && d < nextMonthStart_d ? s + (Number(i.amount) || 0) : s
+  }, 0)
 
-  // Pendiente de cobro (total facturas no pagadas)
+  // Pendiente de cobro (total facturas no pagadas de cualquier mes)
   const pendingTotal = (pendingInvoices || []).reduce((s, i) => s + (Number(i.amount) || 0), 0)
 
   // Proyectos por estado
