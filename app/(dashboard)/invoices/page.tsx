@@ -148,9 +148,9 @@ export default function InvoicesPage() {
     return { cobrado, pendiente, vencido, total, count: monthInvoices.length }
   }, [monthInvoices])
 
-  // Lista filtrada para mostrar
+  // Lista filtrada para mostrar — cuando hay filtro de estado, ignora el mes y muestra todo
   const displayInvoices = useMemo(() => {
-    const base = showAllMonths ? invoices : monthInvoices
+    const base = (showAllMonths || !!statusFilter) ? invoices : monthInvoices
     if (!statusFilter) return base
     if (statusFilter === 'partial') return base.filter(i => (i.paid_amount || 0) > 0 && i.status !== 'paid')
     return base.filter(i => i.status === statusFilter)

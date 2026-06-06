@@ -16,6 +16,12 @@ interface Scorecard {
   fortalezas: string[]; riesgos: string[]; acciones: string[]
 }
 
+interface ClientInvoice {
+  id: string; invoice_number: string; amount: number; status: string
+  description: string | null; due_date: string | null; paid_at: string | null
+  paid_amount?: number
+}
+
 interface ClientData {
   client: {
     id: string; name: string; email: string | null; industry: string | null
@@ -45,9 +51,10 @@ export default function ClientDetailPage() {
   const [roadmapYear]  = useState(now.getFullYear())
   const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
   const emptyWeeks = (): RoadmapWeek[] => [1,2,3,4].map(w => ({ week: w, title: '', items: [] }))
-  const [roadmapData, setRoadmapData] = useState<RoadmapWeek[]>(emptyWeeks())
+  const [roadmapData, setRoadmapData]     = useState<RoadmapWeek[]>(emptyWeeks())
   const [savingRoadmap, setSavingRoadmap] = useState(false)
   const [roadmapSaved, setRoadmapSaved]   = useState(false)
+  const [clientInvoices, setClientInvoices] = useState<ClientInvoice[]>([])
 
   async function analyzeClient() {
     setLoadingScore(true)
@@ -58,11 +65,16 @@ export default function ClientDetailPage() {
   }
 
   async function load() {
-    const res = await fetch(`/api/clients/${id}`)
-    const json = await res.json()
+    const [clientRes, invRes] = await Promise.all([
+      fetch(`/api/clients/${id}`),
+      fetch(`/api/invoices?client_id=${id}`),
+    ])
+    const json   = await clientRes.json()
+    const invData = await invRes.json()
     setData(json)
     setForm(json.client)
     setPhotoUrl(json.client?.photo_url ?? null)
+    setClientInvoices(invData.invoices || [])
   }
 
   async function uploadPhoto(file: File) {
@@ -367,6 +379,64 @@ export default function ClientDetailPage() {
             </div>
           </div>
         )}
+
+        {/* Facturación del cliente */}
+        {clientInvoices.length > 0 && (() => {
+          const cobrado   = clientInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
+          const porCobrar = clientInvoices.filter(i => ['pending','partial'].includes(i.status)).reduce((s, i) => s + Number(i.amount) - (i.paid_amount || 0), 0)
+          const total     = clientInvoices.reduce((s, i) => s + Number(i.amount), 0)
+          return (
+            <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-white">Facturación</h3>
+                <span className="text-[11px] text-[#475569]">{clientInvoices.length} factura{clientInvoices.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Cobrado</p>
+                  <p className="text-lg font-black text-emerald-400">${cobrado.toLocaleString()}</p>
+                </div>
+                <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Por cobrar</p>
+                  <p className="text-lg font-black text-amber-400">${porCobrar.toLocaleString()}</p>
+                </div>
+                <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Total</p>
+                  <p className="text-lg font-black text-white">${total.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {clientInvoices.slice(0, 5).map(inv => {
+                  const resta = Math.max(0, Number(inv.amount) - (inv.paid_amount || 0))
+                  return (
+                    <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 bg-[#080f1e] border border-[#1a2d45] rounded-xl">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-[10px] font-mono text-[#334155] shrink-0">{inv.invoice_number}</span>
+                        <span className="text-xs text-[#64748b] truncate">{inv.description || 'Sin descripción'}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {inv.status !== 'paid' && resta > 0 && (
+                          <span className="text-[11px] text-amber-400 font-semibold">Resta ${resta.toLocaleString()}</span>
+                        )}
+                        <span className="text-sm font-bold text-white">${Number(inv.amount).toLocaleString()}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          inv.status === 'paid'    ? 'bg-emerald-500/10 text-emerald-400' :
+                          inv.status === 'overdue' ? 'bg-red-500/10 text-red-400' :
+                          'bg-amber-400/10 text-amber-400'
+                        }`}>
+                          {inv.status === 'paid' ? 'Pagada' : inv.status === 'overdue' ? 'Vencida' : inv.status === 'partial' ? 'Parcial' : 'Pendiente'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {clientInvoices.length > 5 && (
+                <p className="text-center text-[11px] text-[#334155] mt-3">+{clientInvoices.length - 5} facturas más · Ver en Facturación</p>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Roadmap del mes */}
         <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">

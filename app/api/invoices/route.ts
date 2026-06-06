@@ -32,8 +32,13 @@ export async function GET(req: Request) {
   // Calcular MRR y totales
   const all = data || []
   const paid    = all.filter(i => i.status === 'paid').reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
-  const pending = all.filter(i => i.status === 'pending').reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
-  const overdue = all.filter(i => i.status === 'overdue').reduce((s: number, i: { amount: number }) => s + Number(i.amount), 0)
+  // "Por cobrar" = lo que RESTA por cobrar (amount - pagado parcial)
+  const pending = all
+    .filter(i => ['pending', 'partial'].includes(i.status))
+    .reduce((s: number, i: { id: string; amount: number }) => s + Math.max(0, Number(i.amount) - (paymentSums[i.id] || 0)), 0)
+  const overdue = all
+    .filter(i => i.status === 'overdue')
+    .reduce((s: number, i: { id: string; amount: number }) => s + Math.max(0, Number(i.amount) - (paymentSums[i.id] || 0)), 0)
 
   // Cobrado real = facturas pagadas completas + pagos parciales de facturas aún no saldadas
   const partialCobrado = all

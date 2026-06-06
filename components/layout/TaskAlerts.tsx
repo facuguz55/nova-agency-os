@@ -37,14 +37,11 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
           const d = t.due_date!
           return d > todayStr && new Date(d) <= in7
         }))
-      } catch {
-        // silenciar errores de red
-      }
+      } catch { /* silenciar errores de red */ }
     }
     fetchTasks()
   }, [])
 
-  // Cerrar al hacer click fuera
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -90,9 +87,11 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 bottom-full mb-2 z-50 w-80 bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,.5)] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#1e2f4a]">
-            <p className="text-xs font-semibold text-white">Recordatorios de tareas</p>
+        // Abre a la DERECHA del sidebar para no salirse de pantalla
+        <div className="absolute left-full bottom-0 ml-2 z-[100] w-72 bg-[#0a1525] border border-[#1e2f4a] rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,.7)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#1e2f4a] flex items-center justify-between">
+            <p className="text-xs font-semibold text-white">Recordatorios</p>
+            <button onClick={() => setOpen(false)} className="text-[#334155] hover:text-white text-xs">✕</button>
           </div>
 
           {!hasAny ? (
@@ -101,21 +100,17 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
               <p className="text-xs text-[#334155]">Sin alertas pendientes</p>
             </div>
           ) : (
-            <div className="max-h-80 overflow-y-auto divide-y divide-[#1e2f4a]/50">
+            <div className="max-h-[60vh] overflow-y-auto divide-y divide-[#1e2f4a]/50">
               {overdue.length > 0 && (
                 <div className="p-3 bg-red-500/5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <AlertCircle size={11} className="text-red-400" />
-                    <p className="text-[10px] font-semibold text-red-400 uppercase tracking-widest">Vencidas</p>
+                    <p className="text-[10px] font-semibold text-red-400 uppercase tracking-widest">Vencidas · {overdue.length}</p>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {overdue.map(t => (
-                      <Link
-                        key={t.id}
-                        href="/tasks"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center justify-between group hover:bg-red-500/10 rounded-lg px-2 py-1.5 transition-colors"
-                      >
+                      <Link key={t.id} href="/tasks" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between hover:bg-red-500/10 rounded-lg px-2 py-1.5 transition-colors group">
                         <span className="text-xs text-[#94a3b8] group-hover:text-white truncate pr-2">{t.title}</span>
                         <span className="text-[10px] text-red-400 shrink-0">{t.due_date}</span>
                       </Link>
@@ -128,16 +123,12 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
                 <div className="p-3 bg-orange-500/5">
                   <div className="flex items-center gap-1.5 mb-2">
                     <Clock size={11} className="text-orange-400" />
-                    <p className="text-[10px] font-semibold text-orange-400 uppercase tracking-widest">Hoy</p>
+                    <p className="text-[10px] font-semibold text-orange-400 uppercase tracking-widest">Hoy · {today.length}</p>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {today.map(t => (
-                      <Link
-                        key={t.id}
-                        href="/tasks"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center justify-between group hover:bg-orange-500/10 rounded-lg px-2 py-1.5 transition-colors"
-                      >
+                      <Link key={t.id} href="/tasks" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between hover:bg-orange-500/10 rounded-lg px-2 py-1.5 transition-colors group">
                         <span className="text-xs text-[#94a3b8] group-hover:text-white truncate">{t.title}</span>
                       </Link>
                     ))}
@@ -149,16 +140,12 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
                 <div className="p-3">
                   <div className="flex items-center gap-1.5 mb-2">
                     <CalendarDays size={11} className="text-[#64748b]" />
-                    <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest">Próximos 7 días</p>
+                    <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest">Próx. 7 días · {soon.length}</p>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {soon.map(t => (
-                      <Link
-                        key={t.id}
-                        href="/tasks"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center justify-between group hover:bg-white/[.03] rounded-lg px-2 py-1.5 transition-colors"
-                      >
+                      <Link key={t.id} href="/tasks" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between hover:bg-white/[.03] rounded-lg px-2 py-1.5 transition-colors group">
                         <span className="text-xs text-[#94a3b8] group-hover:text-white truncate pr-2">{t.title}</span>
                         <span className="text-[10px] text-[#475569] shrink-0">{t.due_date}</span>
                       </Link>
@@ -168,6 +155,12 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
               )}
             </div>
           )}
+
+          <div className="border-t border-[#1e2f4a] px-4 py-2.5">
+            <Link href="/tasks" onClick={() => setOpen(false)} className="text-[11px] text-[#475569] hover:text-[#ff8c42] transition-colors font-medium">
+              Ver todas las tareas →
+            </Link>
+          </div>
         </div>
       )}
     </div>

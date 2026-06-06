@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { LogOut, Search, ChevronRight } from 'lucide-react'
+import { LogOut, Search, ChevronRight, Settings } from 'lucide-react'
 import TaskAlerts from '@/components/layout/TaskAlerts'
 import { getCachedItems, mergeConfig, setCacheItems, type SidebarItem } from '@/lib/sidebar-config'
 
@@ -168,6 +168,17 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </button>
         <TaskAlerts collapsed={collapsed} />
+        <Link
+          href="/config"
+          title={collapsed ? 'Configuración' : undefined}
+          className={cn(
+            'flex items-center gap-3 rounded-xl text-sm text-[#334155] hover:text-[#94a3b8] hover:bg-white/[.03] transition-all w-full',
+            collapsed ? 'justify-center py-2.5 px-0' : 'px-3 py-2.5',
+          )}
+        >
+          <Settings size={15} className="shrink-0" />
+          {!collapsed && <span className="font-medium">Configuración</span>}
+        </Link>
         <button
           onClick={logout}
           title={collapsed ? 'Salir' : undefined}
