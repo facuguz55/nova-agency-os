@@ -134,13 +134,21 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 rounded-2xl bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center animate-pulse">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <polygon points="10,1 19,18 1,18" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round"/>
-          </svg>
+      <div className="flex flex-col items-center gap-5">
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-2xl bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)]" />
+          <div className="absolute inset-0 rounded-2xl border-2 border-transparent border-t-[var(--amber)] animate-spin" style={{ animationDuration: '1.1s' }} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <polygon points="10,1 19,18 1,18" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round"/>
+            </svg>
+          </div>
         </div>
-        <p className="text-[var(--text-3)] text-[11px] tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-display)' }}>Cargando</p>
+        <div className="flex gap-1.5">
+          {[0,1,2].map(i => (
+            <div key={i} className="w-1 h-1 rounded-full bg-[var(--amber)]" style={{ animation: `bounce-dots 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -196,10 +204,12 @@ export default function DashboardPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
 
         {/* ─── HERO BANNER ─────────────────────────────────── */}
-        <div className="animate-fade-up bg-[#0f0f0f] border border-[rgba(255,255,255,0.07)] rounded-2xl p-6 flex items-center justify-between overflow-hidden relative">
-          {/* Subtle amber glow */}
-          <div className="absolute -top-16 -left-16 w-48 h-48 rounded-full bg-[rgba(245,158,11,0.06)] blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 right-32 w-48 h-48 rounded-full bg-[rgba(59,130,246,0.04)] blur-3xl pointer-events-none" />
+        <div className="animate-fade-up panel p-6 flex items-center justify-between overflow-hidden relative" style={{ borderTop: '2px solid var(--amber)' }}>
+          {/* Glows */}
+          <div className="absolute -top-20 -left-10 w-56 h-56 rounded-full bg-[rgba(245,158,11,0.07)] blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 right-24 w-56 h-56 rounded-full bg-[rgba(59,130,246,0.04)] blur-3xl pointer-events-none" />
+          {/* Subtle grid texture */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.015]" style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 24px,rgba(255,255,255,1) 24px,rgba(255,255,255,1) 25px),repeating-linear-gradient(90deg,transparent,transparent 24px,rgba(255,255,255,1) 24px,rgba(255,255,255,1) 25px)' }} />
 
           <div className="relative z-10">
             <p className="text-[12px] text-[var(--text-3)] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
@@ -256,9 +266,11 @@ export default function DashboardPage() {
 
         {/* ─── REVENUE CARDS ──────────────────────────────── */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 animate-fade-up stagger-3">
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-5 col-span-2 xl:col-span-1">
+          <div className="panel p-5 col-span-2 xl:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <DollarSign size={14} className="text-[var(--amber)]" />
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+                <DollarSign size={13} />
+              </div>
               <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>Cobrado este mes</p>
             </div>
             <p className="text-[26px] font-bold text-white leading-none" style={{ fontFamily: 'var(--font-display)' }}>
@@ -267,9 +279,11 @@ export default function DashboardPage() {
             <p className="text-[11px] text-[var(--text-3)] mt-1.5">Facturas pagadas en junio</p>
           </div>
 
-          <div className="bg-[#111] border border-[rgba(245,158,11,0.12)] rounded-2xl p-5 col-span-2 xl:col-span-1">
+          <div className="panel p-5 col-span-2 xl:col-span-1" style={{ borderColor: 'rgba(245,158,11,0.25)' }}>
             <div className="flex items-center gap-2 mb-3">
-              <Clock size={14} className="text-[var(--amber)]" />
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
+                <Clock size={13} />
+              </div>
               <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>Pendiente de cobro</p>
             </div>
             <p className="text-[26px] font-bold text-[var(--amber)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
@@ -278,7 +292,7 @@ export default function DashboardPage() {
             <p className="text-[11px] text-[var(--text-3)] mt-1.5">Facturas emitidas sin cobrar</p>
           </div>
 
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-5 col-span-2 flex flex-col justify-between">
+          <div className="panel p-5 col-span-2 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>Ingresos últimos 6 meses</p>
               <span className="text-[10px] text-[var(--text-4)] bg-white/5 border border-[rgba(255,255,255,0.07)] px-2 py-0.5 rounded-lg">Total: ${(revenue?.total6m ?? 0).toLocaleString('es-AR')}</span>
@@ -302,7 +316,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up stagger-4">
 
           {/* Revenue bars */}
-          <div className="lg:col-span-2 bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-5">
+          <div className="lg:col-span-2 panel p-5">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-display)' }}>Facturación mensual</p>
@@ -328,7 +342,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Radar */}
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-5 flex flex-col">
+          <div className="panel p-5 flex flex-col">
             <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Rendimiento general</p>
             <div className="flex-1 flex items-center justify-center">
               <ResponsiveContainer width="100%" height={160}>
@@ -346,7 +360,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up stagger-5">
 
           {/* Proyectos por estado */}
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-4">
+          <div className="panel p-4">
             <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Proyectos</p>
             <div className="space-y-2">
               {(projectsChart || []).map(p => (
@@ -360,7 +374,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Tareas por prioridad */}
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-4">
+          <div className="panel p-4">
             <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Tareas pendientes</p>
             <div className="space-y-2">
               {(tasksChart || []).map(t => (
@@ -374,7 +388,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Actividad semanal (mock) */}
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-4">
+          <div className="panel p-4">
             <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Actividad semanal</p>
             <ResponsiveContainer width="100%" height={70}>
               <BarChart data={activityData} barSize={14} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
@@ -390,7 +404,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Salud del negocio */}
-          <div className="bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl p-4 flex flex-col">
+          <div className="panel p-4 flex flex-col">
             <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-2" style={{ fontFamily: 'var(--font-display)' }}>Salud del negocio</p>
             <div className="flex items-center gap-3 flex-1">
               <div className="relative w-14 h-14 shrink-0">
@@ -435,7 +449,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 animate-fade-up stagger-7">
 
           {/* Foco del día */}
-          <div className="lg:col-span-2 bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl overflow-hidden flex flex-col">
+          <div className="lg:col-span-2 panel overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <Flag size={12} className="text-red-400" />
@@ -479,7 +493,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Actividad reciente */}
-          <div className="lg:col-span-3 bg-[#111] border border-[rgba(255,255,255,0.07)] rounded-2xl overflow-hidden flex flex-col">
+          <div className="lg:col-span-3 panel overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <Activity size={12} className="text-[var(--text-3)]" />

@@ -189,6 +189,23 @@ body {
   border-color: rgba(245,158,11,0.25);
 }
 
+/* ─── PANEL (surface + border token auto-sync) ───────────── */
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.panel:hover { border-color: var(--border-hi); }
+
+.panel-accent {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--amber);
+  border-radius: 16px;
+  transition: border-color 0.2s;
+}
+
 /* ─── DISPLAY FONT USAGE ────────────────────────────────── */
 .font-display { font-family: var(--font-display); }
 .font-mono    { font-family: var(--font-mono); }
