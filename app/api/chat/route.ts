@@ -17,13 +17,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Mensaje vacío' }, { status: 400 })
     }
 
-    // Llamar a Claude
     const response = await chatWithClaude(message, history || [], user.id)
 
     // Guardar en chat_history (no bloquear si falla)
     supabase.from('chat_history').insert({
-      user_id: user.id,
-      message: message.trim(),
+      user_id:  user.id,
+      message:  message.trim(),
       response,
       metadata: { action_type: 'chat', context: 'ai_response' },
     }).then(({ error }) => {
@@ -34,7 +33,6 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('Chat error:', msg)
-    // Devolver el error real para poder debuggear
     return NextResponse.json({ error: `Error: ${msg}` }, { status: 500 })
   }
 }
@@ -49,14 +47,26 @@ export async function GET(req: Request) {
     const url   = new URL(req.url)
     const limit = parseInt(url.searchParams.get('limit') || '50')
 
-    const { data } = await supabase
+    // Intentar ordenar por created_at, con fallback a timestamp
+    const { data, error } = await supabase
       .from('chat_history')
       .select('*')
       .eq('user_id', user.id)
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit)
 
-    return NextResponse.json({ history: (data || []).reverse() })
+    // Si el error es de columna, intentar con 'timestamp'
+    if (error?.code === '42703') {
+      const { data: data2 } = await supabase
+        .from('chat_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('timestamp', { ascending: false })
+        .limit(limit)
+      return NextResponse.json({ history: ((data2 || []).reverse()) })
+    }
+
+    return NextResponse.json({ history: ((data || []).reverse()) })
   } catch {
     return NextResponse.json({ history: [] })
   }

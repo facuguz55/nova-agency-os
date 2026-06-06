@@ -119,7 +119,7 @@ export default function ProspeccionPage() {
             label="Total enviados"
             value={total}
             icon={<Users size={16} />}
-            color="orange"
+            color="amber"
             sub="mensajes enviados"
           />
           <StatCard

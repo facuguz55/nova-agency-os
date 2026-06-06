@@ -4,10 +4,13 @@ import { usePageTitle } from '@/lib/usePageTitle'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Header from '@/components/layout/Header'
 import { formatDate } from '@/lib/utils'
-import { Send, Sparkles, RefreshCw, Mic, MicOff } from 'lucide-react'
+import { Send, Sparkles, RefreshCw, Mic, MicOff, Trash2 } from 'lucide-react'
 
 interface Message {
-  role: 'user' | 'assistant'; content: string; timestamp?: string; id?: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp?: string
+  id?: string
 }
 
 interface SpeechRecognitionEvent extends Event {
@@ -24,13 +27,34 @@ interface SpeechRecognitionInstance extends EventTarget {
   start(): void
   stop(): void
   onresult: ((e: SpeechRecognitionEvent) => void) | null
-  onerror: ((e: SpeechRecognitionErrorEvent) => void) | null
-  onend: (() => void) | null
+  onerror:  ((e: SpeechRecognitionErrorEvent) => void) | null
+  onend:    (() => void) | null
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function parseMarkdown(text: string): string {
-  return text
-    .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+  // Extraer bloques de código antes de escapar, para preservarlos
+  const codeBlocks: string[] = []
+  const withPlaceholders = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) => {
+    codeBlocks.push(`<pre><code>${escapeHtml(code)}</code></pre>`)
+    return `\x00CODE${codeBlocks.length - 1}\x00`
+  })
+
+  // Escapar el resto del HTML
+  let safe = escapeHtml(withPlaceholders)
+
+  // Restaurar bloques de código (ya escapados)
+  safe = safe.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[parseInt(i)])
+
+  return safe
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -77,16 +101,26 @@ export default function ChatPage() {
 
   async function loadHistory() {
     setLoadingHistory(true)
-    const res = await fetch('/api/chat?limit=50')
-    const { history } = await res.json()
-    const msgs: Message[] = []
-    for (const item of history) {
-      msgs.push({ role: 'user',      content: item.message,  timestamp: item.timestamp, id: item.id + '_u' })
-      msgs.push({ role: 'assistant', content: item.response, timestamp: item.timestamp, id: item.id + '_a' })
+    try {
+      const res = await fetch('/api/chat?limit=50')
+      const { history } = await res.json()
+      const msgs: Message[] = []
+      for (const item of (history || [])) {
+        const ts = item.created_at || item.timestamp
+        msgs.push({ role: 'user',      content: item.message,  timestamp: ts, id: item.id + '_u' })
+        msgs.push({ role: 'assistant', content: item.response, timestamp: ts, id: item.id + '_a' })
+      }
+      setMessages(msgs)
+    } catch {
+      // silently fail
     }
-    setMessages(msgs)
     setLoadingHistory(false)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+  }
+
+  async function clearHistory() {
+    if (!confirm('¿Borrar todo el historial de chat?')) return
+    setMessages([])
   }
 
   useEffect(() => { loadHistory() }, [])
@@ -150,8 +184,7 @@ export default function ChatPage() {
     recognition.interimResults = true
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
-      let interimText = ''
-      let finalText   = ''
+      let interimText = ''; let finalText = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript
         if (e.results[i].isFinal) finalText   += t
@@ -172,13 +205,9 @@ export default function ChatPage() {
       shouldRestartRef.current = false
       setIsListening(false)
       setInterim('')
-      if (e.error === 'network') {
-        setVoiceError('Sin conexión al servicio de voz. Verificá tu red.')
-      } else if (e.error === 'not-allowed') {
-        setVoiceError('Permiso de micrófono denegado.')
-      } else {
-        setVoiceError(`Error de voz: ${e.error}`)
-      }
+      if (e.error === 'network')      setVoiceError('Sin conexión al servicio de voz.')
+      else if (e.error === 'not-allowed') setVoiceError('Permiso de micrófono denegado.')
+      else                                setVoiceError(`Error de voz: ${e.error}`)
       setTimeout(() => setVoiceError(''), 4000)
     }
 
@@ -217,34 +246,54 @@ export default function ChatPage() {
     <>
       <Header
         title="IA Chat"
-        subtitle="Claude Haiku — Asistente de Nova Agency"
+        subtitle="Claude — Asistente Nova Agency"
         actions={
-          <button onClick={loadHistory} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#111e33] hover:bg-[#1a2d4a] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-xl transition-all">
-            <RefreshCw size={11} />
-            Historial
-          </button>
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={clearHistory}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-white/[.03] hover:bg-red-500/10 text-[var(--text-3)] hover:text-red-400 border border-[rgba(255,255,255,0.07)] hover:border-red-500/20 rounded-lg transition-all"
+              >
+                <Trash2 size={11} /> Limpiar
+              </button>
+            )}
+            <button
+              onClick={loadHistory}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-white/[.03] hover:bg-white/[.06] text-[var(--text-3)] hover:text-[var(--text-2)] border border-[rgba(255,255,255,0.07)] rounded-lg transition-all"
+            >
+              <RefreshCw size={11} /> Historial
+            </button>
+          </div>
         }
       />
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-grid">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
           {loadingHistory ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-[#334155] text-sm">Cargando historial...</p>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)] flex items-center justify-center animate-pulse">
+                  <Sparkles size={14} className="text-[var(--amber)]" />
+                </div>
+                <p className="text-[var(--text-3)] text-[12px]">Cargando historial...</p>
+              </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-6 max-w-lg mx-auto">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff8c42] to-[#ff5f1a] flex items-center justify-center shadow-[0_0_40px_rgba(255,140,66,.35)]">
-                <Sparkles size={24} className="text-white" />
+            <div className="flex flex-col items-center justify-center h-full gap-6 max-w-lg mx-auto animate-fade-up">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-2xl bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center animate-float">
+                  <Sparkles size={24} className="text-[var(--amber)]" />
+                </div>
+                <div className="absolute inset-0 rounded-2xl bg-[rgba(245,158,11,0.15)] blur-xl -z-10 animate-glow" />
               </div>
               <div className="text-center">
-                <p className="text-white font-bold text-lg mb-1">Nova AI</p>
-                <p className="text-[#475569] text-sm leading-relaxed">
+                <p className="text-white font-bold text-[18px] mb-1" style={{ fontFamily: 'var(--font-display)' }}>Nova IA</p>
+                <p className="text-[var(--text-3)] text-[13px] leading-relaxed">
                   Asistente consultivo. Preguntame sobre clientes, proyectos, métricas o automatizaciones.
                 </p>
                 {voiceSupported && (
-                  <p className="text-[#334155] text-xs mt-2 flex items-center justify-center gap-1">
+                  <p className="text-[var(--text-4)] text-[11px] mt-2 flex items-center justify-center gap-1">
                     <Mic size={10} /> Podés hablarle usando el micrófono
                   </p>
                 )}
@@ -254,7 +303,7 @@ export default function ChatPage() {
                   <button
                     key={s}
                     onClick={() => { setInput(s); textRef.current?.focus() }}
-                    className="px-4 py-3 text-xs text-left bg-[#0e1a2e] border border-[#1e2f4a] rounded-xl text-[#64748b] hover:border-[#ff8c42]/30 hover:text-[#94a3b8] hover:bg-[#111e33] transition-all"
+                    className="px-4 py-3 text-[12px] text-left bg-white/[.03] border border-[rgba(255,255,255,0.07)] rounded-xl text-[var(--text-3)] hover:border-[rgba(245,158,11,0.25)] hover:text-[var(--text-2)] hover:bg-white/[.05] transition-all"
                   >
                     {s}
                   </button>
@@ -264,22 +313,26 @@ export default function ChatPage() {
           ) : (
             <>
               {messages.map((msg, i) => (
-                <div key={msg.id || i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}>
+                <div
+                  key={msg.id || i}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3 animate-fade-up`}
+                  style={{ animationDelay: `${Math.min(i * 0.03, 0.3)}s` }}
+                >
                   {msg.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#ff8c42] to-[#ff5f1a] flex items-center justify-center shrink-0 mt-1 shadow-[0_0_10px_rgba(255,140,66,.3)]">
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-                        <polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2.5" strokeLinejoin="round"/>
+                    <div className="w-7 h-7 rounded-xl bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center shrink-0 mt-1">
+                      <svg width="11" height="11" viewBox="0 0 20 20" fill="none">
+                        <polygon points="10,1 19,18 1,18" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinejoin="round"/>
                       </svg>
                     </div>
                   )}
                   <div className="max-w-[78%]">
                     {msg.role === 'assistant' && (
-                      <p className="text-[11px] text-[#334155] mb-1.5 ml-1">Nova AI · {msg.timestamp ? formatDate(msg.timestamp) : ''}</p>
+                      <p className="text-[10px] text-[var(--text-4)] mb-1.5 ml-1">Nova IA · {msg.timestamp ? formatDate(msg.timestamp) : ''}</p>
                     )}
-                    <div className={`px-4 py-3.5 rounded-2xl text-sm leading-relaxed ${
+                    <div className={`px-4 py-3.5 rounded-2xl text-[13px] leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[#ff8c42]/10 border border-[#ff8c42]/20 text-white rounded-tr-sm shadow-[0_0_16px_rgba(255,140,66,.08)]'
-                        : 'bg-[#0e1a2e] border border-[#1e2f4a] text-[#e2e8f0] rounded-tl-sm'
+                        ? 'bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)] text-white rounded-tr-sm'
+                        : 'bg-[#111] border border-[rgba(255,255,255,0.08)] text-[var(--text-2)] rounded-tl-sm'
                     }`}>
                       {msg.role === 'assistant'
                         ? <div className="prose-chat" dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content) }} />
@@ -287,21 +340,27 @@ export default function ChatPage() {
                       }
                     </div>
                     {msg.role === 'user' && msg.timestamp && (
-                      <p className="text-[11px] text-[#334155] text-right mt-1.5 mr-1">{formatDate(msg.timestamp)}</p>
+                      <p className="text-[10px] text-[var(--text-4)] text-right mt-1.5 mr-1">{formatDate(msg.timestamp)}</p>
                     )}
                   </div>
                 </div>
               ))}
 
               {loading && (
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#ff8c42] to-[#ff5f1a] flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(255,140,66,.3)] animate-pulse">
-                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><polygon points="10,1 19,18 1,18" fill="none" stroke="white" strokeWidth="2.5" strokeLinejoin="round"/></svg>
+                <div className="flex items-start gap-3 animate-fade-in">
+                  <div className="w-7 h-7 rounded-xl bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center shrink-0 animate-pulse">
+                    <svg width="11" height="11" viewBox="0 0 20 20" fill="none">
+                      <polygon points="10,1 19,18 1,18" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinejoin="round"/>
+                    </svg>
                   </div>
-                  <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl rounded-tl-sm px-5 py-4">
+                  <div className="bg-[#111] border border-[rgba(255,255,255,0.08)] rounded-2xl rounded-tl-sm px-5 py-4">
                     <div className="flex gap-1.5">
                       {[0,1,2].map(i => (
-                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#ff8c42] animate-bounce" style={{ animationDelay: `${i*0.12}s` }} />
+                        <div
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full bg-[var(--amber)]"
+                          style={{ animation: `bounce-dots 1.2s ease-in-out ${i * 0.2}s infinite` }}
+                        />
                       ))}
                     </div>
                   </div>
@@ -313,11 +372,10 @@ export default function ChatPage() {
         </div>
 
         {/* Input area */}
-        <div className="shrink-0 px-6 pb-6 pt-3 bg-[#080f1e]/80 backdrop-blur-sm border-t border-[#1e2f4a]">
-
+        <div className="shrink-0 px-6 pb-6 pt-3 border-t border-[rgba(255,255,255,0.06)]">
           {voiceError && (
             <div className="flex items-center gap-2 mb-2 px-1">
-              <span className="text-xs text-red-400">{voiceError}</span>
+              <span className="text-[12px] text-red-400">{voiceError}</span>
             </div>
           )}
 
@@ -327,23 +385,23 @@ export default function ChatPage() {
                 {[0,1,2,3,4].map(i => (
                   <div
                     key={i}
-                    className="w-1 bg-red-400 rounded-full animate-pulse"
-                    style={{ height: `${[40, 70, 55, 85, 45][i]}%`, animationDelay: `${i * 0.1}s` }}
+                    className="w-1 bg-red-400 rounded-full"
+                    style={{ height: `${[40,70,55,85,45][i]}%`, animation: `pulse-dot 1s ease-in-out ${i * 0.1}s infinite` }}
                   />
                 ))}
               </div>
-              <span className="text-xs text-red-400 font-medium">Escuchando...</span>
+              <span className="text-[12px] text-red-400 font-medium">Escuchando...</span>
               {interim && (
-                <span className="text-xs text-[#475569] italic truncate max-w-xs">{interim}</span>
+                <span className="text-[12px] text-[var(--text-3)] italic truncate max-w-xs">{interim}</span>
               )}
             </div>
           )}
 
           <form onSubmit={send} className="flex gap-2 items-end">
-            <div className={`flex-1 bg-[#0e1a2e] border rounded-2xl px-4 py-3 transition-all ${
+            <div className={`flex-1 bg-[rgba(255,255,255,0.03)] border rounded-2xl px-4 py-3 transition-all ${
               isListening
-                ? 'border-red-500/40 shadow-[0_0_0_3px_rgba(239,68,68,.06)]'
-                : 'border-[#1e2f4a] focus-within:border-[#ff8c42]/40 focus-within:shadow-[0_0_0_3px_rgba(255,140,66,.06)]'
+                ? 'border-red-500/30 shadow-[0_0_0_3px_rgba(239,68,68,0.05)]'
+                : 'border-[rgba(255,255,255,0.08)] focus-within:border-[rgba(245,158,11,0.35)] focus-within:shadow-[0_0_0_3px_rgba(245,158,11,0.05)]'
             }`}>
               <textarea
                 ref={textRef}
@@ -358,7 +416,7 @@ export default function ChatPage() {
                 placeholder={isListening ? 'Hablá... el mic para solo, después enviás vos' : 'Escribí o usá el micrófono... (Enter para enviar)'}
                 rows={1}
                 readOnly={isListening}
-                className="w-full bg-transparent text-white text-sm placeholder-[#334155] resize-none focus:outline-none max-h-40"
+                className="w-full bg-transparent text-white text-[13px] placeholder-[var(--text-4)] resize-none focus:outline-none max-h-40"
                 onInput={e => autoResize(e.target as HTMLTextAreaElement)}
               />
             </div>
@@ -370,11 +428,11 @@ export default function ChatPage() {
                 title={isListening ? 'Detener grabación' : 'Hablar'}
                 className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all ${
                   isListening
-                    ? 'bg-red-500 hover:bg-red-600 shadow-[0_0_20px_rgba(239,68,68,.4)] animate-pulse'
-                    : 'bg-[#0e1a2e] border border-[#1e2f4a] text-[#475569] hover:border-[#ff8c42]/40 hover:text-[#ff8c42]'
+                    ? 'bg-red-500 hover:bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse'
+                    : 'bg-white/[.04] border border-[rgba(255,255,255,0.08)] text-[var(--text-3)] hover:border-[rgba(245,158,11,0.3)] hover:text-[var(--amber)]'
                 }`}
               >
-                {isListening ? <MicOff size={15} className="text-white" /> : <Mic size={15} />}
+                {isListening ? <MicOff size={14} className="text-white" /> : <Mic size={14} />}
               </button>
             )}
 
@@ -383,11 +441,11 @@ export default function ChatPage() {
               disabled={loading || !(input.trim() || interim.trim())}
               className="w-11 h-11 btn-primary rounded-2xl flex items-center justify-center shrink-0 disabled:opacity-30"
             >
-              <Send size={15} className="text-white -translate-x-px" />
+              <Send size={14} className="text-black -translate-x-px" />
             </button>
           </form>
 
-          <p className="text-[10px] text-[#1e2f4a] text-center mt-2">
+          <p className="text-[10px] text-[var(--text-4)] text-center mt-2">
             Enter para enviar · Shift+Enter nueva línea{voiceSupported ? ' · Micrófono disponible' : ''}
           </p>
         </div>

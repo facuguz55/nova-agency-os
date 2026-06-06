@@ -3,16 +3,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Bell, Settings, LogOut, ChevronDown, User } from 'lucide-react'
+import { Search, Bell, Settings, LogOut, ChevronDown, User, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 interface HeaderProps {
   title: string
   subtitle?: string
   actions?: React.ReactNode
+  breadcrumb?: string
 }
 
-export default function Header({ title, subtitle, actions }: HeaderProps) {
+export default function Header({ title, subtitle, actions, breadcrumb }: HeaderProps) {
   const router   = useRouter()
   const supabase = createClient()
 
@@ -20,7 +22,9 @@ export default function Header({ title, subtitle, actions }: HeaderProps) {
   const [agencyName, setAgencyName] = useState('Nova Agency')
   const [agencyLogo, setAgencyLogo] = useState<string | null>(null)
   const [dropOpen, setDropOpen]     = useState(false)
-  const dropRef = useRef<HTMLDivElement>(null)
+  const [notifOpen, setNotifOpen]   = useState(false)
+  const dropRef   = useRef<HTMLDivElement>(null)
+  const notifRef  = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null))
@@ -36,6 +40,7 @@ export default function Header({ title, subtitle, actions }: HeaderProps) {
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDropOpen(false)
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -46,90 +51,115 @@ export default function Header({ title, subtitle, actions }: HeaderProps) {
     router.push('/login')
   }
 
-  const initials = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'NA'
+  const initials    = userEmail ? userEmail.slice(0, 2).toUpperCase() : 'NA'
   const displayName = userEmail?.split('@')[0] ?? 'Usuario'
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-[#1a2d45] shrink-0 bg-[#0c1628] sticky top-0 z-10 gap-4">
-      {/* Izquierda: título */}
-      <div className="min-w-0">
-        <h1 className="text-sm font-semibold text-white truncate">{title}</h1>
-        {subtitle && <p className="text-xs text-[#4a6080] mt-0.5 truncate">{subtitle}</p>}
+    <header className="h-[56px] flex items-center justify-between px-6 border-b border-[rgba(255,255,255,0.07)] shrink-0 bg-[#080808]/90 sticky top-0 z-20 backdrop-blur-xl gap-4">
+
+      {/* Breadcrumb + título */}
+      <div className="min-w-0 flex items-center gap-2">
+        {breadcrumb && (
+          <>
+            <Link href="/" className="text-[12px] text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors">
+              {breadcrumb}
+            </Link>
+            <ChevronRight size={11} className="text-[var(--text-4)] shrink-0" />
+          </>
+        )}
+        <div>
+          <h1 className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: 'var(--font-display)' }}>
+            {title}
+          </h1>
+          {subtitle && <p className="text-[11px] text-[var(--text-3)] mt-px truncate">{subtitle}</p>}
+        </div>
       </div>
 
-      {/* Centro: acciones de página */}
+      {/* Acciones de página */}
       {actions && <div className="flex items-center gap-2 ml-auto">{actions}</div>}
 
-      {/* Derecha: iconos + perfil */}
+      {/* Iconos + perfil */}
       <div className="flex items-center gap-1 shrink-0">
 
         {/* Búsqueda */}
         <button
           onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#4a6080] hover:text-white hover:bg-white/5 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-white/5 transition-all"
           title="Buscar (⌘K)"
         >
-          <Search size={15} />
+          <Search size={14} />
         </button>
 
         {/* Campana */}
-        <button className="w-8 h-8 flex items-center justify-center rounded-lg text-[#4a6080] hover:text-white hover:bg-white/5 transition-colors relative" title="Notificaciones">
-          <Bell size={15} />
-        </button>
+        <div ref={notifRef} className="relative">
+          <button
+            onClick={() => setNotifOpen(o => !o)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-3)] hover:text-[var(--text-2)] hover:bg-white/5 transition-all relative"
+            title="Notificaciones"
+          >
+            <Bell size={14} />
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-[#111] border border-[rgba(255,255,255,0.08)] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-50 animate-scale-in">
+              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+                <p className="text-[12px] font-semibold text-white" style={{ fontFamily: 'var(--font-display)' }}>Notificaciones</p>
+              </div>
+              <div className="px-4 py-6 text-center">
+                <p className="text-[12px] text-[var(--text-3)]">Sin notificaciones nuevas</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Separador */}
-        <div className="w-px h-5 bg-[#1a2d45] mx-1" />
+        <div className="w-px h-4 bg-[rgba(255,255,255,0.08)] mx-1" />
 
-        {/* Avatar + nombre + dropdown */}
+        {/* Avatar + dropdown */}
         <div ref={dropRef} className="relative">
           <button
             onClick={() => setDropOpen(o => !o)}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[.04] transition-all"
           >
-            {/* Avatar */}
-            <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 bg-[#f97316]/15 border border-[#f97316]/25 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-md overflow-hidden shrink-0 bg-[var(--amber-dim)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center">
               {agencyLogo ? (
-                <Image src={agencyLogo} alt={agencyName} width={28} height={28} className="object-cover w-full h-full" />
+                <Image src={agencyLogo} alt={agencyName} width={24} height={24} className="object-cover w-full h-full" />
               ) : (
-                <span className="text-[10px] font-black text-[#f97316]">{initials}</span>
+                <span className="text-[9px] font-bold text-[var(--amber)]" style={{ fontFamily: 'var(--font-display)' }}>{initials}</span>
               )}
             </div>
             <div className="text-left hidden sm:block">
-              <p className="text-xs font-semibold text-white leading-none">{displayName}</p>
-              <p className="text-[10px] text-[#4a6080] mt-0.5 leading-none">{agencyName}</p>
+              <p className="text-[12px] font-medium text-white/90 leading-none">{displayName}</p>
             </div>
-            <ChevronDown size={11} className={`text-[#4a6080] transition-transform ${dropOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown size={10} className={`text-[var(--text-3)] transition-transform ${dropOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {/* Dropdown */}
           {dropOpen && (
-            <div className="absolute right-0 top-full mt-2 w-52 bg-[#0c1628] border border-[#1a2d45] rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50">
-              {/* Info usuario */}
-              <div className="px-4 py-3 border-b border-[#1a2d45]">
-                <p className="text-xs font-semibold text-white truncate">{displayName}</p>
-                <p className="text-[10px] text-[#4a6080] truncate mt-0.5">{userEmail}</p>
+            <div className="absolute right-0 top-full mt-2 w-52 bg-[#111] border border-[rgba(255,255,255,0.08)] rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-50 animate-scale-in">
+              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.07)]">
+                <p className="text-[12px] font-semibold text-white truncate">{displayName}</p>
+                <p className="text-[10px] text-[var(--text-3)] truncate mt-0.5">{userEmail}</p>
               </div>
-              {/* Opciones */}
               <div className="p-1.5 space-y-0.5">
                 <button
                   onClick={() => { setDropOpen(false); router.push('/config?tab=perfil') }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-[var(--text-2)] hover:text-white hover:bg-white/[.04] transition-all text-left"
                 >
-                  <User size={13} /> Mi perfil
+                  <User size={12} /> Mi perfil
                 </button>
                 <button
                   onClick={() => { setDropOpen(false); router.push('/config') }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-[#94a3b8] hover:text-white hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-[var(--text-2)] hover:text-white hover:bg-white/[.04] transition-all text-left"
                 >
-                  <Settings size={13} /> Configuración
+                  <Settings size={12} /> Configuración
                 </button>
               </div>
-              <div className="p-1.5 border-t border-[#1a2d45]">
+              <div className="p-1.5 border-t border-[rgba(255,255,255,0.07)]">
                 <button
                   onClick={logout}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-red-400/70 hover:text-red-400 hover:bg-red-500/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] text-red-400/60 hover:text-red-400 hover:bg-red-500/[.05] transition-all text-left"
                 >
-                  <LogOut size={13} /> Cerrar sesión
+                  <LogOut size={12} /> Cerrar sesión
                 </button>
               </div>
             </div>
