@@ -15,6 +15,8 @@ const TYPE_ICONS: Record<string, string> = {
   email: '✉', api_call: '⚡', ssh: '💻', report: '📊', decision: '◈', other: '◌',
 }
 
+const PANEL = { background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12 }
+
 export default function AuditPage() {
   usePageTitle('Auditoría')
   const [actions, setActions] = useState<Action[]>([])
@@ -35,25 +37,31 @@ export default function AuditPage() {
 
   useEffect(() => { load() }, [typeFilter, statusFilter])
 
+  const selectCls = 'px-4 py-2 rounded-xl text-white text-sm focus:outline-none transition-all'
+
   return (
     <>
       <Header
         title="Audit Log"
         subtitle={`${actions.length} acciones registradas`}
         actions={
-          <button onClick={load} className="px-3 py-1.5 text-xs bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors">
+          <button
+            onClick={load}
+            className="px-3 py-1.5 text-xs text-[var(--text-2)] hover:text-white rounded-lg transition-colors hover:bg-white/[.06]"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+          >
             Actualizar
           </button>
         }
       />
 
       <div className="flex-1 p-6 space-y-4">
-        {/* Filtros */}
         <div className="flex gap-3 flex-wrap">
           <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
-            className="px-4 py-2 bg-[#1e293b] border border-[#334155] rounded-xl text-white text-sm focus:outline-none focus:border-[#ff8c42]"
+            className={selectCls}
+            style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}
           >
             <option value="">Todos los tipos</option>
             <option value="email">Email</option>
@@ -66,7 +74,8 @@ export default function AuditPage() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-[#1e293b] border border-[#334155] rounded-xl text-white text-sm focus:outline-none focus:border-[#ff8c42]"
+            className={selectCls}
+            style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}
           >
             <option value="">Todos los estados</option>
             <option value="pending">Pendiente</option>
@@ -77,35 +86,43 @@ export default function AuditPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16"><p className="text-[#475569] text-sm">Cargando...</p></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
+          </div>
         ) : actions.length === 0 ? (
-          <div className="flex items-center justify-center py-16"><p className="text-[#475569] text-sm">No hay acciones registradas</p></div>
+          <div className="flex items-center justify-center py-16">
+            <p className="text-[var(--text-3)] text-sm">No hay acciones registradas</p>
+          </div>
         ) : (
-          <div className="bg-[#1e293b] border border-[#334155] rounded-xl overflow-hidden">
+          <div style={PANEL} className="overflow-hidden animate-fade-up">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#334155]">
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Tipo', 'Descripción', 'Estado', 'Por', 'Fecha'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs text-[#475569] uppercase tracking-wider font-medium">{h}</th>
+                    <th key={h} className="text-left px-4 py-3 text-[10px] text-[var(--text-4)] uppercase tracking-wider font-medium">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {actions.map(a => (
-                  <tr key={a.id} className="border-b border-[#334155]/50 hover:bg-[#334155]/20 transition-colors last:border-0">
+                  <tr
+                    key={a.id}
+                    className="hover:bg-white/[.02] transition-colors last:border-0"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  >
                     <td className="px-4 py-3">
-                      <span className="flex items-center gap-1.5 text-sm text-[#94a3b8]">
+                      <span className="flex items-center gap-1.5 text-sm text-[var(--text-2)]">
                         <span>{TYPE_ICONS[a.action_type] || '◌'}</span>
                         <span className="capitalize">{a.action_type}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 max-w-xs">
                       <p className="text-sm text-white truncate">{a.description}</p>
-                      {a.result && <p className="text-xs text-[#475569] mt-0.5 truncate">{a.result}</p>}
+                      {a.result && <p className="text-xs text-[var(--text-3)] mt-0.5 truncate">{a.result}</p>}
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
-                    <td className="px-4 py-3 text-sm text-[#94a3b8]">{a.created_by}</td>
-                    <td className="px-4 py-3 text-xs text-[#475569]">{formatDate(a.created_at)}</td>
+                    <td className="px-4 py-3 text-sm text-[var(--text-2)]">{a.created_by}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--text-3)]">{formatDate(a.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

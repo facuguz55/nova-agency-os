@@ -18,15 +18,15 @@ interface Project { id: string; name: string }
 
 export default function NotesPage() {
   usePageTitle('Notas')
-  const [notes, setNotes]     = useState<Note[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
+  const [notes, setNotes]         = useState<Note[]>([])
+  const [clients, setClients]     = useState<Client[]>([])
+  const [projects, setProjects]   = useState<Project[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [search, setSearch]       = useState('')
   const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing] = useState<Note | null>(null)
-  const [form, setForm]       = useState({ title: '', content: '', project_id: '', client_id: '' })
-  const [saving, setSaving]   = useState(false)
+  const [editing, setEditing]     = useState<Note | null>(null)
+  const [form, setForm]           = useState({ title: '', content: '', project_id: '', client_id: '' })
+  const [saving, setSaving]       = useState(false)
   const [active, setActive]       = useState<Note | null>(null)
   const [aiPrompt, setAiPrompt]   = useState('')
   const [aiLoading, setAiLoading] = useState(false)
@@ -42,10 +42,7 @@ export default function NotesPage() {
       })
       const { response } = await res.json()
       setForm(f => ({ ...f, title: aiPrompt.slice(0, 60), content: response }))
-      setAiPrompt('')
-      setShowAI(false)
-      setEditing(null)
-      setShowModal(true)
+      setAiPrompt(''); setShowAI(false); setEditing(null); setShowModal(true)
     } catch { /* ignore */ }
     setAiLoading(false)
   }
@@ -58,9 +55,7 @@ export default function NotesPage() {
       fetch(`/api/notes?${p}`), fetch('/api/clients'), fetch('/api/projects'),
     ])
     const [n, c, pr] = await Promise.all([nRes.json(), cRes.json(), pRes.json()])
-    setNotes(n.notes || [])
-    setClients(c.clients || [])
-    setProjects(pr.projects || [])
+    setNotes(n.notes || []); setClients(c.clients || []); setProjects(pr.projects || [])
     if (!active && (n.notes || []).length > 0) setActive((n.notes || [])[0])
     setLoading(false)
   }
@@ -116,59 +111,58 @@ export default function NotesPage() {
       />
 
       {showAI && (
-        <div className="shrink-0 mx-6 mb-0 mt-3 p-4 bg-[#0c1628] border border-[#f97316]/20 rounded-2xl flex items-center gap-3">
-          <Sparkles size={16} className="text-[#f97316] shrink-0" />
-          <input
-            autoFocus
-            value={aiPrompt}
-            onChange={e => setAiPrompt(e.target.value)}
+        <div className="shrink-0 mx-6 mb-0 mt-3 p-4 flex items-center gap-3 rounded-2xl"
+          style={{ background: 'var(--surface-0)', border: '1px solid rgba(245,158,11,0.2)' }}>
+          <Sparkles size={16} className="text-[var(--amber)] shrink-0" />
+          <input autoFocus value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') generateAINote(); if (e.key === 'Escape') setShowAI(false) }}
             placeholder="¿Sobre qué querés que Nova genere la nota?"
-            className="flex-1 bg-transparent text-sm text-white placeholder-[#334155] outline-none"
-          />
+            className="flex-1 bg-transparent text-sm text-white placeholder-[var(--text-4)] outline-none" />
           <Button size="sm" onClick={generateAINote} disabled={aiLoading || !aiPrompt.trim()}>
             {aiLoading ? 'Generando...' : 'Generar'}
           </Button>
-          <button onClick={() => setShowAI(false)} className="text-[#334155] hover:text-white text-xs">✕</button>
+          <button onClick={() => setShowAI(false)} className="text-[var(--text-4)] hover:text-white text-xs">✕</button>
         </div>
       )}
 
       <div className="flex-1 flex overflow-hidden bg-grid">
         {/* Lista */}
-        <div className="w-72 shrink-0 border-r border-[#1e2f4a] flex flex-col">
-          <div className="p-3 border-b border-[#1e2f4a]">
+        <div className="w-72 shrink-0 flex flex-col" style={{ borderRight: '1px solid var(--border)' }}>
+          <div className="p-3" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="relative">
-              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#334155]"/>
+              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]"/>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..."
-                className="w-full pl-8 pr-3 py-2 bg-[#080f1e] border border-[#1e2f4a] rounded-xl text-sm text-white placeholder-[#334155] focus:outline-none focus:border-[#ff8c42]/40"/>
+                className="w-full pl-8 pr-3 py-2 rounded-xl text-sm text-white placeholder-[var(--text-4)] focus:outline-none"
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)' }} />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-8"><div className="w-4 h-4 border-2 border-[#ff8c42] border-t-transparent rounded-full animate-spin"/></div>
+              <div className="flex items-center justify-center py-8">
+                <div className="w-4 h-4 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
+              </div>
             ) : notes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <FileText size={24} className="text-[#1e2f4a]"/>
-                <p className="text-xs text-[#334155]">No hay notas</p>
+                <FileText size={24} className="text-[var(--text-4)]"/>
+                <p className="text-xs text-[var(--text-4)]">No hay notas</p>
               </div>
             ) : notes.map(note => (
-              <div
-                key={note.id}
-                onClick={() => setActive(note)}
-                className={`p-3 border-b border-[#1e2f4a]/50 cursor-pointer transition-colors group ${active?.id === note.id ? 'bg-[#ff8c42]/5 border-l-2 border-l-[#ff8c42]' : 'hover:bg-white/[.02]'}`}
+              <div key={note.id} onClick={() => setActive(note)}
+                className={`p-3 cursor-pointer transition-colors group ${active?.id === note.id ? 'bg-[var(--amber)]/5 border-l-2 border-l-[var(--amber)]' : 'hover:bg-white/[.02]'}`}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
               >
                 <p className="text-sm font-medium text-white truncate">{note.title}</p>
-                <p className="text-xs text-[#334155] mt-0.5 truncate">{note.content?.slice(0, 60) || 'Sin contenido'}</p>
+                <p className="text-xs text-[var(--text-4)] mt-0.5 truncate">{note.content?.slice(0, 60) || 'Sin contenido'}</p>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[10px] text-[#1e2f4a]">{formatRelative(note.updated_at)}</span>
+                  <span className="text-[10px] text-[var(--text-4)]">{formatRelative(note.updated_at)}</span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                    <button onClick={e => { e.stopPropagation(); openEdit(note) }} className="text-[#475569] hover:text-white"><Edit2 size={11}/></button>
-                    <button onClick={e => { e.stopPropagation(); deleteNote(note.id) }} className="text-[#475569] hover:text-red-400"><Trash2 size={11}/></button>
+                    <button onClick={e => { e.stopPropagation(); openEdit(note) }} className="text-[var(--text-3)] hover:text-white"><Edit2 size={11}/></button>
+                    <button onClick={e => { e.stopPropagation(); deleteNote(note.id) }} className="text-[var(--text-3)] hover:text-red-400"><Trash2 size={11}/></button>
                   </div>
                 </div>
                 {(note.projects || note.clients) && (
-                  <span className="text-[10px] text-[#ff8c42]/60">{note.projects?.name || note.clients?.name}</span>
+                  <span className="text-[10px] text-[var(--amber)]/60">{note.projects?.name || note.clients?.name}</span>
                 )}
               </div>
             ))}
@@ -182,7 +176,7 @@ export default function NotesPage() {
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-white">{active.title}</h2>
-                  <p className="text-xs text-[#334155] mt-1">
+                  <p className="text-xs text-[var(--text-4)] mt-1">
                     Actualizado {formatRelative(active.updated_at)}
                     {active.projects && <> · {active.projects.name}</>}
                     {active.clients && <> · {active.clients.name}</>}
@@ -193,14 +187,14 @@ export default function NotesPage() {
                   <Button size="sm" variant="danger" onClick={() => deleteNote(active.id)}><Trash2 size={12}/></Button>
                 </div>
               </div>
-              <div className="text-[#94a3b8] text-sm leading-relaxed whitespace-pre-wrap">
-                {active.content || <span className="text-[#334155] italic">Sin contenido</span>}
+              <div className="text-[var(--text-2)] text-sm leading-relaxed whitespace-pre-wrap">
+                {active.content || <span className="text-[var(--text-4)] italic">Sin contenido</span>}
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3">
-              <FileText size={40} className="text-[#1e2f4a]"/>
-              <p className="text-sm text-[#334155]">Seleccioná una nota o creá una nueva</p>
+              <FileText size={40} className="text-[var(--text-4)]"/>
+              <p className="text-sm text-[var(--text-4)]">Seleccioná una nota o creá una nueva</p>
               <Button size="sm" onClick={() => setShowModal(true)}><Plus size={12}/> Nueva nota</Button>
             </div>
           )}

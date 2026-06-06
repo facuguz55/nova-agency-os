@@ -15,13 +15,15 @@ function parseMarkdown(text: string): string {
     .replace(/^### (.+)$/gm, '<h3 class="text-base font-bold text-white mt-5 mb-2">$1</h3>')
     .replace(/^## (.+)$/gm,  '<h2 class="text-lg font-bold text-white mt-6 mb-2">$1</h2>')
     .replace(/^# (.+)$/gm,   '<h2 class="text-xl font-bold text-white mt-6 mb-2">$1</h2>')
-    .replace(/^- (.+)$/gm,   '<li class="ml-4 text-[#94a3b8] list-disc">$1</li>')
+    .replace(/^- (.+)$/gm,   '<li class="ml-4 text-[var(--text-2)] list-disc">$1</li>')
     .replace(/(<li[\s\S]*?<\/li>\n?)+/g, '<ul class="space-y-1 my-2">$&</ul>')
-    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 text-[#94a3b8] list-decimal">$1</li>')
-    .replace(/\n\n/g, '</p><p class="text-[#94a3b8] leading-relaxed mb-3">')
-    .replace(/^(?!<[a-z])(.+)$/gm, '<p class="text-[#94a3b8] leading-relaxed mb-3">$1</p>')
+    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 text-[var(--text-2)] list-decimal">$1</li>')
+    .replace(/\n\n/g, '</p><p class="text-[var(--text-2)] leading-relaxed mb-3">')
+    .replace(/^(?!<[a-z])(.+)$/gm, '<p class="text-[var(--text-2)] leading-relaxed mb-3">$1</p>')
     .replace(/<p[^>]*><\/p>/g, '')
 }
+
+const CARD = { background: 'var(--surface-0)', border: '1px solid var(--border)', borderRadius: 16 }
 
 export default function ReportsPage() {
   usePageTitle('Reportes')
@@ -79,9 +81,9 @@ export default function ReportsPage() {
         <div className="max-w-3xl mx-auto space-y-5">
 
           {/* Selector de cliente */}
-          <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-5 space-y-4">
+          <div className="p-5 space-y-4 rounded-2xl" style={CARD}>
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={15} className="text-[#ff8c42]" />
+              <TrendingUp size={15} className="text-[var(--amber)]" />
               <h3 className="text-sm font-semibold text-white">Generar reporte</h3>
             </div>
 
@@ -89,42 +91,43 @@ export default function ReportsPage() {
             <div className="relative">
               <button
                 onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-[#080f1e] border border-[#1e2f4a] rounded-xl text-sm text-left focus:outline-none hover:border-[#ff8c42]/30 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-left focus:outline-none hover:border-[var(--amber)]/30 transition-colors"
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}
               >
                 {selected ? (
                   <span className="text-white">{selected.name}
-                    <span className="ml-2 text-[10px] text-[#475569]">{selected.industry || ''}</span>
+                    <span className="ml-2 text-[10px] text-[var(--text-3)]">{selected.industry || ''}</span>
                   </span>
                 ) : (
-                  <span className="text-[#334155]">Seleccioná un cliente...</span>
+                  <span className="text-[var(--text-4)]">Seleccioná un cliente...</span>
                 )}
-                <ChevronDown size={14} className={`text-[#475569] transition-transform ${open ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-[var(--text-3)] transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
 
               {open && (
-                <div className="absolute z-20 mt-1 w-full bg-[#0e1a2e] border border-[#1e2f4a] rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute z-20 mt-1 w-full rounded-xl shadow-xl overflow-hidden" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                   {clients.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-[#334155]">No hay clientes</p>
+                    <p className="px-4 py-3 text-sm text-[var(--text-4)]">No hay clientes</p>
                   ) : (
                     <>
                       {activeClients.length > 0 && (
                         <>
-                          <p className="px-4 pt-3 pb-1 text-[9px] text-[#1e3a5f] uppercase tracking-widest font-semibold">Activos</p>
+                          <p className="px-4 pt-3 pb-1 text-[9px] text-[var(--text-4)] uppercase tracking-widest font-semibold">Activos</p>
                           {activeClients.map(c => (
                             <button key={c.id} onClick={() => { setSelected(c); setOpen(false); setReport('') }}
-                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/[.03] transition-colors flex items-center justify-between group ${selected?.id === c.id ? 'text-[#ff8c42]' : 'text-[#94a3b8]'}`}>
+                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/[.03] transition-colors flex items-center justify-between group ${selected?.id === c.id ? 'text-[var(--amber)]' : 'text-[var(--text-2)]'}`}>
                               <span>{c.name}</span>
-                              {c.industry && <span className="text-[10px] text-[#334155] group-hover:text-[#475569]">{c.industry}</span>}
+                              {c.industry && <span className="text-[10px] text-[var(--text-4)] group-hover:text-[var(--text-3)]">{c.industry}</span>}
                             </button>
                           ))}
                         </>
                       )}
                       {inactiveClients.length > 0 && (
                         <>
-                          <p className="px-4 pt-3 pb-1 text-[9px] text-[#1e3a5f] uppercase tracking-widest font-semibold">Otros</p>
+                          <p className="px-4 pt-3 pb-1 text-[9px] text-[var(--text-4)] uppercase tracking-widest font-semibold">Otros</p>
                           {inactiveClients.map(c => (
                             <button key={c.id} onClick={() => { setSelected(c); setOpen(false); setReport('') }}
-                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/[.03] transition-colors ${selected?.id === c.id ? 'text-[#ff8c42]' : 'text-[#475569]'}`}>
+                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/[.03] transition-colors ${selected?.id === c.id ? 'text-[var(--amber)]' : 'text-[var(--text-3)]'}`}>
                               {c.name}
                             </button>
                           ))}
@@ -157,28 +160,28 @@ export default function ReportsPage() {
 
           {/* Skeleton mientras genera */}
           {generating && (
-            <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-6 space-y-3 animate-pulse">
-              <div className="h-4 bg-[#1e2f4a] rounded-lg w-2/3" />
-              <div className="h-3 bg-[#1e2f4a] rounded-lg w-full" />
-              <div className="h-3 bg-[#1e2f4a] rounded-lg w-5/6" />
-              <div className="h-3 bg-[#1e2f4a] rounded-lg w-4/5" />
-              <div className="mt-4 h-4 bg-[#1e2f4a] rounded-lg w-1/2" />
-              <div className="h-3 bg-[#1e2f4a] rounded-lg w-full" />
-              <div className="h-3 bg-[#1e2f4a] rounded-lg w-3/4" />
+            <div className="rounded-2xl p-6 space-y-3 animate-pulse" style={CARD}>
+              <div className="h-4 bg-white/5 rounded-lg w-2/3" />
+              <div className="h-3 bg-white/5 rounded-lg w-full" />
+              <div className="h-3 bg-white/5 rounded-lg w-5/6" />
+              <div className="h-3 bg-white/5 rounded-lg w-4/5" />
+              <div className="mt-4 h-4 bg-white/5 rounded-lg w-1/2" />
+              <div className="h-3 bg-white/5 rounded-lg w-full" />
+              <div className="h-3 bg-white/5 rounded-lg w-3/4" />
             </div>
           )}
 
           {/* Reporte generado */}
           {report && !generating && (
-            <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e2f4a]">
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+              <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2">
-                  <Sparkles size={13} className="text-[#ff8c42]" />
+                  <Sparkles size={13} className="text-[var(--amber)]" />
                   <span className="text-xs font-semibold text-white">Reporte — {selected?.name}</span>
                 </div>
                 <button
                   onClick={copy}
-                  className="flex items-center gap-1.5 text-xs text-[#475569] hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/[.04]"
+                  className="flex items-center gap-1.5 text-xs text-[var(--text-3)] hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/[.04]"
                 >
                   {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
                   {copied ? 'Copiado' : 'Copiar'}
@@ -194,10 +197,10 @@ export default function ReportsPage() {
           {/* Empty state */}
           {!report && !generating && !error && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#0e1a2e] border border-[#1e2f4a] flex items-center justify-center">
-                <TrendingUp size={20} className="text-[#1e2f4a]" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                <TrendingUp size={20} className="text-[var(--text-4)]" />
               </div>
-              <p className="text-sm text-[#334155]">Seleccioná un cliente y generá su reporte</p>
+              <p className="text-sm text-[var(--text-4)]">Seleccioná un cliente y generá su reporte</p>
             </div>
           )}
         </div>

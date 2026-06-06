@@ -2,7 +2,7 @@
 import { usePageTitle } from '@/lib/usePageTitle'
 import { useEffect, useState, useRef } from 'react'
 import Header from '@/components/layout/Header'
-import { Button, Input, Select, Textarea } from '@/components/ui/Input'
+import { Button, Select, Textarea } from '@/components/ui/Input'
 
 interface Client {
   id: string; name: string; status: string
@@ -28,16 +28,19 @@ const TEMPLATES = [
 ]
 
 const STATUS_STYLES: Record<string, string> = {
-  pending:   'bg-[#1e3a5f] text-[#60a5fa] border-[#1e4a8f]',
-  rendering: 'bg-[#2d1f00] text-[#ff8c42] border-[#5a3500]',
-  done:      'bg-[#0f2d1a] text-[#4ade80] border-[#1a5a2a]',
-  error:     'bg-[#2d0f0f] text-[#f87171] border-[#5a1a1a]',
-  cancelled: 'bg-[#1e1e2e] text-[#6b7280] border-[#374151]',
+  pending:   'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  rendering: 'bg-[var(--amber-dim)] text-[var(--amber)] border-[var(--amber)]/30',
+  done:      'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  error:     'bg-red-500/10 text-red-400 border-red-500/20',
+  cancelled: 'bg-white/5 text-[var(--text-3)] border-white/10',
 }
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'En cola', rendering: 'Renderizando...', done: 'Listo', error: 'Error', cancelled: 'Cancelado',
 }
+
+const BTN_ACTIVE   = 'border-[var(--amber)]/60 bg-[var(--amber-dim)] text-[var(--amber)]'
+const BTN_INACTIVE = 'text-[var(--text-3)] hover:text-[var(--text-2)]'
 
 export default function VideosPage() {
   usePageTitle('Videos')
@@ -47,19 +50,17 @@ export default function VideosPage() {
   const [jobs, setJobs] = useState<VideoJob[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Form state
   const [clientId, setClientId] = useState('')
   const [projectId, setProjectId] = useState('')
   const [template, setTemplate] = useState('prospecto')
   const [format, setFormat] = useState<'vertical' | 'square' | 'horizontal'>('vertical')
-  const [totalDuration, setTotalDuration] = useState<number | null>(null) // null = auto
+  const [totalDuration, setTotalDuration] = useState<number | null>(null)
   const [technicality, setTechnicality] = useState<'con' | 'sin'>('con')
   const [extraInfo, setExtraInfo] = useState('')
   const [brandColors, setBrandColors] = useState<string[]>([])
   const [hasBrandColors, setHasBrandColors] = useState(false)
   const [generating, setGenerating] = useState(false)
 
-  // Color extraction state
   const [extractUrl, setExtractUrl] = useState('')
   const [extracting, setExtracting] = useState(false)
   const [extractedColors, setExtractedColors] = useState<string[]>([])
@@ -77,7 +78,6 @@ export default function VideosPage() {
     }
   }
 
-  // Re-generate state
   const [regenJobId, setRegenJobId] = useState<string | null>(null)
   const [regenInstructions, setRegenInstructions] = useState('')
   const [regening, setRegening] = useState(false)
@@ -114,7 +114,6 @@ export default function VideosPage() {
   function toggleColor(c: string, fromExtraction = false) {
     const isAdding = !brandColors.includes(c)
     setBrandColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
-    // Si viene de colores extraídos: activar hasBrandColors y guardar en el cliente
     if (fromExtraction && isAdding) {
       setHasBrandColors(true)
       const newColors = [...brandColors, c]
@@ -132,7 +131,6 @@ export default function VideosPage() {
     }
   }
 
-  // Sync brand colors from selected client
   useEffect(() => {
     if (!clientId) return
     const client = clients.find(c => c.id === clientId)
@@ -145,7 +143,6 @@ export default function VideosPage() {
   }, [clientId, clients])
 
   const clientProjects = projects.filter(p => p.client_id === clientId)
-  const selectedTemplate = TEMPLATES.find(t => t.value === template)
 
   async function generate() {
     if (!clientId || !template) return
@@ -204,10 +201,9 @@ export default function VideosPage() {
       <div className="flex-1 p-6 flex gap-6 overflow-hidden">
         {/* ── Left: Form ── */}
         <div className="w-[360px] flex-shrink-0 space-y-5 overflow-y-auto pr-1">
-          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-4">
+          <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
             <h2 className="text-sm font-semibold text-white">Nuevo video</h2>
 
-            {/* Client */}
             <Select
               label="Cliente *"
               value={clientId}
@@ -219,12 +215,12 @@ export default function VideosPage() {
 
             {/* Brand colors */}
             {clientId && (
-              <div className="space-y-3 p-3 bg-[#0e1a2e] rounded-xl border border-[#1e2f4a]">
+              <div className="space-y-3 p-3 rounded-xl" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#64748b]">Colores de marca</span>
+                  <span className="text-xs text-[var(--text-3)]">Colores de marca</span>
                   <button
                     onClick={() => setHasBrandColors(v => !v)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${hasBrandColors ? 'bg-[#ff8c42]' : 'bg-[#334155]'}`}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${hasBrandColors ? 'bg-[var(--amber)]' : 'bg-[var(--surface-2)]'}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${hasBrandColors ? 'left-5' : 'left-0.5'}`} />
                   </button>
@@ -232,42 +228,41 @@ export default function VideosPage() {
 
                 {hasBrandColors && (
                   <div className="space-y-3">
-                    {/* Selected colors */}
                     <div>
-                      <p className="text-[10px] text-[#64748b] mb-2">Paleta seleccionada</p>
+                      <p className="text-[10px] text-[var(--text-3)] mb-2">Paleta seleccionada</p>
                       <div className="flex gap-2 flex-wrap items-center">
                         {brandColors.map((c, i) => (
                           <div key={i} className="relative group">
                             <div className="w-9 h-9 rounded-xl border-2 border-white/20 shadow-md" style={{ background: c }} title={c} />
                             <button
                               onClick={() => setBrandColors(prev => prev.filter((_, j) => j !== i))}
-                              className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#0e1a2e] border border-[#334155] text-[#94a3b8] text-[10px] hidden group-hover:flex items-center justify-center leading-none"
+                              className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[var(--text-2)] text-[10px] hidden group-hover:flex items-center justify-center leading-none"
+                              style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}
                             >
                               ×
                             </button>
                           </div>
                         ))}
-                        {/* Manual add */}
                         <label className="cursor-pointer" title="Agregar color manual">
                           <input
                             type="color"
-                            defaultValue="#ff8c42"
+                            defaultValue="#f59e0b"
                             onChange={e => toggleColor(e.target.value)}
                             className="sr-only"
                           />
-                          <div className="w-9 h-9 rounded-xl border-2 border-dashed border-[#334155] flex items-center justify-center text-[#475569] hover:border-[#ff8c42]/50 hover:text-[#ff8c42] transition-colors text-lg font-light">
+                          <div className="w-9 h-9 rounded-xl border-2 border-dashed flex items-center justify-center text-[var(--text-3)] hover:border-[var(--amber)]/50 hover:text-[var(--amber)] transition-colors text-lg font-light"
+                            style={{ borderColor: 'var(--border)' }}>
                             +
                           </div>
                         </label>
                       </div>
                       {brandColors.length === 0 && (
-                        <p className="text-[10px] text-[#334155] mt-1.5">Extraé colores de una URL o agregá manualmente con el +</p>
+                        <p className="text-[10px] text-[var(--text-4)] mt-1.5">Extraé colores de una URL o agregá manualmente con el +</p>
                       )}
                     </div>
 
-                    {/* Extract from URL */}
                     <div className="space-y-2">
-                      <p className="text-[10px] text-[#475569]">Extraer desde una web</p>
+                      <p className="text-[10px] text-[var(--text-3)]">Extraer desde una web</p>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
@@ -275,30 +270,31 @@ export default function VideosPage() {
                           onChange={e => setExtractUrl(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && extractColors()}
                           placeholder="ej: rightbotines.com.ar"
-                          className="flex-1 bg-[#0a1628] border border-[#1e2f4a] rounded-lg px-2.5 py-1.5 text-[11px] text-[#94a3b8] placeholder-[#334155] focus:outline-none focus:border-[#ff8c42]/40"
+                          className="flex-1 rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--text-2)] placeholder-[var(--text-4)] focus:outline-none focus:border-[var(--amber)]/40"
+                          style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}
                         />
                         <button
                           onClick={extractColors}
                           disabled={extracting || !extractUrl}
-                          className="px-2.5 py-1.5 rounded-lg bg-[#ff8c42]/10 border border-[#ff8c42]/30 text-[#ff8c42] text-[11px] font-semibold hover:bg-[#ff8c42]/20 disabled:opacity-40 transition-colors whitespace-nowrap"
+                          className="px-2.5 py-1.5 rounded-lg text-[var(--amber)] text-[11px] font-semibold disabled:opacity-40 transition-colors whitespace-nowrap hover:opacity-80"
+                          style={{ background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.3)' }}
                         >
                           {extracting ? '...' : 'Extraer'}
                         </button>
                       </div>
 
-                      {/* Extracted swatches — click to toggle */}
                       {extractedColors.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-[10px] text-[#334155]">Clic para agregar · clic de nuevo para quitar</p>
+                          <p className="text-[10px] text-[var(--text-4)]">Clic para agregar · clic de nuevo para quitar</p>
                           <div className="flex gap-1.5 flex-wrap">
                             {extractedColors.map(c => {
-                              const selected = brandColors.includes(c)
+                              const isSelected = brandColors.includes(c)
                               return (
                                 <button
                                   key={c}
                                   title={c}
                                   onClick={() => toggleColor(c, true)}
-                                  className={`w-9 h-9 rounded-xl border-2 transition-all shadow ${selected ? 'border-white scale-110 shadow-white/20' : 'border-white/10 hover:border-white/40 hover:scale-105'}`}
+                                  className={`w-9 h-9 rounded-xl border-2 transition-all shadow ${isSelected ? 'border-white scale-110 shadow-white/20' : 'border-white/10 hover:border-white/40 hover:scale-105'}`}
                                   style={{ background: c }}
                                 />
                               )
@@ -311,12 +307,11 @@ export default function VideosPage() {
                 )}
 
                 {!hasBrandColors && (
-                  <p className="text-[11px] text-[#334155]">Usará colores Nova Agency por defecto</p>
+                  <p className="text-[11px] text-[var(--text-4)]">Usará colores Nova Agency por defecto</p>
                 )}
               </div>
             )}
 
-            {/* Project (optional) */}
             {clientId && clientProjects.length > 0 && (
               <Select
                 label="Proyecto (opcional)"
@@ -330,7 +325,7 @@ export default function VideosPage() {
 
             {/* Duration */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-[#94a3b8]">Duración del clip</p>
+              <p className="text-xs font-medium text-[var(--text-2)]">Duración del clip</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {([
                   { value: null, label: 'Auto', sub: 'Según texto' },
@@ -343,11 +338,8 @@ export default function VideosPage() {
                   <button
                     key={String(d.value)}
                     onClick={() => setTotalDuration(d.value)}
-                    className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${
-                      totalDuration === d.value
-                        ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]'
-                        : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
-                    }`}
+                    className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${totalDuration === d.value ? BTN_ACTIVE : BTN_INACTIVE}`}
+                    style={totalDuration !== d.value ? { background: 'var(--bg)', border: '1px solid var(--border)' } : {}}
                   >
                     <div className="font-bold">{d.label}</div>
                     <div className="text-[10px] mt-0.5 opacity-70">{d.sub}</div>
@@ -358,7 +350,7 @@ export default function VideosPage() {
 
             {/* Format */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-[#94a3b8]">Formato</p>
+              <p className="text-xs font-medium text-[var(--text-2)]">Formato</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {([
                   { value: 'vertical',   label: '9:16', sub: 'Reels/TikTok' },
@@ -368,11 +360,8 @@ export default function VideosPage() {
                   <button
                     key={f.value}
                     onClick={() => setFormat(f.value)}
-                    className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${
-                      format === f.value
-                        ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]'
-                        : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
-                    }`}
+                    className={`text-center px-2 py-2 rounded-xl border text-xs transition-all ${format === f.value ? BTN_ACTIVE : BTN_INACTIVE}`}
+                    style={format !== f.value ? { background: 'var(--bg)', border: '1px solid var(--border)' } : {}}
                   >
                     <div className="font-bold">{f.label}</div>
                     <div className="text-[10px] mt-0.5 opacity-70">{f.sub}</div>
@@ -383,20 +372,17 @@ export default function VideosPage() {
 
             {/* Template */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-[#94a3b8]">Tipo de video *</p>
+              <p className="text-xs font-medium text-[var(--text-2)]">Tipo de video *</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {TEMPLATES.map(t => (
                   <button
                     key={t.value}
                     onClick={() => setTemplate(t.value)}
-                    className={`text-left px-3 py-2.5 rounded-xl border text-xs transition-all ${
-                      template === t.value
-                        ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]'
-                        : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'
-                    }`}
+                    className={`text-left px-3 py-2.5 rounded-xl border text-xs transition-all ${template === t.value ? BTN_ACTIVE : BTN_INACTIVE}`}
+                    style={template !== t.value ? { background: 'var(--bg)', border: '1px solid var(--border)' } : {}}
                   >
                     <div className="font-semibold">{t.emoji} {t.label}</div>
-                    <div className={`text-[10px] mt-0.5 leading-tight ${template === t.value ? 'text-[#ff8c42]/70' : 'text-[#334155]'}`}>{t.desc}</div>
+                    <div className={`text-[10px] mt-0.5 leading-tight ${template === t.value ? 'text-[var(--amber)]/70' : 'text-[var(--text-4)]'}`}>{t.desc}</div>
                   </button>
                 ))}
               </div>
@@ -404,18 +390,20 @@ export default function VideosPage() {
 
             {/* Tecnicismo */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-[#94a3b8]">Lenguaje</p>
+              <p className="text-xs font-medium text-[var(--text-2)]">Lenguaje</p>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => setTechnicality('con')}
-                  className={`text-center px-3 py-2.5 rounded-xl border text-xs transition-all ${technicality === 'con' ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]' : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'}`}
+                  className={`text-center px-3 py-2.5 rounded-xl border text-xs transition-all ${technicality === 'con' ? BTN_ACTIVE : BTN_INACTIVE}`}
+                  style={technicality !== 'con' ? { background: 'var(--bg)', border: '1px solid var(--border)' } : {}}
                 >
                   <div className="font-bold">🧠 Técnico</div>
                   <div className="text-[10px] mt-0.5 opacity-70">CTR, funnel, KPI...</div>
                 </button>
                 <button
                   onClick={() => setTechnicality('sin')}
-                  className={`text-center px-3 py-2.5 rounded-xl border text-xs transition-all ${technicality === 'sin' ? 'border-[#ff8c42]/60 bg-[#ff8c42]/10 text-[#ff8c42]' : 'border-[#1e2f4a] bg-[#0e1a2e] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]'}`}
+                  className={`text-center px-3 py-2.5 rounded-xl border text-xs transition-all ${technicality === 'sin' ? BTN_ACTIVE : BTN_INACTIVE}`}
+                  style={technicality !== 'sin' ? { background: 'var(--bg)', border: '1px solid var(--border)' } : {}}
                 >
                   <div className="font-bold">💬 Simple</div>
                   <div className="text-[10px] mt-0.5 opacity-70">Sin jerga técnica</div>
@@ -423,7 +411,6 @@ export default function VideosPage() {
               </div>
             </div>
 
-            {/* Extra info */}
             <Textarea
               label="Info extra para Claude (opcional)"
               value={extraInfo}
@@ -446,16 +433,16 @@ export default function VideosPage() {
         <div className="flex-1 overflow-y-auto space-y-3 pr-1">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="w-5 h-5 border-2 border-[#ff8c42] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : jobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <p className="text-4xl">🎬</p>
-              <p className="text-[#475569] text-sm">Todavía no hay videos generados</p>
-              <p className="text-[#334155] text-xs">Seleccioná un cliente y apretá Generar</p>
+              <p className="text-[var(--text-3)] text-sm">Todavía no hay videos generados</p>
+              <p className="text-[var(--text-4)] text-xs">Seleccioná un cliente y apretá Generar</p>
             </div>
           ) : jobs.map(job => (
-            <div key={job.id} className="bg-[#1e293b] border border-[#334155] rounded-2xl p-4 space-y-3">
+            <div key={job.id} className="rounded-2xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               {/* Header row */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -464,10 +451,10 @@ export default function VideosPage() {
                       {job.clients?.name || 'Sin cliente'}
                     </span>
                     {job.projects?.name && (
-                      <span className="text-xs text-[#475569]">· {job.projects.name}</span>
+                      <span className="text-xs text-[var(--text-3)]">· {job.projects.name}</span>
                     )}
                   </div>
-                  <p className="text-xs text-[#475569] mt-0.5">
+                  <p className="text-xs text-[var(--text-3)] mt-0.5">
                     {(() => { const t = TEMPLATES.find(t => t.value === job.template); return t ? `${t.emoji} ${t.label}` : job.template })()}
                   </p>
                 </div>
@@ -479,7 +466,8 @@ export default function VideosPage() {
                     <button
                       onClick={() => cancelJob(job.id)}
                       title="Cancelar job"
-                      className="w-6 h-6 flex items-center justify-center rounded-full bg-[#2d0f0f] border border-[#5a1a1a] text-[#f87171] hover:bg-[#3d1515] text-xs transition-colors"
+                      className="w-6 h-6 flex items-center justify-center rounded-full text-red-400 hover:bg-red-500/10 text-xs transition-colors"
+                      style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}
                     >
                       ✕
                     </button>
@@ -490,32 +478,29 @@ export default function VideosPage() {
               {/* Progress bar */}
               {job.status === 'rendering' && (
                 <div className="space-y-1">
-                  <div className="h-1.5 bg-[#0e1a2e] rounded-full overflow-hidden">
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-1)' }}>
                     <div
-                      className="h-full bg-[#ff8c42] rounded-full transition-all duration-500"
+                      className="h-full bg-[var(--amber)] rounded-full transition-all duration-500"
                       style={{ width: `${job.progress}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-[#475569]">{job.progress}% completado</p>
+                  <p className="text-[10px] text-[var(--text-3)]">{job.progress}% completado</p>
                 </div>
               )}
 
-              {/* Pending indicator */}
               {job.status === 'pending' && (
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] animate-pulse" />
-                  <p className="text-[11px] text-[#60a5fa]">En cola — el worker lo tomará en segundos</p>
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                  <p className="text-[11px] text-blue-400">En cola — el worker lo tomará en segundos</p>
                 </div>
               )}
 
-              {/* Error */}
               {job.status === 'error' && job.error && (
-                <p className="text-xs text-[#f87171] bg-[#2d0f0f] rounded-lg px-3 py-2 font-mono">
+                <p className="text-xs text-red-400 rounded-lg px-3 py-2 font-mono bg-red-500/10">
                   {job.error}
                 </p>
               )}
 
-              {/* Done: actions */}
               {job.status === 'done' && job.output_url && (
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -523,30 +508,30 @@ export default function VideosPage() {
                       href={job.output_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-1 text-center text-xs font-semibold py-2 px-4 rounded-xl bg-[#ff8c42] text-white hover:bg-[#ff9f5a] transition-colors"
+                      className="flex-1 text-center text-xs font-semibold py-2 px-4 rounded-xl text-white hover:opacity-90 transition-opacity"
+                      style={{ background: 'var(--amber)' }}
                     >
                       ⬇ Descargar MP4
                     </a>
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(job.output_url!)
-                      }}
-                      className="text-xs px-3 py-2 rounded-xl border border-[#334155] text-[#64748b] hover:border-[#475569] hover:text-[#94a3b8] transition-colors"
+                      onClick={() => { navigator.clipboard.writeText(job.output_url!) }}
+                      className="text-xs px-3 py-2 rounded-xl text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+                      style={{ border: '1px solid var(--border)' }}
                     >
                       Copiar link
                     </button>
                     <button
                       onClick={() => { setRegenJobId(job.id); setRegenInstructions('') }}
-                      className="text-xs px-3 py-2 rounded-xl border border-[#334155] text-[#64748b] hover:border-[#ff8c42]/40 hover:text-[#ff8c42] transition-colors"
+                      className="text-xs px-3 py-2 rounded-xl text-[var(--text-3)] hover:border-[var(--amber)]/40 hover:text-[var(--amber)] transition-colors"
+                      style={{ border: '1px solid var(--border)' }}
                     >
                       Editar con IA
                     </button>
                   </div>
 
-                  {/* Re-generate form */}
                   {regenJobId === job.id && (
-                    <div className="space-y-2 p-3 bg-[#0e1a2e] rounded-xl border border-[#1e2f4a]">
-                      <p className="text-xs text-[#64748b]">Instrucciones para Claude</p>
+                    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                      <p className="text-xs text-[var(--text-3)]">Instrucciones para Claude</p>
                       <Textarea
                         value={regenInstructions}
                         onChange={e => setRegenInstructions(e.target.value)}
@@ -570,8 +555,7 @@ export default function VideosPage() {
                 </div>
               )}
 
-              {/* Timestamp */}
-              <p className="text-[10px] text-[#1e3a5f]">
+              <p className="text-[10px] text-[var(--text-4)]">
                 {new Date(job.created_at).toLocaleString('es-AR')}
                 {job.completed_at && ` · completado ${new Date(job.completed_at).toLocaleTimeString('es-AR')}`}
               </p>

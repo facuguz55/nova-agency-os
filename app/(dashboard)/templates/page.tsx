@@ -29,7 +29,6 @@ export default function TemplatesPage() {
   const [selected, setSelected]   = useState<Template | null>(null)
   const [form, setForm]           = useState({ name: '', subject: '', body: '', type: 'general' })
   const [saving, setSaving]       = useState(false)
-  // Personalización con IA
   const [showPersonalize, setShowPersonalize] = useState(false)
   const [personClient, setPersonClient]       = useState('')
   const [personalizing, setPersonalizing]     = useState(false)
@@ -101,25 +100,28 @@ export default function TemplatesPage() {
 
       <div className="flex-1 flex overflow-hidden bg-grid">
         {/* Lista */}
-        <div className="w-64 shrink-0 border-r border-[#1e2f4a] flex flex-col">
-          <div className="p-3 border-b border-[#1e2f4a]">
-            <p className="text-[10px] text-[#334155] uppercase tracking-widest">Templates</p>
+        <div className="w-64 shrink-0 flex flex-col" style={{ borderRight: '1px solid var(--border)' }}>
+          <div className="p-3" style={{ borderBottom: '1px solid var(--border)' }}>
+            <p className="text-[10px] text-[var(--text-4)] uppercase tracking-widest">Templates</p>
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-8"><div className="w-4 h-4 border-2 border-[#ff8c42] border-t-transparent rounded-full animate-spin"/></div>
+              <div className="flex items-center justify-center py-8">
+                <div className="w-4 h-4 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
+              </div>
             ) : templates.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <Mail size={24} className="text-[#1e2f4a]"/>
-                <p className="text-xs text-[#334155] text-center px-4">Sin templates. Creá uno o cargá ejemplos.</p>
+                <Mail size={24} className="text-[var(--text-4)]"/>
+                <p className="text-xs text-[var(--text-4)] text-center px-4">Sin templates. Creá uno o cargá ejemplos.</p>
               </div>
             ) : templates.map(t => (
               <div key={t.id} onClick={() => { setSelected(t); setPersonalized('') }}
-                className={`p-3 border-b border-[#1e2f4a]/50 cursor-pointer transition-colors ${selected?.id === t.id ? 'bg-[#ff8c42]/5 border-l-2 border-l-[#ff8c42]' : 'hover:bg-white/[.02]'}`}>
+                className={`p-3 cursor-pointer transition-colors ${selected?.id === t.id ? 'bg-[var(--amber)]/5 border-l-2 border-l-[var(--amber)]' : 'hover:bg-white/[.02]'}`}
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <p className="text-sm font-medium text-white truncate">{t.name}</p>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-[10px] text-[#a855f7] bg-[#a855f7]/10 px-1.5 py-0.5 rounded-md">{t.type}</span>
-                  <span className="text-[10px] text-[#334155]">{formatRelative(t.created_at)}</span>
+                  <span className="text-[10px] text-[var(--text-4)]">{formatRelative(t.created_at)}</span>
                 </div>
               </div>
             ))}
@@ -133,7 +135,7 @@ export default function TemplatesPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-white">{selected.name}</h2>
-                  <p className="text-sm text-[#475569] mt-0.5">Asunto: {selected.subject}</p>
+                  <p className="text-sm text-[var(--text-3)] mt-0.5">Asunto: {selected.subject}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="secondary" onClick={() => copy(selected.body)}><Copy size={12}/> Copiar</Button>
@@ -144,23 +146,23 @@ export default function TemplatesPage() {
                 </div>
               </div>
 
-              <div className="bg-[#080f1e] border border-[#1e2f4a] rounded-xl p-5">
-                <pre className="text-sm text-[#94a3b8] whitespace-pre-wrap font-sans leading-relaxed">{selected.body}</pre>
+              <div className="rounded-xl p-5" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                <pre className="text-sm text-[var(--text-2)] whitespace-pre-wrap font-sans leading-relaxed">{selected.body}</pre>
               </div>
 
               {/* Resultado personalizado */}
               {personalized && (
-                <div className="bg-[#0e1a2e] border border-[#a855f7]/20 rounded-xl p-5">
+                <div className="rounded-xl p-5" style={{ background: 'var(--surface-0)', border: '1px solid rgba(168,85,247,0.2)' }}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-semibold text-[#a855f7] flex items-center gap-1.5"><Sparkles size={12}/> Personalizado por IA</p>
                     <Button size="sm" variant="ghost" onClick={() => copy(personalized)}><Copy size={11}/> Copiar</Button>
                   </div>
-                  <pre className="text-sm text-[#94a3b8] whitespace-pre-wrap font-sans leading-relaxed">{personalized}</pre>
+                  <pre className="text-sm text-[var(--text-2)] whitespace-pre-wrap font-sans leading-relaxed">{personalized}</pre>
                 </div>
               )}
 
               {showPersonalize && (
-                <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-xl p-4 space-y-3">
+                <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                   <p className="text-sm font-medium text-white">Personalizar para cliente</p>
                   <Select label="Cliente" value={personClient} onChange={e => setPersonClient(e.target.value)}>
                     <option value="">Seleccionar cliente...</option>
@@ -177,8 +179,8 @@ export default function TemplatesPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3">
-              <Mail size={40} className="text-[#1e2f4a]"/>
-              <p className="text-sm text-[#334155]">Seleccioná un template</p>
+              <Mail size={40} className="text-[var(--text-4)]"/>
+              <p className="text-sm text-[var(--text-4)]">Seleccioná un template</p>
             </div>
           )}
         </div>

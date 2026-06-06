@@ -19,7 +19,7 @@ interface Message {
 }
 
 const TYPE_CONFIG = {
-  new_service: { label: 'Nuevo servicio', icon: Rocket,       color: '#f97316', bg: 'rgba(249,115,22,0.08)',  border: 'rgba(249,115,22,0.2)' },
+  new_service: { label: 'Nuevo servicio', icon: Rocket,       color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.2)' },
   problem:     { label: 'Problema',       icon: AlertTriangle, color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' },
   note:        { label: 'Nota',           icon: FileText,      color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.2)' },
 }
@@ -72,7 +72,7 @@ export default function SolicitudesPage() {
         title="Solicitudes"
         subtitle="Mensajes desde el portal de clientes"
         actions={
-          <button onClick={load} className="p-2 rounded-xl text-[#475569] hover:text-white transition-colors">
+          <button onClick={load} className="p-2 rounded-xl text-[var(--text-3)] hover:text-white transition-colors">
             <RefreshCw size={15} />
           </button>
         }
@@ -83,14 +83,14 @@ export default function SolicitudesPage() {
         {/* Stats rápidas */}
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: 'Total',           value: messages.length,                                         color: 'text-white' },
-            { label: 'Pendientes',      value: pending,                                                 color: 'text-[#f97316]' },
+            { label: 'Total',            value: messages.length,                                        color: 'text-white' },
+            { label: 'Pendientes',       value: pending,                                                color: 'text-[var(--amber)]' },
             { label: 'Nuevos servicios', value: messages.filter(m => m.type === 'new_service').length,  color: 'text-orange-400' },
-            { label: 'Problemas',       value: messages.filter(m => m.type === 'problem').length,       color: 'text-red-400' },
+            { label: 'Problemas',        value: messages.filter(m => m.type === 'problem').length,      color: 'text-red-400' },
           ].map(s => (
-            <div key={s.label} className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-4">
+            <div key={s.label} className="rounded-2xl p-4" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-              <p className="text-[11px] text-[#475569] mt-1 uppercase tracking-wide">{s.label}</p>
+              <p className="text-[11px] text-[var(--text-3)] mt-1 uppercase tracking-wide">{s.label}</p>
             </div>
           ))}
         </div>
@@ -106,8 +106,8 @@ export default function SolicitudesPage() {
             <button key={f.value} onClick={() => setFilter(f.value)}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
               style={filter === f.value
-                ? { background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }
-                : { background: '#0e1a2e', color: '#475569', border: '1px solid #1e2f4a' }
+                ? { background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid rgba(245,158,11,0.3)' }
+                : { background: 'var(--surface-0)', color: 'var(--text-3)', border: '1px solid var(--border)' }
               }>
               {f.label}
             </button>
@@ -117,13 +117,13 @@ export default function SolicitudesPage() {
         {/* Lista */}
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-[#ff8c42] border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <MessageSquare size={32} className="text-[#1e2f4a]" />
-            <p className="text-sm text-[#475569]">No hay mensajes todavía</p>
-            <p className="text-xs text-[#334155]">Los clientes pueden enviar solicitudes desde su portal</p>
+            <MessageSquare size={32} className="text-[var(--text-4)]" />
+            <p className="text-sm text-[var(--text-3)]">No hay mensajes todavía</p>
+            <p className="text-xs text-[var(--text-4)]">Los clientes pueden enviar solicitudes desde su portal</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -134,8 +134,8 @@ export default function SolicitudesPage() {
               return (
                 <div key={m.id} className="rounded-2xl p-5 transition-all"
                   style={{
-                    background: done ? 'rgba(255,255,255,0.01)' : '#0e1a2e',
-                    border: done ? '1px solid #1a2740' : `1px solid ${cfg.border}`,
+                    background: done ? 'rgba(255,255,255,0.01)' : 'var(--surface-0)',
+                    border: done ? '1px solid var(--border)' : `1px solid ${cfg.border}`,
                     opacity: done ? 0.5 : 1,
                   }}>
                   <div className="flex items-start gap-4">
@@ -149,14 +149,14 @@ export default function SolicitudesPage() {
                           style={{ color: cfg.color }}>{cfg.label}</span>
                         <span className="text-white/80 font-semibold text-sm">{clientName(m)}</span>
                         {projectName(m) && (
-                          <span className="text-[11px] text-[#475569]">· {projectName(m)}</span>
+                          <span className="text-[11px] text-[var(--text-3)]">· {projectName(m)}</span>
                         )}
-                        <span className="text-[11px] text-[#334155] ml-auto shrink-0">{formatDate(m.created_at)}</span>
+                        <span className="text-[11px] text-[var(--text-4)] ml-auto shrink-0">{formatDate(m.created_at)}</span>
                       </div>
                       {m.title && (
                         <p className="text-sm font-semibold text-white mb-1">{m.title}</p>
                       )}
-                      <p className="text-sm text-[#64748b] leading-relaxed">{m.body}</p>
+                      <p className="text-sm text-[var(--text-3)] leading-relaxed">{m.body}</p>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 mt-4">

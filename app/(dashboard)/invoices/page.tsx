@@ -2,6 +2,7 @@
 import { usePageTitle } from '@/lib/usePageTitle'
 import { useEffect, useState, useMemo } from 'react'
 import Header from '@/components/layout/Header'
+import { StatCard } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
@@ -34,28 +35,7 @@ const EMPTY = {
   description: '', due_date: '', paid_at: '',
 }
 
-function StatCard({ label, value, sub, icon, color }: {
-  label: string; value: string; sub?: string; icon: React.ReactNode
-  color: 'orange' | 'green' | 'blue' | 'red' | 'purple'
-}) {
-  const colors = {
-    orange: 'text-[#ff8c42] bg-[#ff8c42]/10 border-[#ff8c42]/20',
-    green:  'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-    blue:   'text-blue-400 bg-blue-400/10 border-blue-400/20',
-    red:    'text-red-400 bg-red-400/10 border-red-400/20',
-    purple: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
-  }
-  return (
-    <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-bold text-[#475569] uppercase tracking-widest">{label}</p>
-        <div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${colors[color]}`}>{icon}</div>
-      </div>
-      <p className="text-2xl font-black text-white">{value}</p>
-      {sub && <p className="text-[11px] text-[#334155] mt-1">{sub}</p>}
-    </div>
-  )
-}
+const BTN_GHOST = 'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors'
 
 export default function InvoicesPage() {
   usePageTitle('Facturación')
@@ -73,12 +53,10 @@ export default function InvoicesPage() {
   const [showSplit, setShowSplit] = useState(false)
   const [showAllMonths, setShowAllMonths] = useState(false)
 
-  // Month navigator
   const now = new Date()
   const [selYear, setSelYear]   = useState(now.getFullYear())
   const [selMonth, setSelMonth] = useState(now.getMonth())
 
-  // Pagos parciales
   const [paymentInvoice, setPaymentInvoice]     = useState<Invoice | null>(null)
   const [payments, setPayments]                 = useState<Payment[]>([])
   const [paymentTotalPaid, setPaymentTotalPaid] = useState(0)
@@ -88,7 +66,6 @@ export default function InvoicesPage() {
   const [paymentLoading, setPaymentLoading]     = useState(false)
   const [paymentSaving, setPaymentSaving]       = useState(false)
 
-  // Cuotas
   const [useCuotas, setUseCuotas]     = useState(false)
   const [cuotasCount, setCuotasCount] = useState(2)
   const [cuotasDays, setCuotasDays]   = useState(30)
@@ -119,7 +96,6 @@ export default function InvoicesPage() {
 
   useEffect(() => { load() }, [])
 
-  // Month navigation
   function prevMonth() {
     if (selMonth === 0) { setSelMonth(11); setSelYear(y => y - 1) }
     else setSelMonth(m => m - 1)
@@ -129,14 +105,12 @@ export default function InvoicesPage() {
     else setSelMonth(m => m + 1)
   }
 
-  // Invoices del mes seleccionado (por due_date, si no por created_at)
   const monthInvoices = useMemo(() => invoices.filter(inv => {
     const raw = inv.due_date || inv.created_at
     const d   = new Date(raw)
     return d.getFullYear() === selYear && d.getMonth() === selMonth
   }), [invoices, selYear, selMonth])
 
-  // Stats del mes
   const monthStats = useMemo(() => {
     const cobrado   = monthInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
                     + monthInvoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.paid_amount || 0), 0)
@@ -148,7 +122,6 @@ export default function InvoicesPage() {
     return { cobrado, pendiente, vencido, total, count: monthInvoices.length }
   }, [monthInvoices])
 
-  // Lista filtrada para mostrar — cuando hay filtro de estado, ignora el mes y muestra todo
   const displayInvoices = useMemo(() => {
     const base = (showAllMonths || !!statusFilter) ? invoices : monthInvoices
     if (!statusFilter) return base
@@ -231,8 +204,7 @@ export default function InvoicesPage() {
   }
 
   async function save() {
-    setSaving(true)
-    setSaveError(null)
+    setSaving(true); setSaveError(null)
     try {
       if (editInvoice) {
         const body: Record<string, unknown> = {
@@ -299,10 +271,8 @@ export default function InvoicesPage() {
     load()
   }
 
-  const remaining = paymentInvoice ? Math.max(0, Number(paymentInvoice.amount) - paymentTotalPaid) : 0
-
-  // ─── Progress del mes ─────────────────────────────────────────────
-  const monthPct = monthStats.total > 0 ? Math.round((monthStats.cobrado / monthStats.total) * 100) : 0
+  const remaining  = paymentInvoice ? Math.max(0, Number(paymentInvoice.amount) - paymentTotalPaid) : 0
+  const monthPct   = monthStats.total > 0 ? Math.round((monthStats.cobrado / monthStats.total) * 100) : 0
 
   return (
     <>
@@ -313,7 +283,8 @@ export default function InvoicesPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowSplit(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-[#ff8c42]/10 hover:bg-[#ff8c42]/20 text-[#ff8c42] border border-[#ff8c42]/30 hover:border-[#ff8c42]/50 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+              style={{ background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid rgba(245,158,11,0.25)' }}
             >
               <Split size={12}/> Split 50/50
             </button>
@@ -322,105 +293,73 @@ export default function InvoicesPage() {
         }
       />
 
-      <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-grid">
+      <div className="flex-1 p-6 space-y-5 overflow-y-auto">
 
         {/* ── Stats globales ── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard
-            label="Total cobrado"
-            value={`$${formatNumber(stats.cobrado ?? stats.paid)}`}
-            sub="incluye pagos parciales"
-            icon={<CheckCircle2 size={15}/>}
-            color="green"
-          />
-          <StatCard
-            label="Por cobrar"
-            value={`$${formatNumber(stats.pending)}`}
-            sub="facturas pendientes"
-            icon={<Clock size={15}/>}
-            color="blue"
-          />
-          <StatCard
-            label="Vencido"
-            value={`$${formatNumber(stats.overdue)}`}
-            sub="requiere atención"
-            icon={<AlertTriangle size={15}/>}
-            color="red"
-          />
-          <StatCard
-            label="MRR (30 días)"
-            value={`$${formatNumber(stats.mrr)}`}
-            sub="cobrado este mes"
-            icon={<TrendingUp size={15}/>}
-            color="orange"
-          />
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 animate-fade-up">
+          <StatCard label="Total cobrado"  value={`$${formatNumber(stats.cobrado ?? stats.paid)}`} sub="incl. parciales"    icon={<CheckCircle2 size={14}/>} color="green"  animDelay="0.05s" />
+          <StatCard label="Por cobrar"     value={`$${formatNumber(stats.pending)}`}               sub="facturas pendientes" icon={<Clock size={14}/>}        color="blue"   animDelay="0.10s" />
+          <StatCard label="Vencido"        value={`$${formatNumber(stats.overdue)}`}               sub="requiere atención"   icon={<AlertTriangle size={14}/>} color="red"    animDelay="0.15s" />
+          <StatCard label="MRR (30 días)"  value={`$${formatNumber(stats.mrr)}`}                   sub="cobrado este mes"    icon={<TrendingUp size={14}/>}   color="amber"  animDelay="0.20s" />
         </div>
 
         {/* ── Navegador de mes ── */}
-        <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl overflow-hidden">
-          {/* Header del mes */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e2f4a]">
+        <div className="panel overflow-hidden animate-fade-up stagger-2">
+          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
             <button
               onClick={prevMonth}
-              className="w-8 h-8 rounded-xl bg-[#1a2d45] hover:bg-[#253f60] text-[#64748b] hover:text-white flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}
             >
-              <ChevronLeft size={16}/>
+              <ChevronLeft size={15}/>
             </button>
 
             <div className="text-center">
-              <h2 className="text-xl font-black text-white">{MONTHS_ES[selMonth]} {selYear}</h2>
-              <p className="text-[11px] text-[#475569] mt-0.5">
+              <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                {MONTHS_ES[selMonth]} {selYear}
+              </h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>
                 {monthStats.count} {monthStats.count === 1 ? 'factura' : 'facturas'} · ${formatNumber(monthStats.total)} total
               </p>
             </div>
 
             <button
               onClick={nextMonth}
-              className="w-8 h-8 rounded-xl bg-[#1a2d45] hover:bg-[#253f60] text-[#64748b] hover:text-white flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+              style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}
             >
-              <ChevronRight size={16}/>
+              <ChevronRight size={15}/>
             </button>
           </div>
 
           {/* Stats del mes */}
-          <div className="grid grid-cols-3 divide-x divide-[#1e2f4a]">
-            <div className="px-6 py-4">
-              <p className="text-[10px] font-bold text-[#475569] uppercase tracking-widest mb-1.5">Cobrado</p>
-              <p className="text-xl font-black text-emerald-400">${formatNumber(monthStats.cobrado)}</p>
-              {monthStats.total > 0 && (
-                <p className="text-[11px] text-[#334155] mt-0.5">{monthPct}% del total</p>
-              )}
-            </div>
-            <div className="px-6 py-4">
-              <p className="text-[10px] font-bold text-[#475569] uppercase tracking-widest mb-1.5">Pendiente</p>
-              <p className="text-xl font-black text-amber-400">${formatNumber(monthStats.pendiente)}</p>
-              <p className="text-[11px] text-[#334155] mt-0.5">por cobrar</p>
-            </div>
-            <div className="px-6 py-4">
-              <p className="text-[10px] font-bold text-[#475569] uppercase tracking-widest mb-1.5">Proyección</p>
-              <p className="text-xl font-black text-white">${formatNumber(monthStats.cobrado + monthStats.pendiente)}</p>
-              <p className="text-[11px] text-[#334155] mt-0.5">si cobrás todo</p>
-            </div>
+          <div className="grid grid-cols-3" style={{ borderBottom: '1px solid var(--border)' }}>
+            {[
+              { label: 'Cobrado',    value: monthStats.cobrado,   color: '#10b981', sub: `${monthPct}% del total` },
+              { label: 'Pendiente',  value: monthStats.pendiente, color: 'var(--amber)', sub: 'por cobrar' },
+              { label: 'Proyección', value: monthStats.cobrado + monthStats.pendiente, color: 'var(--text)', sub: 'si cobrás todo' },
+            ].map((s, i) => (
+              <div key={s.label} className="px-6 py-4" style={i < 2 ? { borderRight: '1px solid var(--border)' } : {}}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>{s.label}</p>
+                <p className="text-[20px] font-bold leading-none" style={{ color: s.color, fontFamily: 'var(--font-display)' }}>${formatNumber(s.value)}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-4)' }}>{s.sub}</p>
+              </div>
+            ))}
           </div>
 
           {/* Barra de progreso del mes */}
           {monthStats.total > 0 && (
-            <div className="px-6 pb-4">
-              <div className="h-2 rounded-full bg-[#1a2d45] overflow-hidden flex">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${(monthStats.cobrado / monthStats.total) * 100}%` }}
-                />
-                <div
-                  className="h-full bg-amber-400 transition-all duration-500"
-                  style={{ width: `${(monthStats.pendiente / monthStats.total) * 100}%` }}
-                />
-                <div
-                  className="h-full bg-red-400 transition-all duration-500"
-                  style={{ width: `${(monthStats.vencido / monthStats.total) * 100}%` }}
-                />
+            <div className="px-6 py-4">
+              <div className="h-1.5 rounded-full overflow-hidden flex" style={{ background: 'var(--surface-2)' }}>
+                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(monthStats.cobrado / monthStats.total) * 100}%` }}/>
+                <div className="h-full bg-amber-400 transition-all duration-500"   style={{ width: `${(monthStats.pendiente / monthStats.total) * 100}%` }}/>
+                <div className="h-full bg-red-400 transition-all duration-500"     style={{ width: `${(monthStats.vencido / monthStats.total) * 100}%` }}/>
               </div>
-              <div className="flex gap-4 mt-2 text-[10px] text-[#475569]">
+              <div className="flex gap-4 mt-2 text-[10px]" style={{ color: 'var(--text-3)' }}>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Cobrado</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Pendiente</span>
                 {monthStats.vencido > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>Vencido</span>}
@@ -429,57 +368,56 @@ export default function InvoicesPage() {
           )}
 
           {monthStats.count === 0 && !loading && (
-            <div className="px-6 pb-4 text-center text-sm text-[#334155]">Sin facturas este mes</div>
+            <div className="px-6 pb-4 text-center text-[13px]" style={{ color: 'var(--text-4)' }}>Sin facturas este mes</div>
           )}
         </div>
 
         {/* ── Lista de facturas ── */}
-        <div className="space-y-3">
-          {/* Controles */}
+        <div className="space-y-3 animate-fade-up stagger-3">
           <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="px-4 py-2 bg-[#0e1a2e] border border-[#1e2f4a] rounded-xl text-sm text-white focus:outline-none focus:border-[#ff8c42]/40"
-              >
-                <option value="">Todas</option>
-                <option value="pending">Pendientes</option>
-                <option value="partial">Pago parcial</option>
-                <option value="paid">Pagadas</option>
-                <option value="overdue">Vencidas</option>
-                <option value="draft">Borrador</option>
-                <option value="canceled">Canceladas</option>
-              </select>
-            </div>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-4 py-2 rounded-xl text-[13px] focus:outline-none transition-colors"
+              style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            >
+              <option value="">Todas</option>
+              <option value="pending">Pendientes</option>
+              <option value="partial">Pago parcial</option>
+              <option value="paid">Pagadas</option>
+              <option value="overdue">Vencidas</option>
+              <option value="draft">Borrador</option>
+              <option value="canceled">Canceladas</option>
+            </select>
+
             <button
               onClick={() => setShowAllMonths(v => !v)}
-              className={`text-xs font-semibold px-3 py-2 rounded-xl border transition-colors ${
-                showAllMonths
-                  ? 'bg-[#ff8c42]/10 border-[#ff8c42]/30 text-[#ff8c42]'
-                  : 'bg-[#0e1a2e] border-[#1e2f4a] text-[#475569] hover:text-white'
-              }`}
+              className="text-xs font-semibold px-3 py-2 rounded-xl border transition-colors"
+              style={showAllMonths
+                ? { background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--amber)' }
+                : { background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-3)' }
+              }
             >
-              {showAllMonths ? `Mostrando todo · filtrar por mes` : `Ver todas las facturas`}
+              {showAllMonths ? 'Filtrando por mes' : 'Ver todas las facturas'}
             </button>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="w-6 h-6 border-2 border-[#ff8c42] border-t-transparent rounded-full animate-spin"/>
+              <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--amber)', borderTopColor: 'transparent' }}/>
             </div>
           ) : displayInvoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-[#0e1a2e] border border-[#1e2f4a] flex items-center justify-center">
-                <DollarSign size={24} className="text-[#1e2f4a]"/>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+                <DollarSign size={22} style={{ color: 'var(--text-4)' }}/>
               </div>
-              <p className="text-sm text-[#475569]">
+              <p className="text-[13px]" style={{ color: 'var(--text-3)' }}>
                 {showAllMonths ? 'No hay facturas' : `No hay facturas en ${MONTHS_ES[selMonth]}`}
               </p>
               <Button onClick={openNew} size="sm">Crear factura</Button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {displayInvoices.map(inv => {
                 const paidAmt    = inv.paid_amount || 0
                 const rest       = Math.max(0, Number(inv.amount) - paidAmt)
@@ -489,39 +427,40 @@ export default function InvoicesPage() {
                 return (
                   <div
                     key={inv.id}
-                    className="bg-[#0e1a2e] border border-[#1e2f4a] hover:border-[#253f60] rounded-2xl p-5 transition-colors"
+                    className="rounded-xl p-5 transition-all duration-200 animate-fade-up"
+                    style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hi)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}
                   >
-                    {/* Fila superior */}
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className="text-[11px] font-mono text-[#334155]">{inv.invoice_number}</span>
+                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>{inv.invoice_number}</span>
                           <StatusBadge status={inv.status}/>
                           {inv.due_date && (
-                            <span className="flex items-center gap-1 text-[11px] text-[#475569]">
+                            <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-3)' }}>
                               <Calendar size={10}/>{formatDate(inv.due_date).split(' ')[0]}
                             </span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-white truncate">{inv.clients?.name || '—'}</p>
+                        <p className="text-[16px] font-bold text-white truncate">{inv.clients?.name || '—'}</p>
                         {inv.projects?.name && (
-                          <p className="text-[12px] text-[#475569] mt-0.5">{inv.projects.name}</p>
+                          <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-3)' }}>{inv.projects.name}</p>
                         )}
                         {inv.description && (
-                          <p className="text-sm text-[#64748b] mt-1.5 line-clamp-2">{inv.description}</p>
+                          <p className="text-[13px] mt-1.5 line-clamp-2" style={{ color: 'var(--text-2)' }}>{inv.description}</p>
                         )}
                       </div>
 
-                      {/* Monto + resta */}
                       <div className="text-right shrink-0">
-                        <p className="text-2xl font-black text-white">${Number(inv.amount).toLocaleString()}</p>
+                        <p className="text-[22px] font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>${Number(inv.amount).toLocaleString()}</p>
                         {inv.status === 'paid' && (
                           <p className="text-[12px] text-emerald-400 font-semibold mt-0.5">✓ Pagado</p>
                         )}
                         {hasPartial && (
                           <div className="mt-0.5">
                             <p className="text-[11px] text-emerald-400">${paidAmt.toLocaleString()} pagado</p>
-                            <p className="text-base font-black text-amber-400">Resta ${rest.toLocaleString()}</p>
+                            <p className="text-[14px] font-bold text-amber-400">Resta ${rest.toLocaleString()}</p>
                           </div>
                         )}
                         {inv.status === 'overdue' && (
@@ -530,33 +469,34 @@ export default function InvoicesPage() {
                       </div>
                     </div>
 
-                    {/* Barra de progreso (pagos parciales) */}
                     {hasPartial && (
                       <div className="mb-4">
-                        <div className="flex justify-between text-[10px] text-[#475569] mb-1.5">
+                        <div className="flex justify-between text-[10px] mb-1.5" style={{ color: 'var(--text-3)' }}>
                           <span>Progreso de cobro</span>
                           <span className="font-bold text-amber-400">{pct}%</span>
                         </div>
-                        <div className="h-2 rounded-full bg-[#1a2d45] overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-amber-400 transition-all duration-500"
-                            style={{ width: `${pct}%` }}
-                          />
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                          <div className="h-full rounded-full bg-amber-400 transition-all duration-500" style={{ width: `${pct}%` }}/>
                         </div>
                       </div>
                     )}
 
-                    {/* Acciones */}
-                    <div className="flex gap-2 flex-wrap pt-3 border-t border-[#1e2f4a]">
+                    <div className="flex gap-2 flex-wrap pt-3" style={{ borderTop: '1px solid var(--border)' }}>
                       <button
                         onClick={() => window.open(`/invoice-print/${inv.id}`, '_blank')}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#1a2d45] hover:bg-[#253f60] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-lg transition-colors"
+                        className={BTN_GHOST}
+                        style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}
                       >
                         <FileText size={11}/> PDF
                       </button>
                       <button
                         onClick={() => openEdit(inv)}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-[#1a2d45] hover:bg-[#253f60] text-[#64748b] hover:text-white border border-[#1e2f4a] rounded-lg transition-colors"
+                        className={BTN_GHOST}
+                        style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}
                       >
                         <Pencil size={11}/> Editar
                       </button>
@@ -564,13 +504,13 @@ export default function InvoicesPage() {
                         <>
                           <button
                             onClick={() => openPaymentModal(inv)}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/20 rounded-lg transition-colors"
+                            className={`${BTN_GHOST} bg-amber-400/10 text-amber-300 border border-amber-400/20 hover:bg-amber-400/20`}
                           >
                             <CreditCard size={11}/> Registrar pago
                           </button>
                           <button
                             onClick={() => markPaid(inv.id)}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition-colors"
+                            className={`${BTN_GHOST} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20`}
                           >
                             <CheckCircle2 size={11}/> Cobrado total
                           </button>
@@ -578,7 +518,7 @@ export default function InvoicesPage() {
                       )}
                       <button
                         onClick={() => deleteInvoice(inv.id)}
-                        className="ml-auto flex items-center gap-1 text-xs px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-colors"
+                        className={`ml-auto ${BTN_GHOST} bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20`}
                       >
                         <Trash2 size={11}/>
                       </button>
@@ -598,11 +538,10 @@ export default function InvoicesPage() {
         title={editInvoice ? `Editar ${editInvoice.invoice_number}` : 'Nueva factura'}
       >
         <div className="space-y-4">
-          {/* Cliente (solo lectura al editar) */}
           {editInvoice ? (
-            <div className="px-4 py-3 bg-[#080f1e] border border-[#1a2d45] rounded-xl">
-              <p className="text-[10px] text-[#475569] uppercase tracking-widest mb-0.5">Cliente</p>
-              <p className="text-sm font-semibold text-white">{editInvoice.clients?.name || '—'}</p>
+            <div className="px-4 py-3 rounded-xl" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+              <p className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-3)' }}>Cliente</p>
+              <p className="text-[13px] font-semibold text-white">{editInvoice.clients?.name || '—'}</p>
             </div>
           ) : (
             <Select label="Cliente *" value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value, project_id: '' }))}>
@@ -623,13 +562,7 @@ export default function InvoicesPage() {
           </Select>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Monto (ARS) *"
-              value={form.amount}
-              onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-              type="number"
-              placeholder="500000"
-            />
+            <Input label="Monto (ARS) *" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} type="number" placeholder="500000"/>
             <Select label="Estado" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
               <option value="draft">Borrador</option>
               <option value="pending">Pendiente</option>
@@ -640,19 +573,9 @@ export default function InvoicesPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Fecha de vencimiento"
-              value={form.due_date}
-              onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
-              type="date"
-            />
+            <Input label="Vencimiento" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} type="date"/>
             {form.status === 'paid' && (
-              <Input
-                label="Fecha de pago"
-                value={form.paid_at}
-                onChange={e => setForm(f => ({ ...f, paid_at: e.target.value }))}
-                type="date"
-              />
+              <Input label="Fecha de pago" value={form.paid_at} onChange={e => setForm(f => ({ ...f, paid_at: e.target.value }))} type="date"/>
             )}
           </div>
 
@@ -664,59 +587,60 @@ export default function InvoicesPage() {
             placeholder="Servicios de marketing digital — Junio 2026"
           />
 
-          {/* Cuotas (solo en nueva) */}
           {!editInvoice && (
-            <div className="rounded-xl border border-[#1e2f4a] p-4 bg-[#0a1525] space-y-3">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               <button type="button" onClick={() => setUseCuotas(v => !v)} className="flex items-center gap-2.5 w-full text-left">
-                <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${useCuotas ? 'bg-[#ff8c42] border-[#ff8c42]' : 'border-[#334155] bg-[#0e1a2e]'}`}>
-                  {useCuotas && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>}
+                <div className="w-5 h-5 rounded flex items-center justify-center border transition-colors" style={useCuotas ? { background: 'var(--amber)', borderColor: 'var(--amber)' } : { background: 'var(--surface-1)', borderColor: 'var(--border)' }}>
+                  {useCuotas && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Dividir en cuotas</p>
-                  <p className="text-[11px] text-[#475569] mt-0.5">Genera facturas separadas por cuota</p>
+                  <p className="text-[13px] font-semibold text-white">Dividir en cuotas</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>Genera facturas separadas por cuota</p>
                 </div>
               </button>
 
               {useCuotas && form.amount && (
-                <div className="space-y-3 pt-2 border-t border-[#1e2f4a]">
+                <div className="space-y-3 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-[#64748b] mb-1.5">Cantidad de cuotas</p>
+                      <p className="text-[11px] mb-1.5" style={{ color: 'var(--text-3)' }}>Cantidad de cuotas</p>
                       <div className="flex gap-1.5 flex-wrap">
                         {[2, 3, 4, 6, 12].map(n => (
                           <button key={n} type="button" onClick={() => setCuotasCount(n)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${cuotasCount === n ? 'bg-[#ff8c42]/15 border-[#ff8c42]/40 text-[#ff8c42]' : 'bg-[#0e1a2e] border-[#1e2f4a] text-[#475569] hover:text-white'}`}>
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors"
+                            style={cuotasCount === n ? { background: 'var(--amber-dim)', borderColor: 'rgba(245,158,11,0.4)', color: 'var(--amber)' } : { background: 'var(--surface-1)', borderColor: 'var(--border)', color: 'var(--text-3)' }}>
                             {n}x
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-[#64748b] mb-1.5">Días entre cuotas</p>
+                      <p className="text-[11px] mb-1.5" style={{ color: 'var(--text-3)' }}>Días entre cuotas</p>
                       <div className="flex gap-1.5 flex-wrap">
                         {[7, 15, 30, 60].map(d => (
                           <button key={d} type="button" onClick={() => setCuotasDays(d)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${cuotasDays === d ? 'bg-[#ff8c42]/15 border-[#ff8c42]/40 text-[#ff8c42]' : 'bg-[#0e1a2e] border-[#1e2f4a] text-[#475569] hover:text-white'}`}>
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors"
+                            style={cuotasDays === d ? { background: 'var(--amber-dim)', borderColor: 'rgba(245,158,11,0.4)', color: 'var(--amber)' } : { background: 'var(--surface-1)', borderColor: 'var(--border)', color: 'var(--text-3)' }}>
                             {d === 30 ? '1 mes' : d === 60 ? '2 meses' : `${d}d`}
                           </button>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-xl p-3 space-y-1.5">
-                    <p className="text-[10px] text-[#334155] uppercase tracking-widest mb-2">Preview</p>
+                  <div className="rounded-xl p-3 space-y-1.5" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+                    <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Preview</p>
                     {Array.from({ length: cuotasCount }, (_, i) => {
-                      const total    = parseFloat(form.amount)
-                      const cAmt     = Math.floor(total / cuotasCount)
-                      const lastAmt  = total - cAmt * (cuotasCount - 1)
-                      const base     = form.due_date ? new Date(form.due_date) : new Date()
-                      const due      = new Date(base)
+                      const total   = parseFloat(form.amount)
+                      const cAmt    = Math.floor(total / cuotasCount)
+                      const lastAmt = total - cAmt * (cuotasCount - 1)
+                      const base    = form.due_date ? new Date(form.due_date) : new Date()
+                      const due     = new Date(base)
                       due.setDate(due.getDate() + i * cuotasDays)
                       return (
-                        <div key={i} className="flex items-center justify-between text-xs">
-                          <span className="text-[#475569]">Cuota {i + 1}/{cuotasCount}</span>
-                          <span className="font-bold text-[#ff8c42]">${(i === cuotasCount - 1 ? lastAmt : cAmt).toLocaleString()}</span>
-                          <span className="text-[#334155]">{due.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>
+                        <div key={i} className="flex items-center justify-between text-[12px]">
+                          <span style={{ color: 'var(--text-3)' }}>Cuota {i + 1}/{cuotasCount}</span>
+                          <span className="font-bold" style={{ color: 'var(--amber)' }}>${(i === cuotasCount - 1 ? lastAmt : cAmt).toLocaleString()}</span>
+                          <span style={{ color: 'var(--text-4)' }}>{due.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>
                         </div>
                       )
                     })}
@@ -731,34 +655,24 @@ export default function InvoicesPage() {
           )}
 
           <div className="flex gap-3 pt-2">
-            <Button
-              onClick={save}
-              disabled={saving || (!editInvoice && (!form.client_id || !form.amount)) || (!!editInvoice && !form.amount)}
-            >
+            <Button onClick={save} disabled={saving || (!editInvoice && (!form.client_id || !form.amount)) || (!!editInvoice && !form.amount)}>
               {saving ? 'Guardando...' : editInvoice ? 'Guardar cambios' : useCuotas ? `Crear ${cuotasCount} cuotas` : 'Crear factura'}
             </Button>
-            <Button variant="secondary" onClick={() => { setShowModal(false); setEditInvoice(null); setSaveError(null) }}>
-              Cancelar
-            </Button>
+            <Button variant="secondary" onClick={() => { setShowModal(false); setEditInvoice(null); setSaveError(null) }}>Cancelar</Button>
           </div>
         </div>
       </Modal>
 
-      {/* ── Modal Registrar Pago Parcial ── */}
-      <Modal
-        open={!!paymentInvoice}
-        onClose={() => setPaymentInvoice(null)}
-        title={paymentInvoice ? `Pagos — ${paymentInvoice.invoice_number}` : ''}
-      >
+      {/* ── Modal Pagos Parciales ── */}
+      <Modal open={!!paymentInvoice} onClose={() => setPaymentInvoice(null)} title={paymentInvoice ? `Pagos — ${paymentInvoice.invoice_number}` : ''}>
         {paymentInvoice && (
           <div className="space-y-5">
-            {/* Resumen */}
-            <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-4 space-y-3">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-base font-black text-white">{paymentInvoice.clients?.name}</p>
+                  <p className="text-[15px] font-bold text-white">{paymentInvoice.clients?.name}</p>
                   {paymentInvoice.description && (
-                    <p className="text-[12px] text-[#475569] mt-0.5">{paymentInvoice.description}</p>
+                    <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-3)' }}>{paymentInvoice.description}</p>
                   )}
                 </div>
                 <StatusBadge status={
@@ -770,57 +684,54 @@ export default function InvoicesPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 rounded-xl bg-[#0e1a2e] border border-[#1e2f4a]">
-                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Total</p>
-                  <p className="text-sm font-black text-white">${Number(paymentInvoice.amount).toLocaleString()}</p>
+                <div className="text-center p-3 rounded-xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+                  <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-3)' }}>Total</p>
+                  <p className="text-[13px] font-bold text-white">${Number(paymentInvoice.amount).toLocaleString()}</p>
                 </div>
                 <div className="text-center p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                  <p className="text-[10px] text-emerald-400/60 uppercase tracking-wide mb-1">Pagado</p>
-                  <p className="text-sm font-black text-emerald-400">${paymentTotalPaid.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase tracking-wide mb-1 text-emerald-400/60">Pagado</p>
+                  <p className="text-[13px] font-bold text-emerald-400">${paymentTotalPaid.toLocaleString()}</p>
                 </div>
                 <div className="text-center p-3 rounded-xl bg-amber-400/5 border border-amber-400/20">
-                  <p className="text-[10px] text-amber-400/60 uppercase tracking-wide mb-1">Resta</p>
-                  <p className="text-sm font-black text-amber-400">${remaining.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase tracking-wide mb-1 text-amber-400/60">Resta</p>
+                  <p className="text-[13px] font-bold text-amber-400">${remaining.toLocaleString()}</p>
                 </div>
               </div>
 
               {paymentTotalPaid > 0 && (
                 <div>
-                  <div className="flex justify-between text-[10px] text-[#475569] mb-1.5">
-                    <span>Progreso de cobro</span>
+                  <div className="flex justify-between text-[10px] mb-1.5" style={{ color: 'var(--text-3)' }}>
+                    <span>Progreso</span>
                     <span className="text-amber-400 font-bold">
                       {Math.min(100, Math.round((paymentTotalPaid / Number(paymentInvoice.amount)) * 100))}%
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-[#1a2d45] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-amber-400 transition-all duration-500"
-                      style={{ width: `${Math.min(100, (paymentTotalPaid / Number(paymentInvoice.amount)) * 100)}%` }}
-                    />
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                    <div className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                      style={{ width: `${Math.min(100, (paymentTotalPaid / Number(paymentInvoice.amount)) * 100)}%` }}/>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Historial */}
             {paymentLoading ? (
               <div className="flex justify-center py-4">
-                <div className="w-5 h-5 border-2 border-[#ff8c42] border-t-transparent rounded-full animate-spin"/>
+                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--amber)', borderTopColor: 'transparent' }}/>
               </div>
             ) : payments.length > 0 && (
               <div>
-                <p className="text-[10px] text-[#334155] uppercase tracking-widest mb-2">Historial de pagos</p>
+                <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Historial de pagos</p>
                 <div className="space-y-2">
                   {payments.map(p => (
-                    <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 bg-[#080f1e] border border-[#1a2d45] rounded-xl">
+                    <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                       <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
                         <BadgeDollarSign size={13} className="text-emerald-400"/>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-emerald-400">${Number(p.amount).toLocaleString()}</p>
-                        {p.note && <p className="text-[11px] text-[#475569] truncate">{p.note}</p>}
+                        <p className="text-[13px] font-bold text-emerald-400">${Number(p.amount).toLocaleString()}</p>
+                        {p.note && <p className="text-[11px] truncate" style={{ color: 'var(--text-3)' }}>{p.note}</p>}
                       </div>
-                      <p className="text-[11px] text-[#334155] shrink-0">
+                      <p className="text-[11px] shrink-0" style={{ color: 'var(--text-4)' }}>
                         {new Date(p.paid_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
                       </p>
                     </div>
@@ -829,61 +740,36 @@ export default function InvoicesPage() {
               </div>
             )}
 
-            {/* Nuevo pago */}
             {remaining > 0 && (
-              <div className="space-y-3 pt-2 border-t border-[#1e2f4a]">
-                <p className="text-[10px] text-[#334155] uppercase tracking-widest">Registrar pago</p>
+              <div className="space-y-3 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Registrar pago</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="Monto *"
-                    value={paymentAmount}
-                    onChange={e => setPaymentAmount(e.target.value)}
-                    type="number"
-                    placeholder={remaining.toLocaleString()}
-                  />
-                  <Input
-                    label="Fecha"
-                    value={paymentDate}
-                    onChange={e => setPaymentDate(e.target.value)}
-                    type="date"
-                  />
+                  <Input label="Monto *" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" placeholder={remaining.toLocaleString()}/>
+                  <Input label="Fecha" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} type="date"/>
                 </div>
-                {/* Atajos */}
                 <div className="flex gap-2 flex-wrap">
                   {[remaining, Math.floor(remaining / 2), Math.floor(Number(paymentInvoice.amount) / 2)]
                     .filter((v, i, a) => v > 0 && a.indexOf(v) === i)
                     .map(val => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setPaymentAmount(String(val))}
-                        className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#0e1a2e] border border-[#1e2f4a] text-[#475569] hover:text-[#ff8c42] hover:border-[#ff8c42]/30 transition-colors"
+                      <button key={val} type="button" onClick={() => setPaymentAmount(String(val))}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors"
+                        style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-3)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--amber)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)' }}
                       >
                         ${val.toLocaleString()}
                       </button>
                     ))
                   }
                 </div>
-                <Input
-                  label="Nota (opcional)"
-                  value={paymentNote}
-                  onChange={e => setPaymentNote(e.target.value)}
-                  placeholder="Transferencia, efectivo..."
-                />
-                <Button
-                  onClick={registerPayment}
-                  disabled={paymentSaving || !paymentAmount || parseFloat(paymentAmount) <= 0}
-                  className="w-full"
-                >
-                  {paymentSaving
-                    ? 'Registrando...'
-                    : `Registrar $${parseFloat(paymentAmount || '0').toLocaleString() || '---'}`
-                  }
+                <Input label="Nota (opcional)" value={paymentNote} onChange={e => setPaymentNote(e.target.value)} placeholder="Transferencia, efectivo..."/>
+                <Button onClick={registerPayment} disabled={paymentSaving || !paymentAmount || parseFloat(paymentAmount) <= 0} className="w-full">
+                  {paymentSaving ? 'Registrando...' : `Registrar $${parseFloat(paymentAmount || '0').toLocaleString() || '---'}`}
                 </Button>
               </div>
             )}
             {remaining <= 0 && (
-              <p className="text-center text-sm text-emerald-400 font-bold py-2">✓ Factura completamente pagada</p>
+              <p className="text-center text-[13px] text-emerald-400 font-bold py-2">✓ Factura completamente pagada</p>
             )}
           </div>
         )}
@@ -892,31 +778,28 @@ export default function InvoicesPage() {
       {/* ── Modal Split 50/50 ── */}
       <Modal open={showSplit} onClose={() => setShowSplit(false)} title="Split 50/50 — Facundo & Mauricio">
         <div className="space-y-4">
-          <p className="text-xs text-[#4a6080]">División equitativa del revenue</p>
+          <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>División equitativa del revenue</p>
           {[
-            { label: 'Cobrado',        sub: 'incl. parciales',    value: stats.cobrado ?? stats.paid, color: '#22c55e' as const },
-            { label: 'Por cobrar',     sub: 'facturas pendientes', value: stats.pending,              color: '#60a5fa' as const },
-            { label: 'Vencido',        sub: 'facturas vencidas',   value: stats.overdue,              color: '#f87171' as const },
-            { label: 'Total potencial',sub: 'si cobrás todo',      value: (stats.cobrado ?? stats.paid) + stats.pending + stats.overdue, color: '#ff8c42' as const, bold: true },
+            { label: 'Cobrado',         sub: 'incl. parciales',    value: stats.cobrado ?? stats.paid, color: '#22c55e' },
+            { label: 'Por cobrar',      sub: 'facturas pendientes', value: stats.pending,              color: '#60a5fa' },
+            { label: 'Vencido',         sub: 'facturas vencidas',   value: stats.overdue,              color: '#f87171' },
+            { label: 'Total potencial', sub: 'si cobrás todo',      value: (stats.cobrado ?? stats.paid) + stats.pending + stats.overdue, color: 'var(--amber)', bold: true },
           ].map(row => (
-            <div
-              key={row.label}
-              className={`rounded-xl border p-4 ${row.bold ? 'border-[#ff8c42]/30 bg-[#ff8c42]/5' : 'border-[#1a2d45] bg-[#080f1e]'}`}
-            >
-              <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-3">{row.label} · {row.sub}</p>
+            <div key={row.label} className="rounded-xl p-4" style={row.bold ? { background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.25)' } : { background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+              <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>{row.label} · {row.sub}</p>
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-[10px] text-[#475569] mb-0.5">Total</p>
-                  <p className="text-lg font-black" style={{ color: row.color }}>${formatNumber(row.value)}</p>
+                  <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>Total</p>
+                  <p className="text-[16px] font-bold" style={{ color: row.color }}>${formatNumber(row.value)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-[#475569] mb-0.5">Cada uno</p>
-                  <p className="text-2xl font-black" style={{ color: row.color }}>${formatNumber(row.value / 2)}</p>
+                  <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>Cada uno</p>
+                  <p className="text-[22px] font-bold" style={{ color: row.color, fontFamily: 'var(--font-display)' }}>${formatNumber(row.value / 2)}</p>
                 </div>
               </div>
             </div>
           ))}
-          <button onClick={() => setShowSplit(false)} className="w-full text-xs text-[#4a6080] hover:text-white transition-colors py-1">
+          <button onClick={() => setShowSplit(false)} className="w-full text-[12px] transition-colors py-1" style={{ color: 'var(--text-3)' }}>
             Cerrar
           </button>
         </div>

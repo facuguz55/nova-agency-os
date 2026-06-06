@@ -13,14 +13,15 @@ interface Snippet {
 
 const CATS = ['Caption', 'Email', 'CTA', 'Propuesta', 'WhatsApp', 'Otros']
 const CAT_COLOR: Record<string, string> = {
-  Caption: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
-  Email:   'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  CTA:     'text-[#f97316] bg-[#f97316]/10 border-[#f97316]/20',
+  Caption:   'text-purple-400 bg-purple-400/10 border-purple-400/20',
+  Email:     'text-blue-400 bg-blue-400/10 border-blue-400/20',
+  CTA:       'text-[var(--amber)] bg-[var(--amber-dim)] border-[var(--amber)]/20',
   Propuesta: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  WhatsApp: 'text-green-400 bg-green-400/10 border-green-400/20',
-  Otros:   'text-[#64748b] bg-[#1a2d45] border-[#253f60]',
+  WhatsApp:  'text-green-400 bg-green-400/10 border-green-400/20',
+  Otros:     'text-[var(--text-3)] bg-white/5 border-white/10',
 }
 const EMPTY = { title: '', content: '', category: 'Caption' }
+const CARD = { background: 'var(--surface-0)', border: '1px solid var(--border)', borderRadius: 12 }
 
 export default function SnippetsPage() {
   usePageTitle('Snippets')
@@ -70,11 +71,12 @@ export default function SnippetsPage() {
         actions={<Button onClick={() => setShowModal(true)} size="sm"><Plus size={13}/> Nuevo snippet</Button>}
       />
 
-      <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+      <div className="flex-1 p-6 space-y-4 overflow-y-auto bg-grid">
         {/* Filtro por categoría */}
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setFilter('')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${!filter ? 'bg-[#f97316]/10 border-[#f97316]/30 text-[#f97316]' : 'bg-[#0f1d30] border-[#1a2d45] text-[#64748b] hover:text-white'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${!filter ? 'bg-[var(--amber-dim)] border-[var(--amber)]/30 text-[var(--amber)]' : 'text-[var(--text-3)] hover:text-white'}`}
+            style={!filter ? {} : { background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
             Todos ({snippets.length})
           </button>
           {CATS.map(c => {
@@ -82,7 +84,8 @@ export default function SnippetsPage() {
             if (count === 0) return null
             return (
               <button key={c} onClick={() => setFilter(filter === c ? '' : c)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filter === c ? 'bg-[#f97316]/10 border-[#f97316]/30 text-[#f97316]' : 'bg-[#0f1d30] border-[#1a2d45] text-[#64748b] hover:text-white'}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filter === c ? 'bg-[var(--amber-dim)] border-[var(--amber)]/30 text-[var(--amber)]' : 'text-[var(--text-3)] hover:text-white'}`}
+                style={filter === c ? {} : { background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                 {c} ({count})
               </button>
             )
@@ -90,28 +93,30 @@ export default function SnippetsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16"><div className="w-5 h-5 border-2 border-[#f97316] border-t-transparent rounded-full animate-spin"/></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="w-5 h-5 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Tag size={28} className="text-[#1a2d45]"/>
-            <p className="text-sm text-[#475569]">Sin snippets todavía</p>
+            <Tag size={28} className="text-[var(--text-4)]"/>
+            <p className="text-sm text-[var(--text-3)]">Sin snippets todavía</p>
             <Button onClick={() => setShowModal(true)} size="sm">Crear el primero</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.map(s => (
-              <div key={s.id} className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-4 flex flex-col gap-3 group hover:border-[#253f60] transition-colors">
+              <div key={s.id} className="flex flex-col gap-3 group p-4 rounded-xl hover:border-white/10 transition-colors" style={CARD}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold text-white leading-snug">{s.title}</p>
                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${CAT_COLOR[s.category] || CAT_COLOR.Otros}`}>{s.category}</span>
                 </div>
-                <p className="text-xs text-[#64748b] whitespace-pre-wrap line-clamp-4 flex-1">{s.content}</p>
-                <div className="flex items-center justify-between pt-1 border-t border-[#1a2d45]">
+                <p className="text-xs text-[var(--text-3)] whitespace-pre-wrap line-clamp-4 flex-1">{s.content}</p>
+                <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid var(--border)' }}>
                   <button onClick={() => copy(s.id, s.content)}
-                    className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-white transition-colors">
+                    className="flex items-center gap-1.5 text-xs text-[var(--text-3)] hover:text-white transition-colors">
                     {copied === s.id ? <><Check size={12} className="text-emerald-400"/> Copiado</> : <><Copy size={12}/> Copiar</>}
                   </button>
-                  <button onClick={() => del(s.id)} className="text-[#334155] hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+                  <button onClick={() => del(s.id)} className="text-[var(--text-4)] hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
                     <Trash2 size={13}/>
                   </button>
                 </div>

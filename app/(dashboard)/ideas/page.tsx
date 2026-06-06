@@ -13,11 +13,13 @@ interface Idea {
 }
 
 const STATUS_LIST = [
-  { key: 'pendiente',    label: 'Pendiente',    dot: 'bg-[#334155]',      chip: 'text-[#64748b] bg-[#0f1d30] border-[#253f60]' },
-  { key: 'en_proceso',   label: 'En proceso',   dot: 'bg-blue-400',       chip: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  { key: 'implementada', label: 'Implementada', dot: 'bg-emerald-400',    chip: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
-  { key: 'descartada',   label: 'Descartada',   dot: 'bg-red-400/50',     chip: 'text-red-400/70 bg-red-400/5 border-red-400/15' },
+  { key: 'pendiente',    label: 'Pendiente',    dot: 'bg-[var(--text-3)]',   chip: 'text-[var(--text-3)] bg-white/5 border-white/10' },
+  { key: 'en_proceso',   label: 'En proceso',   dot: 'bg-blue-400',          chip: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+  { key: 'implementada', label: 'Implementada', dot: 'bg-emerald-400',       chip: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
+  { key: 'descartada',   label: 'Descartada',   dot: 'bg-red-400/50',        chip: 'text-red-400/70 bg-red-400/5 border-red-400/15' },
 ]
+
+const CARD = { background: 'var(--surface-0)', border: '1px solid var(--border)', borderRadius: 12 }
 
 function StatusPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -40,12 +42,13 @@ function StatusPicker({ value, onChange }: { value: string; onChange: (v: string
         {current.label}
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-36 bg-[#0c1628] border border-[#1a2d45] rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50 py-1">
+        <div className="absolute right-0 top-full mt-1.5 w-36 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50 py-1"
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
           {STATUS_LIST.map(s => (
             <button
               key={s.key}
               onClick={() => { onChange(s.key); setOpen(false) }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-white/5 ${s.key === value ? 'text-white' : 'text-[#64748b]'}`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-white/5 ${s.key === value ? 'text-white' : 'text-[var(--text-3)]'}`}
             >
               <span className={`w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
               {s.label}
@@ -94,7 +97,6 @@ export default function IdeasPage() {
     let { error } = await supabase
       .from('ideas')
       .insert({ title: title.trim(), description: desc.trim() || null, status: 'pendiente' })
-    // Si la columna description no existe todavía, reintenta sin ella
     if (error?.message.includes('description')) {
       const retry = await supabase
         .from('ideas')
@@ -142,37 +144,38 @@ export default function IdeasPage() {
         }
       />
 
-      <div className="flex-1 p-6 space-y-5 overflow-y-auto max-w-3xl mx-auto w-full">
+      <div className="flex-1 p-6 space-y-5 overflow-y-auto max-w-3xl mx-auto w-full bg-grid">
 
         {/* Caja de captura rápida */}
-        <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-2xl p-5 space-y-3">
+        <div className="p-5 space-y-3 rounded-2xl" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
           <div className="flex items-center gap-2 mb-1">
-            <Lightbulb size={14} className="text-[#f97316]" />
-            <p className="text-xs font-bold text-[#475569] uppercase tracking-widest">Nueva idea</p>
+            <Lightbulb size={14} className="text-[var(--amber)]" />
+            <p className="text-xs font-bold text-[var(--text-3)] uppercase tracking-widest">Nueva idea</p>
           </div>
           <input
             value={title}
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add() } }}
             placeholder="¿Qué se te ocurrió?"
-            className="w-full bg-transparent text-white text-base font-semibold placeholder-[#253f60] focus:outline-none"
+            className="w-full bg-transparent text-white text-base font-semibold placeholder-[var(--text-4)] focus:outline-none"
           />
           <textarea
             value={desc}
             onChange={e => setDesc(e.target.value)}
             placeholder="Detalle opcional..."
             rows={2}
-            className="w-full bg-transparent text-sm text-[#4a6080] placeholder-[#1a2d45] focus:outline-none resize-none"
+            className="w-full bg-transparent text-sm text-[var(--text-3)] placeholder-[var(--text-4)] focus:outline-none resize-none"
           />
           {addError && (
             <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{addError}</p>
           )}
-          <div className="flex items-center justify-between pt-2 border-t border-[#1a2d45]">
-            <p className="text-[10px] text-[#1e2f4a]">Enter para guardar</p>
+          <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[10px] text-[var(--text-4)]">Enter para guardar</p>
             <button
               onClick={add}
               disabled={adding || !title.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f97316] hover:bg-[#fb923c] disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-4 py-1.5 disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-colors hover:opacity-90"
+              style={{ background: 'var(--amber)' }}
             >
               <Plus size={12}/> Guardar
             </button>
@@ -188,7 +191,8 @@ export default function IdeasPage() {
             { key: 'implementada', label: `Implementadas (${counts.implementada})` },
           ].map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filter === f.key ? 'bg-[#f97316]/10 border-[#f97316]/30 text-[#f97316]' : 'bg-[#0f1d30] border-[#1a2d45] text-[#64748b] hover:text-white'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filter === f.key ? 'bg-[var(--amber-dim)] border-[var(--amber)]/30 text-[var(--amber)]' : 'text-[var(--text-3)] hover:text-white'}`}
+              style={filter === f.key ? {} : { background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               {f.label}
             </button>
           ))}
@@ -197,28 +201,29 @@ export default function IdeasPage() {
         {/* Lista */}
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="w-5 h-5 border-2 border-[#f97316] border-t-transparent rounded-full animate-spin"/>
+            <div className="w-5 h-5 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Lightbulb size={32} className="text-[#1a2d45]"/>
-            <p className="text-sm text-[#475569]">No hay ideas todavía</p>
+            <Lightbulb size={32} className="text-[var(--text-4)]"/>
+            <p className="text-sm text-[var(--text-3)]">No hay ideas todavía</p>
           </div>
         ) : (
           <div className="space-y-2">
             {filtered.map(idea => (
               <div key={idea.id}
-                className={`bg-[#0f1d30] border border-[#1a2d45] rounded-xl px-4 py-3.5 flex items-start gap-3 group hover:border-[#253f60] transition-colors ${idea.status === 'descartada' ? 'opacity-50' : ''}`}
+                className={`flex items-start gap-3 px-4 py-3.5 rounded-xl group transition-colors ${idea.status === 'descartada' ? 'opacity-50' : ''}`}
+                style={CARD}
               >
-                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${STATUS_LIST.find(s => s.key === idea.status)?.dot || 'bg-[#334155]'}`} />
+                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${STATUS_LIST.find(s => s.key === idea.status)?.dot || 'bg-[var(--text-3)]'}`} />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${idea.status === 'descartada' ? 'line-through text-[#475569]' : 'text-white'}`}>{idea.title}</p>
-                  {idea.description && <p className="text-xs text-[#4a6080] mt-1 leading-relaxed">{idea.description}</p>}
-                  <p className="text-[10px] text-[#253f60] mt-1.5">{formatRelative(idea.created_at)}</p>
+                  <p className={`text-sm font-semibold ${idea.status === 'descartada' ? 'line-through text-[var(--text-3)]' : 'text-white'}`}>{idea.title}</p>
+                  {idea.description && <p className="text-xs text-[var(--text-3)] mt-1 leading-relaxed">{idea.description}</p>}
+                  <p className="text-[10px] text-[var(--text-4)] mt-1.5">{formatRelative(idea.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <StatusPicker value={idea.status} onChange={v => setStatus(idea.id, v)} />
-                  <button onClick={() => del(idea.id)} className="p-1 text-[#1e2f4a] hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+                  <button onClick={() => del(idea.id)} className="p-1 text-[var(--text-4)] hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
                     <Trash2 size={12}/>
                   </button>
                 </div>

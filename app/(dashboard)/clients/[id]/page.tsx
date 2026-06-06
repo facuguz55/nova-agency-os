@@ -32,17 +32,23 @@ interface ClientData {
   automations: Array<{ id: string; name: string; status: string; trigger_type: string }>
 }
 
+const SECTION = {
+  background: 'var(--surface-1)',
+  border: '1px solid var(--border)',
+  borderRadius: 16,
+}
+
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [data, setData] = useState<ClientData | null>(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<ClientData['client']>>({})
-  const [saving, setSaving]       = useState(false)
+  const [saving, setSaving]           = useState(false)
   const [scorecard, setScorecard]     = useState<Scorecard | null>(null)
   const [loadingScore, setLoadingScore] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl]       = useState<string | null>(null)
   const [portal, setPortal]           = useState<Portal | null | undefined>(undefined)
   const [creatingPortal, setCreatingPortal] = useState(false)
   const [copied, setCopied]           = useState(false)
@@ -69,7 +75,7 @@ export default function ClientDetailPage() {
       fetch(`/api/clients/${id}`),
       fetch(`/api/invoices?client_id=${id}`),
     ])
-    const json   = await clientRes.json()
+    const json    = await clientRes.json()
     const invData = await invRes.json()
     setData(json)
     setForm(json.client)
@@ -166,7 +172,12 @@ export default function ClientDetailPage() {
     router.push('/clients')
   }
 
-  if (!data) return <div className="flex-1 flex items-center justify-center"><p className="text-[#475569]">Cargando...</p></div>
+  if (!data) return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+        style={{ borderColor: 'var(--amber)', borderTopColor: 'transparent' }} />
+    </div>
+  )
 
   const { client, projects, automations } = data
 
@@ -196,20 +207,21 @@ export default function ClientDetailPage() {
         }
       />
 
-      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <div className="flex-1 p-6 space-y-5 overflow-y-auto" style={{ background: 'var(--bg)' }}>
 
         {/* Foto del cliente */}
-        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-4">
-          <p className="text-xs font-semibold text-[#94a3b8] mb-3">Foto / Logo del cliente</p>
+        <div className="p-5 rounded-2xl border animate-fade-up" style={SECTION}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>
+            Foto / Logo del cliente
+          </p>
           <div className="flex items-center gap-4">
-            {/* Preview */}
-            <div className="w-20 h-20 rounded-xl border border-[#334155] bg-[#0e1a2e] overflow-hidden flex items-center justify-center flex-shrink-0">
+            <div className="w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
+              style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               {photoUrl
                 ? <img src={photoUrl} alt="foto cliente" className="w-full h-full object-cover" />
                 : <span className="text-2xl">🏢</span>
               }
             </div>
-
             <div className="flex flex-col gap-2">
               <label className="cursor-pointer">
                 <input
@@ -219,19 +231,21 @@ export default function ClientDetailPage() {
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }}
                 />
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                  uploadingPhoto
-                    ? 'border-[#334155] text-[#475569] cursor-not-allowed'
-                    : 'border-[#ff8c42]/40 text-[#ff8c42] bg-[#ff8c42]/8 hover:bg-[#ff8c42]/15'
-                }`}>
+                  uploadingPhoto ? 'opacity-40 cursor-not-allowed' : ''
+                }`}
+                  style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.08)' }}>
                   {uploadingPhoto ? '⏳ Subiendo...' : '📷 Subir foto'}
                 </span>
               </label>
               {photoUrl && (
-                <button onClick={deletePhoto} className="text-[11px] text-[#475569] hover:text-[#f87171] transition-colors text-left">
+                <button onClick={deletePhoto} className="text-[11px] text-left transition-colors"
+                  style={{ color: 'var(--text-3)' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f87171'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}>
                   Eliminar foto
                 </button>
               )}
-              <p className="text-[10px] text-[#334155] leading-tight">
+              <p className="text-[10px] leading-tight" style={{ color: 'var(--text-4)' }}>
                 Se usa como fondo sutil en los videos generados y para extraer colores de marca.
               </p>
             </div>
@@ -240,7 +254,7 @@ export default function ClientDetailPage() {
 
         {/* Scorecard IA */}
         {scorecard && (
-          <div className="bg-[#0f1d30] border border-[#1a2d45] rounded-xl p-5">
+          <div className="rounded-2xl border p-5 animate-fade-up stagger-1" style={SECTION}>
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className={cn(
@@ -253,24 +267,26 @@ export default function ClientDetailPage() {
                   {scorecard.score}
                 </div>
                 <div>
-                  <p className="text-xs text-[#64748b] uppercase tracking-widest">Scorecard IA</p>
+                  <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Scorecard IA</p>
                   <p className="text-base font-bold text-white">{scorecard.nivel}</p>
                 </div>
               </div>
-              <button onClick={() => setScorecard(null)} className="text-[#334155] hover:text-[#64748b] text-xs px-2 py-1 border border-[#1a2d45] rounded-lg">×</button>
+              <button onClick={() => setScorecard(null)}
+                className="text-xs px-2 py-1 rounded-lg transition-colors"
+                style={{ color: 'var(--text-3)', border: '1px solid var(--border)' }}>×</button>
             </div>
-            <p className="text-sm text-[#94a3b8] mb-4 leading-relaxed">{scorecard.resumen}</p>
+            <p className="text-sm mb-4 leading-relaxed" style={{ color: 'var(--text-2)' }}>{scorecard.resumen}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { label: 'Fortalezas', items: scorecard.fortalezas, color: 'text-emerald-400', dot: 'bg-emerald-400' },
-                { label: 'Riesgos', items: scorecard.riesgos, color: 'text-red-400', dot: 'bg-red-400' },
-                { label: 'Acciones', items: scorecard.acciones, color: 'text-[#f97316]', dot: 'bg-[#f97316]' },
+                { label: 'Riesgos',    items: scorecard.riesgos,    color: 'text-red-400',     dot: 'bg-red-400' },
+                { label: 'Acciones',   items: scorecard.acciones,   color: 'text-[#f97316]',   dot: 'bg-[#f97316]' },
               ].map(({ label, items, color, dot }) => (
-                <div key={label} className="bg-[#080f1e] border border-[#1a2d45] rounded-lg p-3">
+                <div key={label} className="rounded-xl p-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                   <p className={cn('text-[10px] font-bold uppercase tracking-widest mb-2', color)}>{label}</p>
                   <ul className="space-y-1.5">
                     {items?.map((item, i) => (
-                      <li key={i} className="flex gap-2 text-xs text-[#94a3b8]">
+                      <li key={i} className="flex gap-2 text-xs" style={{ color: 'var(--text-2)' }}>
                         <div className={cn('w-1.5 h-1.5 rounded-full mt-1.5 shrink-0', dot)} />
                         {item}
                       </li>
@@ -282,10 +298,10 @@ export default function ClientDetailPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Info principal */}
-          <div className="lg:col-span-2 bg-[#1e293b] border border-[#334155] rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-4">Información</h3>
+          <div className="lg:col-span-2 rounded-2xl border p-5 animate-fade-up stagger-2" style={SECTION}>
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Información</h3>
             {editing ? (
               <div className="space-y-4">
                 <Input label="Nombre" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -310,7 +326,7 @@ export default function ClientDetailPage() {
                   ['Actualizado', formatDate(client.updated_at)],
                 ].map(([k, v]) => (
                   <div key={k as string}>
-                    <dt className="text-xs text-[#475569] mb-1">{k}</dt>
+                    <dt className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>{k}</dt>
                     <dd className="text-sm text-white">
                       {k === 'Estado' ? <StatusBadge status={client.status} /> : v}
                     </dd>
@@ -318,8 +334,8 @@ export default function ClientDetailPage() {
                 ))}
                 {client.notes && (
                   <div className="col-span-2">
-                    <dt className="text-xs text-[#475569] mb-1">Notas</dt>
-                    <dd className="text-sm text-[#94a3b8] whitespace-pre-wrap">{client.notes}</dd>
+                    <dt className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>Notas</dt>
+                    <dd className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-2)' }}>{client.notes}</dd>
                   </div>
                 )}
               </dl>
@@ -327,33 +343,37 @@ export default function ClientDetailPage() {
           </div>
 
           {/* Stats */}
-          <div className="space-y-4">
-            <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-4">
-              <p className="text-xs text-[#475569] mb-1">Proyectos</p>
-              <p className="text-2xl font-bold text-white">{projects.length}</p>
-              <p className="text-xs text-[#475569]">{projects.filter(p => p.status === 'active').length} activos</p>
-            </div>
-            <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-4">
-              <p className="text-xs text-[#475569] mb-1">Automatizaciones</p>
-              <p className="text-2xl font-bold text-white">{automations.length}</p>
-              <p className="text-xs text-[#475569]">{automations.filter(a => a.status === 'active').length} activas</p>
-            </div>
+          <div className="space-y-4 animate-fade-up stagger-3">
+            {[
+              { label: 'Proyectos', value: projects.length, sub: `${projects.filter(p => p.status === 'active').length} activos` },
+              { label: 'Automatizaciones', value: automations.length, sub: `${automations.filter(a => a.status === 'active').length} activas` },
+            ].map(s => (
+              <div key={s.label} className="rounded-2xl border p-5" style={SECTION}>
+                <p className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>{s.label}</p>
+                <p className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>{s.value}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{s.sub}</p>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Proyectos */}
         {projects.length > 0 && (
-          <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-4">Proyectos</h3>
+          <div className="rounded-2xl border p-5 animate-fade-up stagger-4" style={SECTION}>
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Proyectos</h3>
             <div className="space-y-2">
               {projects.map(p => (
-                <div key={p.id} onClick={() => router.push(`/projects/${p.id}`)} className="flex items-center justify-between p-3 rounded-lg hover:bg-[#334155]/50 cursor-pointer transition-colors">
+                <div key={p.id} onClick={() => router.push(`/projects/${p.id}`)}
+                  className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hi)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}>
                   <div>
-                    <p className="text-sm font-medium text-white">{p.name}</p>
-                    <p className="text-xs text-[#475569]">{formatDate(p.created_at)}</p>
+                    <p className="text-sm font-semibold text-white">{p.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{formatDate(p.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {p.budget && <span className="text-sm text-[#94a3b8]">${p.budget.toLocaleString()}</span>}
+                    {p.budget && <span className="text-sm font-bold" style={{ color: 'var(--amber)' }}>${p.budget.toLocaleString()}</span>}
                     <StatusBadge status={p.status} />
                   </div>
                 </div>
@@ -364,14 +384,15 @@ export default function ClientDetailPage() {
 
         {/* Automatizaciones */}
         {automations.length > 0 && (
-          <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-4">Automatizaciones</h3>
+          <div className="rounded-2xl border p-5 animate-fade-up stagger-5" style={SECTION}>
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Automatizaciones</h3>
             <div className="space-y-2">
               {automations.map(a => (
-                <div key={a.id} className="flex items-center justify-between p-3 rounded-lg bg-[#0f172a]/50">
+                <div key={a.id} className="flex items-center justify-between p-3 rounded-xl"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                   <div>
-                    <p className="text-sm font-medium text-white">{a.name}</p>
-                    <p className="text-xs text-[#475569]">Trigger: {a.trigger_type}</p>
+                    <p className="text-sm font-semibold text-white">{a.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Trigger: {a.trigger_type}</p>
                   </div>
                   <StatusBadge status={a.status} />
                 </div>
@@ -386,37 +407,45 @@ export default function ClientDetailPage() {
           const porCobrar = clientInvoices.filter(i => ['pending','partial'].includes(i.status)).reduce((s, i) => s + Number(i.amount) - (i.paid_amount || 0), 0)
           const total     = clientInvoices.reduce((s, i) => s + Number(i.amount), 0)
           return (
-            <div className="bg-[#0e1a2e] border border-[#1e2f4a] rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white">Facturación</h3>
-                <span className="text-[11px] text-[#475569]">{clientInvoices.length} factura{clientInvoices.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total</span>
+            <div className="rounded-2xl border p-5 animate-fade-up stagger-6" style={SECTION}>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Facturación</h3>
+                <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                  {clientInvoices.length} factura{clientInvoices.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total
+                </span>
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Cobrado</p>
-                  <p className="text-lg font-black text-emerald-400">${cobrado.toLocaleString()}</p>
-                </div>
-                <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Por cobrar</p>
-                  <p className="text-lg font-black text-amber-400">${porCobrar.toLocaleString()}</p>
-                </div>
-                <div className="bg-[#080f1e] border border-[#1a2d45] rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-[#475569] uppercase tracking-wide mb-1">Total</p>
-                  <p className="text-lg font-black text-white">${total.toLocaleString()}</p>
-                </div>
+                {[
+                  { label: 'Cobrado',    value: cobrado,   color: '#10b981' },
+                  { label: 'Por cobrar', value: porCobrar, color: 'var(--amber)' },
+                  { label: 'Total',      value: total,     color: 'var(--text)' },
+                ].map(s => (
+                  <div key={s.label} className="rounded-xl p-3 text-center"
+                    style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                    <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-3)' }}>{s.label}</p>
+                    <p className="text-lg font-black" style={{ color: s.color, fontFamily: 'var(--font-display)' }}>
+                      ${s.value.toLocaleString()}
+                    </p>
+                  </div>
+                ))}
               </div>
               <div className="space-y-2">
                 {clientInvoices.slice(0, 5).map(inv => {
                   const resta = Math.max(0, Number(inv.amount) - (inv.paid_amount || 0))
                   return (
-                    <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 bg-[#080f1e] border border-[#1a2d45] rounded-xl">
+                    <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                      style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-[10px] font-mono text-[#334155] shrink-0">{inv.invoice_number}</span>
-                        <span className="text-xs text-[#64748b] truncate">{inv.description || 'Sin descripción'}</span>
+                        <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>
+                          {inv.invoice_number}
+                        </span>
+                        <span className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
+                          {inv.description || 'Sin descripción'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {inv.status !== 'paid' && resta > 0 && (
-                          <span className="text-[11px] text-amber-400 font-semibold">Resta ${resta.toLocaleString()}</span>
+                          <span className="text-[11px] font-semibold text-amber-400">Resta ${resta.toLocaleString()}</span>
                         )}
                         <span className="text-sm font-bold text-white">${Number(inv.amount).toLocaleString()}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
@@ -432,37 +461,42 @@ export default function ClientDetailPage() {
                 })}
               </div>
               {clientInvoices.length > 5 && (
-                <p className="text-center text-[11px] text-[#334155] mt-3">+{clientInvoices.length - 5} facturas más · Ver en Facturación</p>
+                <p className="text-center text-[11px] mt-3" style={{ color: 'var(--text-4)' }}>
+                  +{clientInvoices.length - 5} facturas más · Ver en Facturación
+                </p>
               )}
             </div>
           )
         })()}
 
         {/* Roadmap del mes */}
-        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+        <div className="rounded-2xl border p-5 animate-fade-up stagger-7" style={SECTION}>
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-semibold text-white">Roadmap del mes</h3>
-              <p className="text-xs text-[#475569] mt-0.5">Lo que vas a hacer semana a semana — visible en el portal del cliente</p>
+              <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Roadmap del mes</h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>
+                Lo que vas a hacer semana a semana — visible en el portal del cliente
+              </p>
             </div>
-            <span className="text-xs font-semibold text-[#f97316]/70 bg-[#f97316]/10 px-2.5 py-1 rounded-lg">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+              style={{ color: '#f97316', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
               {MONTH_NAMES[roadmapMonth - 1]} {roadmapYear}
             </span>
           </div>
 
           <div className="space-y-3">
             {roadmapData.map((w) => (
-              <div key={w.week} className="bg-[#0f172a] border border-[#1a2d45] rounded-xl p-4">
+              <div key={w.week} className="rounded-xl p-4" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-black text-[#f97316]"
-                    style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
+                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-black"
+                    style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)', color: '#f97316' }}>
                     S{w.week}
                   </div>
                   <input
                     value={w.title}
                     onChange={e => updateWeek(w.week, 'title', e.target.value)}
                     placeholder={`Título semana ${w.week} (ej: Desarrollo del CRM)`}
-                    className="flex-1 bg-transparent text-sm text-white placeholder-[#334155] outline-none font-medium"
+                    className="flex-1 bg-transparent text-sm text-white outline-none font-medium placeholder-[#383838]"
                   />
                 </div>
                 <textarea
@@ -470,8 +504,8 @@ export default function ClientDetailPage() {
                   onChange={e => updateWeek(w.week, 'items', e.target.value.split('\n'))}
                   placeholder="Una tarea por línea..."
                   rows={3}
-                  className="w-full px-3 py-2.5 rounded-lg text-xs text-[#94a3b8] placeholder-[#334155] outline-none resize-none"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+                  className="w-full px-3 py-2.5 rounded-lg text-xs outline-none resize-none placeholder-[#383838]"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
                 />
               </div>
             ))}
@@ -481,45 +515,43 @@ export default function ClientDetailPage() {
             onClick={saveRoadmap}
             disabled={savingRoadmap}
             className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ background: roadmapSaved ? 'rgba(52,211,153,0.2)' : '#f97316' }}
-          >
+            style={{ background: roadmapSaved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg, #f97316, #fb923c)' }}>
             {roadmapSaved ? (
-              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg> Guardado</>
+              <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Guardado</>
             ) : savingRoadmap ? 'Guardando...' : 'Guardar roadmap'}
           </button>
         </div>
 
         {/* Portal del cliente */}
-        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+        <div className="rounded-2xl border p-5 animate-fade-up stagger-8" style={SECTION}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Globe size={14} className="text-[#f97316]" />
-              <h3 className="text-sm font-semibold text-white">Portal del cliente</h3>
+              <Globe size={14} style={{ color: '#f97316' }} />
+              <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Portal del cliente</h3>
             </div>
             {portal && (
-              <a
-                href={`/portal/${portal.token}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] text-[#f97316] hover:text-[#fb923c] transition-colors"
-              >
+              <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
+                className="text-[11px] transition-colors"
+                style={{ color: '#f97316' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.7'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}>
                 Ver portal →
               </a>
             )}
           </div>
 
           {portal === undefined && (
-            <p className="text-xs text-[#475569]">Cargando...</p>
+            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Cargando...</p>
           )}
 
           {portal === null && (
             <div className="flex flex-col items-center justify-center py-6 gap-3">
-              <p className="text-sm text-[#475569]">Este cliente todavía no tiene portal.</p>
+              <p className="text-sm" style={{ color: 'var(--text-3)' }}>Este cliente todavía no tiene portal.</p>
               <button
                 onClick={createPortal}
                 disabled={creatingPortal}
-                className="flex items-center gap-2 px-4 py-2 bg-[#f97316] hover:bg-[#fb923c] disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
+                className="flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}>
                 {creatingPortal ? <Loader2 size={12} className="animate-spin" /> : <Globe size={12} />}
                 {creatingPortal ? 'Creando...' : 'Crear portal'}
               </button>
@@ -528,26 +560,24 @@ export default function ClientDetailPage() {
 
           {portal && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 p-3 bg-[#0f172a] rounded-xl border border-[#1a2d45]">
-                <a
-                  href={`/portal/${portal.token}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 text-xs text-[#94a3b8] hover:text-[#f97316] truncate transition-colors"
-                >
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
+                  className="flex-1 text-xs truncate transition-colors"
+                  style={{ color: 'var(--text-2)' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f97316'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'}>
                   {typeof window !== 'undefined' ? window.location.origin : ''}/portal/{portal.token}
                 </a>
-                <button
-                  onClick={copyPortalUrl}
-                  className="shrink-0 text-[#4a6080] hover:text-white transition-colors"
-                  title="Copiar URL"
-                >
+                <button onClick={copyPortalUrl} className="shrink-0 transition-colors"
+                  style={{ color: 'var(--text-3)' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}>
                   {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                 </button>
               </div>
-              <div className="flex items-center gap-4 text-xs text-[#475569]">
-                <span>PIN de acceso: <span className="text-white font-mono font-bold text-sm tracking-widest">{portal.pin}</span></span>
-                <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold', portal.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400')}>
+              <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text-3)' }}>
+                <span>PIN: <span className="text-white font-mono font-bold text-sm tracking-widest">{portal.pin}</span></span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${portal.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
                   {portal.active ? 'Activo' : 'Inactivo'}
                 </span>
               </div>

@@ -13,6 +13,8 @@ interface TKMetric { id: string; followers: number; engagement_rate: number | nu
 
 type Platform = 'instagram' | 'youtube' | 'tiktok'
 
+const PANEL = { background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12 }
+
 export default function MetricsPage() {
   usePageTitle('Métricas')
   const [ig, setIg] = useState<IGMetric[]>([])
@@ -133,20 +135,19 @@ export default function MetricsPage() {
       <Header
         title="Métricas"
         subtitle="Redes sociales — datos on-demand"
-        actions={
-          <Button variant="secondary" onClick={loadAll} size="sm">↻ Actualizar</Button>
-        }
+        actions={<Button variant="secondary" onClick={loadAll} size="sm">↻ Actualizar</Button>}
       />
 
       <div className="flex-1 p-6 space-y-6 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-16"><p className="text-[#475569] text-sm">Cargando...</p></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
+          </div>
         ) : (
           <>
-            {/* Tarjetas principales */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {platforms.map(p => (
-                <div key={p.key} className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+              {platforms.map((p, i) => (
+                <div key={p.key} className="animate-fade-up" style={{ ...PANEL, padding: '20px', animationDelay: `${i * 0.07}s` }}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 bg-gradient-to-br ${p.gradient} rounded-lg flex items-center justify-center text-xs font-bold text-white`}>
@@ -154,9 +155,7 @@ export default function MetricsPage() {
                       </div>
                       <h3 className="text-sm font-semibold text-white">{p.name}</h3>
                     </div>
-                    <Button size="sm" variant="secondary" onClick={() => setModal(p.key)}>
-                      + Cargar
-                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => setModal(p.key)}>+ Cargar</Button>
                   </div>
 
                   {p.data ? (
@@ -164,68 +163,69 @@ export default function MetricsPage() {
                       <div className="space-y-3">
                         {p.metrics.map(m => (
                           <div key={m.label} className="flex justify-between items-center">
-                            <span className="text-xs text-[#475569]">{m.label}</span>
+                            <span className="text-xs text-[var(--text-3)]">{m.label}</span>
                             <span className="text-sm font-semibold text-white">{m.value}</span>
                           </div>
                         ))}
                       </div>
-                      <p className="text-xs text-[#334155] mt-3">
+                      <p className="text-xs text-[var(--text-4)] mt-3">
                         Actualizado: {formatDate(p.data.timestamp)}
                       </p>
                     </>
                   ) : (
                     <div className="py-4 text-center">
-                      <p className="text-sm text-[#475569]">Sin datos</p>
-                      <p className="text-xs text-[#334155] mt-1">Cargá métricas manualmente</p>
+                      <p className="text-sm text-[var(--text-3)]">Sin datos</p>
+                      <p className="text-xs text-[var(--text-4)] mt-1">Cargá métricas manualmente</p>
                     </div>
                   )}
                 </div>
               ))}
             </div>
 
-            {/* Historial por plataforma */}
             {platforms.map(p => p.history.length > 1 && (
-              <div key={p.key + '_hist'} className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-white mb-4">{p.name} — Historial</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[#334155]">
-                        <th className="text-left py-2 px-3 text-xs text-[#475569]">Fecha</th>
-                        {p.key === 'instagram' && <>
-                          <th className="text-right py-2 px-3 text-xs text-[#475569]">Seguidores</th>
-                          <th className="text-right py-2 px-3 text-xs text-[#475569]">Engagement</th>
-                        </>}
-                        {p.key === 'youtube' && <>
-                          <th className="text-right py-2 px-3 text-xs text-[#475569]">Suscriptores</th>
-                          <th className="text-right py-2 px-3 text-xs text-[#475569]">Vistas</th>
-                        </>}
-                        {p.key === 'tiktok' && <>
-                          <th className="text-right py-2 px-3 text-xs text-[#475569]">Seguidores</th>
-                          <th className="text-right py-2 px-3 text-xs text-[#475569]">Engagement</th>
-                        </>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p.history.slice(0, 10).map((h: { id: string; timestamp: string; followers?: number; subscribers?: number; views?: number; engagement_rate?: number | null }) => (
-                        <tr key={h.id} className="border-b border-[#334155]/30 last:border-0">
-                          <td className="py-2 px-3 text-xs text-[#475569]">{formatDate(h.timestamp)}</td>
+              <div key={p.key + '_hist'} className="animate-fade-up" style={PANEL}>
+                <div style={{ padding: '20px' }}>
+                  <h3 className="text-sm font-semibold text-white mb-4">{p.name} — Historial</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                          <th className="text-left py-2 px-3 text-xs text-[var(--text-3)]">Fecha</th>
                           {p.key === 'instagram' && <>
-                            <td className="py-2 px-3 text-right text-white">{formatNumber((h as IGMetric).followers)}</td>
-                            <td className="py-2 px-3 text-right text-[#94a3b8]">{(h as IGMetric).engagement_rate ? `${(h as IGMetric).engagement_rate}%` : '—'}</td>
+                            <th className="text-right py-2 px-3 text-xs text-[var(--text-3)]">Seguidores</th>
+                            <th className="text-right py-2 px-3 text-xs text-[var(--text-3)]">Engagement</th>
                           </>}
                           {p.key === 'youtube' && <>
-                            <td className="py-2 px-3 text-right text-white">{formatNumber((h as YTMetric).subscribers)}</td>
-                            <td className="py-2 px-3 text-right text-[#94a3b8]">{formatNumber((h as YTMetric).views)}</td>
+                            <th className="text-right py-2 px-3 text-xs text-[var(--text-3)]">Suscriptores</th>
+                            <th className="text-right py-2 px-3 text-xs text-[var(--text-3)]">Vistas</th>
                           </>}
                           {p.key === 'tiktok' && <>
-                            <td className="py-2 px-3 text-right text-white">{formatNumber((h as TKMetric).followers)}</td>
-                            <td className="py-2 px-3 text-right text-[#94a3b8]">{(h as TKMetric).engagement_rate ? `${(h as TKMetric).engagement_rate}%` : '—'}</td>
+                            <th className="text-right py-2 px-3 text-xs text-[var(--text-3)]">Seguidores</th>
+                            <th className="text-right py-2 px-3 text-xs text-[var(--text-3)]">Engagement</th>
                           </>}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {p.history.slice(0, 10).map((h: { id: string; timestamp: string; followers?: number; subscribers?: number; views?: number; engagement_rate?: number | null }) => (
+                          <tr key={h.id} className="last:border-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <td className="py-2 px-3 text-xs text-[var(--text-3)]">{formatDate(h.timestamp)}</td>
+                            {p.key === 'instagram' && <>
+                              <td className="py-2 px-3 text-right text-white">{formatNumber((h as IGMetric).followers)}</td>
+                              <td className="py-2 px-3 text-right text-[var(--text-2)]">{(h as IGMetric).engagement_rate ? `${(h as IGMetric).engagement_rate}%` : '—'}</td>
+                            </>}
+                            {p.key === 'youtube' && <>
+                              <td className="py-2 px-3 text-right text-white">{formatNumber((h as YTMetric).subscribers)}</td>
+                              <td className="py-2 px-3 text-right text-[var(--text-2)]">{formatNumber((h as YTMetric).views)}</td>
+                            </>}
+                            {p.key === 'tiktok' && <>
+                              <td className="py-2 px-3 text-right text-white">{formatNumber((h as TKMetric).followers)}</td>
+                              <td className="py-2 px-3 text-right text-[var(--text-2)]">{(h as TKMetric).engagement_rate ? `${(h as TKMetric).engagement_rate}%` : '—'}</td>
+                            </>}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             ))}
@@ -233,7 +233,6 @@ export default function MetricsPage() {
         )}
       </div>
 
-      {/* Modal Instagram */}
       <Modal open={modal === 'instagram'} onClose={() => setModal(null)} title="Cargar métricas Instagram">
         <div className="space-y-4">
           <Input label="Seguidores *" value={igForm.followers} onChange={e => setIgForm(f => ({ ...f, followers: e.target.value }))} type="number" placeholder="10000" />
@@ -247,7 +246,6 @@ export default function MetricsPage() {
         </div>
       </Modal>
 
-      {/* Modal YouTube */}
       <Modal open={modal === 'youtube'} onClose={() => setModal(null)} title="Cargar métricas YouTube">
         <div className="space-y-4">
           <Input label="Suscriptores *" value={ytForm.subscribers} onChange={e => setYtForm(f => ({ ...f, subscribers: e.target.value }))} type="number" placeholder="5000" />
@@ -260,7 +258,6 @@ export default function MetricsPage() {
         </div>
       </Modal>
 
-      {/* Modal TikTok */}
       <Modal open={modal === 'tiktok'} onClose={() => setModal(null)} title="Cargar métricas TikTok">
         <div className="space-y-4">
           <Input label="Seguidores *" value={tkForm.followers} onChange={e => setTkForm(f => ({ ...f, followers: e.target.value }))} type="number" placeholder="8000" />

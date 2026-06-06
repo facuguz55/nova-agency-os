@@ -61,8 +61,8 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
         onClick={() => setOpen(o => !o)}
         title={collapsed ? 'Alertas de tareas' : undefined}
         className={cn(
-          'flex items-center gap-3 rounded-xl text-sm text-[#334155]',
-          'hover:bg-[#ff8c42]/10 hover:text-[#ff8c42] transition-all w-full group',
+          'flex items-center gap-3 rounded-xl text-sm text-[var(--text-4)]',
+          'hover:bg-[var(--amber-dim)] hover:text-[var(--amber)] transition-all w-full group',
           collapsed ? 'px-0 py-3 justify-center' : 'px-3 py-2.5',
         )}
       >
@@ -87,20 +87,22 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
       </button>
 
       {open && (
-        // Abre a la DERECHA del sidebar para no salirse de pantalla
-        <div className="absolute left-full bottom-0 ml-2 z-[100] w-72 bg-[#0a1525] border border-[#1e2f4a] rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,.7)] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#1e2f4a] flex items-center justify-between">
+        <div
+          className="absolute left-full bottom-0 ml-2 z-[100] w-72 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,.7)] overflow-hidden"
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}
+        >
+          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
             <p className="text-xs font-semibold text-white">Recordatorios</p>
-            <button onClick={() => setOpen(false)} className="text-[#334155] hover:text-white text-xs">✕</button>
+            <button onClick={() => setOpen(false)} className="text-[var(--text-4)] hover:text-white text-xs">✕</button>
           </div>
 
           {!hasAny ? (
             <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <Bell size={20} className="text-[#1e2f4a]" />
-              <p className="text-xs text-[#334155]">Sin alertas pendientes</p>
+              <Bell size={20} className="text-[var(--border)]" />
+              <p className="text-xs text-[var(--text-4)]">Sin alertas pendientes</p>
             </div>
           ) : (
-            <div className="max-h-[60vh] overflow-y-auto divide-y divide-[#1e2f4a]/50">
+            <div className="max-h-[60vh] overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
               {overdue.length > 0 && (
                 <div className="p-3 bg-red-500/5">
                   <div className="flex items-center gap-1.5 mb-2">
@@ -111,7 +113,7 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
                     {overdue.map(t => (
                       <Link key={t.id} href="/tasks" onClick={() => setOpen(false)}
                         className="flex items-center justify-between hover:bg-red-500/10 rounded-lg px-2 py-1.5 transition-colors group">
-                        <span className="text-xs text-[#94a3b8] group-hover:text-white truncate pr-2">{t.title}</span>
+                        <span className="text-xs text-[var(--text-2)] group-hover:text-white truncate pr-2">{t.title}</span>
                         <span className="text-[10px] text-red-400 shrink-0">{t.due_date}</span>
                       </Link>
                     ))}
@@ -129,7 +131,7 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
                     {today.map(t => (
                       <Link key={t.id} href="/tasks" onClick={() => setOpen(false)}
                         className="flex items-center justify-between hover:bg-orange-500/10 rounded-lg px-2 py-1.5 transition-colors group">
-                        <span className="text-xs text-[#94a3b8] group-hover:text-white truncate">{t.title}</span>
+                        <span className="text-xs text-[var(--text-2)] group-hover:text-white truncate">{t.title}</span>
                       </Link>
                     ))}
                   </div>
@@ -139,15 +141,15 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
               {soon.length > 0 && (
                 <div className="p-3">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <CalendarDays size={11} className="text-[#64748b]" />
-                    <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest">Próx. 7 días · {soon.length}</p>
+                    <CalendarDays size={11} className="text-[var(--text-3)]" />
+                    <p className="text-[10px] font-semibold text-[var(--text-3)] uppercase tracking-widest">Próx. 7 días · {soon.length}</p>
                   </div>
                   <div className="space-y-1">
                     {soon.map(t => (
                       <Link key={t.id} href="/tasks" onClick={() => setOpen(false)}
                         className="flex items-center justify-between hover:bg-white/[.03] rounded-lg px-2 py-1.5 transition-colors group">
-                        <span className="text-xs text-[#94a3b8] group-hover:text-white truncate pr-2">{t.title}</span>
-                        <span className="text-[10px] text-[#475569] shrink-0">{t.due_date}</span>
+                        <span className="text-xs text-[var(--text-2)] group-hover:text-white truncate pr-2">{t.title}</span>
+                        <span className="text-[10px] text-[var(--text-3)] shrink-0">{t.due_date}</span>
                       </Link>
                     ))}
                   </div>
@@ -156,8 +158,8 @@ export default function TaskAlerts({ collapsed }: TaskAlertsProps) {
             </div>
           )}
 
-          <div className="border-t border-[#1e2f4a] px-4 py-2.5">
-            <Link href="/tasks" onClick={() => setOpen(false)} className="text-[11px] text-[#475569] hover:text-[#ff8c42] transition-colors font-medium">
+          <div className="px-4 py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+            <Link href="/tasks" onClick={() => setOpen(false)} className="text-[11px] text-[var(--text-3)] hover:text-[var(--amber)] transition-colors font-medium">
               Ver todas las tareas →
             </Link>
           </div>

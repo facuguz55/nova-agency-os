@@ -13,6 +13,8 @@ interface Server {
   status: string; last_check: string | null; created_at: string
 }
 
+const CARD = { background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12 }
+
 export default function ServersPage() {
   usePageTitle('Servidores')
   const [servers, setServers] = useState<Server[]>([])
@@ -63,39 +65,41 @@ export default function ServersPage() {
 
       <div className="flex-1 p-6 space-y-4">
         {loading ? (
-          <div className="flex items-center justify-center py-16"><p className="text-[#475569] text-sm">Cargando...</p></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="w-6 h-6 border-2 border-[var(--amber)] border-t-transparent rounded-full animate-spin"/>
+          </div>
         ) : servers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <p className="text-[#475569] text-sm">No hay servidores registrados</p>
+            <p className="text-[var(--text-3)] text-sm">No hay servidores registrados</p>
             <Button onClick={() => setShowModal(true)} size="sm">Agregar servidor</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {servers.map(s => (
-              <div key={s.id} className="bg-[#1e293b] border border-[#334155] rounded-xl p-5">
+            {servers.map((s, i) => (
+              <div key={s.id} className="animate-fade-up" style={{ ...CARD, padding: '20px', animationDelay: `${i * 0.06}s` }}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="text-sm font-semibold text-white">{s.name}</h3>
-                    <p className="text-xs text-[#475569] mt-0.5 font-mono">{s.host}:{s.port}</p>
+                    <p className="text-xs text-[var(--text-3)] mt-0.5 font-mono">{s.host}:{s.port}</p>
                   </div>
                   <StatusBadge status={s.status} />
                 </div>
 
                 <div className="flex items-center justify-between mt-4">
-                  <span className="text-xs text-[#334155]">
+                  <span className="text-xs text-[var(--text-4)]">
                     {s.last_check ? `Último check: ${formatDate(s.last_check)}` : 'Sin verificar'}
                   </span>
                   <button
                     onClick={() => ping(s)}
-                    className="text-xs px-2 py-1 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
+                    className="text-xs px-2 py-1 text-white rounded-lg transition-colors hover:bg-white/[.07]"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                   >
                     Ping
                   </button>
                 </div>
 
-                {/* SSH placeholder */}
-                <div className="mt-3 p-2 bg-[#0f172a] rounded-lg border border-[#334155]">
-                  <p className="text-xs text-[#475569] flex items-center gap-1.5">
+                <div className="mt-3 p-2 rounded-lg" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                  <p className="text-xs text-[var(--text-3)] flex items-center gap-1.5">
                     <span className="text-orange-400">⚠</span>
                     SSH requiere aprobación HIGH — próximamente
                   </p>
