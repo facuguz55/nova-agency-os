@@ -10,6 +10,10 @@ interface Task {
   id: string; title: string; priority: string; status: string; due_date: string
   projects: { name: string } | null
 }
+interface Invoice {
+  id: string; invoice_number: string; amount: number; status: string
+  description: string | null; due_date: string | null; clients: { name: string } | null
+}
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
@@ -26,15 +30,20 @@ const PRIORITY_DOT: Record<string, string> = {
 
 export default function CalendarPage() {
   usePageTitle('Calendario')
-  const [tasks, setTasks]     = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
-  const [date, setDate]       = useState(new Date())
-  const [selected, setSelected] = useState<number | null>(null)
+  const [tasks, setTasks]         = useState<Task[]>([])
+  const [invoices, setInvoices]   = useState<Invoice[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [date, setDate]           = useState(new Date())
+  const [selected, setSelected]   = useState<number | null>(null)
 
   useEffect(() => {
-    fetch('/api/tasks')
-      .then(r => r.json())
-      .then(d => { setTasks(d.tasks || []); setLoading(false) })
+    Promise.all([fetch('/api/tasks'), fetch('/api/invoices')])
+      .then(([tRes, iRes]) => Promise.all([tRes.json(), iRes.json()]))
+      .then(([t, i]) => {
+        setTasks(t.tasks || [])
+        setInvoices((i.invoices || []).filter((inv: Invoice) => inv.due_date))
+        setLoading(false)
+      })
   }, [])
 
   const year  = date.getFullYear()
@@ -55,16 +64,26 @@ export default function CalendarPage() {
     return tasks.filter(t => t.due_date?.startsWith(d) && t.status !== 'done')
   }
 
+  function invoicesForDay(day: number) {
+    const d = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return invoices.filter(i => i.due_date?.startsWith(d) && i.status !== 'paid')
+  }
+
   function isToday(day: number) {
     const now = new Date()
     return now.getFullYear() === year && now.getMonth() === month && now.getDate() === day
   }
 
-  const selectedTasks = selected ? tasksForDay(selected) : []
+  const selectedTasks    = selected ? tasksForDay(selected) : []
+  const selectedInvoices = selected ? invoicesForDay(selected) : []
   const upcoming = tasks
     .filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) >= new Date())
     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
     .slice(0, 10)
+  const upcomingInvoices = invoices
+    .filter(i => i.due_date && i.status !== 'paid' && new Date(i.due_date!) >= new Date())
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+    .slice(0, 5)
 
   return (
     <>
@@ -121,9 +140,10 @@ export default function CalendarPage() {
                   )}/>
                 )
 
-                const dayTasks  = tasksForDay(day)
-                const today     = isToday(day)
-                const isSel     = selected === day
+                const dayTasks    = tasksForDay(day)
+                const dayInvoices = invoicesForDay(day)
+                const today       = isToday(day)
+                const isSel       = selected === day
 
                 return (
                   <button
@@ -146,9 +166,9 @@ export default function CalendarPage() {
                       {day}
                     </span>
 
-                    {/* Tareas */}
+                    {/* Tareas + Facturas */}
                     <div className="flex flex-col gap-0.5 w-full overflow-hidden">
-                      {dayTasks.slice(0, 3).map(t => (
+                      {dayTasks.slice(0, 2).map(t => (
                         <div key={t.id} className={cn(
                           'text-[10px] px-1.5 py-0.5 rounded border truncate leading-tight',
                           PRIORITY_COLOR[t.priority] || PRIORITY_COLOR.low,
@@ -156,8 +176,13 @@ export default function CalendarPage() {
                           {t.title}
                         </div>
                       ))}
-                      {dayTasks.length > 3 && (
-                        <span className="text-[9px] text-[#334155] px-1">+{dayTasks.length - 3} más</span>
+                      {dayInvoices.slice(0, 1).map(i => (
+                        <div key={i.id} className="text-[10px] px-1.5 py-0.5 rounded border truncate leading-tight bg-emerald-500/10 text-emerald-300 border-emerald-500/20">
+                          💰 {i.clients?.name || i.invoice_number}
+                        </div>
+                      ))}
+                      {(dayTasks.length + dayInvoices.length) > 3 && (
+                        <span className="text-[9px] text-[#334155] px-1">+{dayTasks.length + dayInvoices.length - 3} más</span>
                       )}
                     </div>
                   </button>
@@ -180,8 +205,8 @@ export default function CalendarPage() {
                 <p className="text-xs font-semibold text-white mb-3 capitalize">
                   {new Date(year, month, selected).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
-                {selectedTasks.length === 0 ? (
-                  <p className="text-xs text-[#334155]">Sin tareas para este día</p>
+                {selectedTasks.length === 0 && selectedInvoices.length === 0 ? (
+                  <p className="text-xs text-[#334155]">Sin eventos para este día</p>
                 ) : (
                   <div className="space-y-2">
                     {selectedTasks.map(t => (
@@ -193,19 +218,28 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     ))}
+                    {selectedInvoices.map(i => (
+                      <div key={i.id} className="flex items-start gap-2 p-2 bg-emerald-500/5 rounded-xl border border-emerald-500/20">
+                        <span className="text-xs mt-0.5 shrink-0">💰</span>
+                        <div className="min-w-0">
+                          <p className="text-xs text-emerald-300 truncate">{i.clients?.name || i.invoice_number}</p>
+                          <p className="text-[10px] text-emerald-400/60 mt-0.5">${Number(i.amount).toLocaleString()} · vence hoy</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Próximas tareas */}
+          {/* Próximas tareas + facturas */}
           <div className="flex-1 overflow-y-auto p-4">
             <p className="text-[9px] font-semibold text-[#1e3a5f] uppercase tracking-widest mb-3">Próximas tareas</p>
-            {upcoming.length === 0 ? (
+            {upcoming.length === 0 && upcomingInvoices.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
                 <CalendarDays size={20} className="text-[#1e2f4a]"/>
-                <p className="text-xs text-[#334155] text-center">Sin tareas próximas</p>
+                <p className="text-xs text-[#334155] text-center">Sin eventos próximos</p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -222,6 +256,23 @@ export default function CalendarPage() {
                     </div>
                   )
                 })}
+                {upcomingInvoices.length > 0 && (
+                  <>
+                    <p className="text-[9px] font-semibold text-[#1e3a5f] uppercase tracking-widest mt-3 mb-2">Facturas por vencer</p>
+                    {upcomingInvoices.map(i => {
+                      const d = new Date(i.due_date!)
+                      return (
+                        <div key={i.id} className="flex items-center gap-2 py-2 border-b border-[#1e2f4a]/30 last:border-0">
+                          <span className="text-[10px] shrink-0">💰</span>
+                          <p className="text-xs text-emerald-400/80 truncate flex-1">{i.clients?.name || i.invoice_number}</p>
+                          <span className="text-[10px] text-emerald-500/60 shrink-0">
+                            {d.toLocaleDateString('es', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -181,6 +181,24 @@ export default function TasksPage() {
     load()
   }
 
+  const [dragOver, setDragOver] = useState<Task['status'] | null>(null)
+
+  function onDragStart(e: React.DragEvent, taskId: string) {
+    e.dataTransfer.setData('taskId', taskId)
+  }
+
+  function onDrop(e: React.DragEvent, status: Task['status']) {
+    e.preventDefault()
+    const taskId = e.dataTransfer.getData('taskId')
+    if (taskId) moveTask(taskId, status)
+    setDragOver(null)
+  }
+
+  function onDragOver(e: React.DragEvent, status: Task['status']) {
+    e.preventDefault()
+    setDragOver(status)
+  }
+
   const byStatus = (status: Task['status']) => tasks.filter(t => t.status === status)
   const dueSoon  = useMemo(
     () => tasks.filter(t => t.due_date && t.status !== 'done' && new Date(t.due_date) <= new Date(Date.now() + 3 * 86400000)),
@@ -221,7 +239,13 @@ export default function TasksPage() {
         ) : view === 'kanban' ? (
           <div className="grid grid-cols-4 gap-4 min-h-[60vh]">
             {COLUMNS.map(col => (
-              <div key={col.key} className="flex flex-col gap-3">
+              <div
+                key={col.key}
+                className="flex flex-col gap-3"
+                onDragOver={e => onDragOver(e, col.key)}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={e => onDrop(e, col.key)}
+              >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className={cn('w-1.5 h-1.5 rounded-full', col.dot)} />
@@ -230,12 +254,17 @@ export default function TasksPage() {
                   <span className="text-xs text-[#334155] bg-[#0e1a2e] border border-[#1e2f4a] rounded-full px-2 py-0.5">{byStatus(col.key).length}</span>
                 </div>
 
-                <div className="flex flex-col gap-2 min-h-[200px]">
+                <div className={cn(
+                  'flex flex-col gap-2 min-h-[200px] rounded-xl transition-colors',
+                  dragOver === col.key && 'bg-[#ff8c42]/5 ring-1 ring-[#ff8c42]/20',
+                )}>
                   {byStatus(col.key).map(task => (
                     <div
                       key={task.id}
+                      draggable
+                      onDragStart={e => onDragStart(e, task.id)}
                       onClick={() => openEdit(task)}
-                      className="bg-[#0e1a2e] border border-[#1e2f4a] hover:border-[#2a4166] rounded-xl p-3 group transition-all cursor-pointer"
+                      className="bg-[#0e1a2e] border border-[#1e2f4a] hover:border-[#2a4166] rounded-xl p-3 group transition-all cursor-grab active:cursor-grabbing active:opacity-70 active:scale-95"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-sm font-medium text-white leading-snug flex-1">{task.title}</p>

@@ -44,10 +44,10 @@ function parseMarkdown(text: string): string {
 }
 
 const SUGGESTIONS = [
-  '¿Cuántos clientes activos tenemos?',
-  '¿Qué proyectos están en curso?',
-  'Mostrá las últimas métricas de Instagram',
-  '¿Hay workflows fallando en n8n?',
+  'Creá un cliente nuevo llamado Marca X',
+  'Creá una tarea urgente: revisar propuesta mañana',
+  '¿Cuántos proyectos activos tenemos?',
+  'Creá una factura de $50.000 para el cliente actual',
 ]
 
 export default function ChatPage() {

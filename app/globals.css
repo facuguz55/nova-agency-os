@@ -2,17 +2,17 @@
 
 /* ─── TOKENS ─────────────────────────────────────────── */
 :root {
-  --bg:        #080f1e;
-  --surface:   #0c1628;
-  --card:      #0f1d30;
-  --border:    #1a2d45;
-  --border-hi: #253f60;
+  --bg:        #030712;
+  --surface:   #080f1e;
+  --card:      #0c1628;
+  --border:    #152236;
+  --border-hi: #1e3352;
   --orange:    #f97316;
   --orange-hi: #fb923c;
   --purple:    #a855f7;
   --text:      #e2e8f0;
   --muted:     #64748b;
-  --dim:       #334155;
+  --dim:       #2d4263;
 }
 
 /* ─── LIGHT MODE (invert trick) ────────────────────────── */

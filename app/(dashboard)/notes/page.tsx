@@ -6,7 +6,7 @@ import Header from '@/components/layout/Header'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatRelative } from '@/lib/utils'
-import { Plus, Search, FileText, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Search, FileText, Trash2, Edit2, Sparkles } from 'lucide-react'
 
 interface Note {
   id: string; title: string; content: string | null
@@ -27,7 +27,28 @@ export default function NotesPage() {
   const [editing, setEditing] = useState<Note | null>(null)
   const [form, setForm]       = useState({ title: '', content: '', project_id: '', client_id: '' })
   const [saving, setSaving]   = useState(false)
-  const [active, setActive]   = useState<Note | null>(null)
+  const [active, setActive]       = useState<Note | null>(null)
+  const [aiPrompt, setAiPrompt]   = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [showAI, setShowAI]       = useState(false)
+
+  async function generateAINote() {
+    if (!aiPrompt.trim()) return
+    setAiLoading(true)
+    try {
+      const res  = await fetch('/api/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `Generá una nota estructurada sobre: ${aiPrompt}. Incluí puntos clave, acciones y contexto relevante.` }),
+      })
+      const { response } = await res.json()
+      setForm(f => ({ ...f, title: aiPrompt.slice(0, 60), content: response }))
+      setAiPrompt('')
+      setShowAI(false)
+      setEditing(null)
+      setShowModal(true)
+    } catch { /* ignore */ }
+    setAiLoading(false)
+  }
 
   async function load() {
     setLoading(true)
@@ -82,8 +103,35 @@ export default function NotesPage() {
       <Header
         title="Notas"
         subtitle={`${notes.length} nota${notes.length !== 1 ? 's' : ''}`}
-        actions={<Button onClick={() => { setEditing(null); setForm({ title: '', content: '', project_id: '', client_id: '' }); setShowModal(true) }} size="sm"><Plus size={13}/> Nueva nota</Button>}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setShowAI(a => !a)}>
+              <Sparkles size={13}/> Nota con IA
+            </Button>
+            <Button onClick={() => { setEditing(null); setForm({ title: '', content: '', project_id: '', client_id: '' }); setShowModal(true) }} size="sm">
+              <Plus size={13}/> Nueva nota
+            </Button>
+          </div>
+        }
       />
+
+      {showAI && (
+        <div className="shrink-0 mx-6 mb-0 mt-3 p-4 bg-[#0c1628] border border-[#f97316]/20 rounded-2xl flex items-center gap-3">
+          <Sparkles size={16} className="text-[#f97316] shrink-0" />
+          <input
+            autoFocus
+            value={aiPrompt}
+            onChange={e => setAiPrompt(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') generateAINote(); if (e.key === 'Escape') setShowAI(false) }}
+            placeholder="¿Sobre qué querés que Nova genere la nota?"
+            className="flex-1 bg-transparent text-sm text-white placeholder-[#334155] outline-none"
+          />
+          <Button size="sm" onClick={generateAINote} disabled={aiLoading || !aiPrompt.trim()}>
+            {aiLoading ? 'Generando...' : 'Generar'}
+          </Button>
+          <button onClick={() => setShowAI(false)} className="text-[#334155] hover:text-white text-xs">✕</button>
+        </div>
+      )}
 
       <div className="flex-1 flex overflow-hidden bg-grid">
         {/* Lista */}
