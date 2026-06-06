@@ -8,9 +8,9 @@
   --surface-1:   #111111;
   --surface-2:   #181818;
   --surface-3:   #202020;
-  --border:      rgba(255,255,255,0.09);
-  --border-hi:   rgba(255,255,255,0.16);
-  --border-focus: rgba(245,158,11,0.4);
+  --border:      rgba(255,255,255,0.13);
+  --border-hi:   rgba(255,255,255,0.20);
+  --border-focus: rgba(245,158,11,0.45);
   --amber:       #f59e0b;
   --amber-hi:    #fbbf24;
   --amber-dim:   rgba(245,158,11,0.15);
