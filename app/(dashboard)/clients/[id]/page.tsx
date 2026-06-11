@@ -1,12 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import { formatDate, cn } from '@/lib/utils'
-import { Sparkles, Loader2, Globe, Copy, Check } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie,
+} from 'recharts'
+import {
+  Sparkles, Loader2, Globe, Copy, Check, FolderKanban, Zap,
+  DollarSign, Clock, CalendarDays, BarChart3, PieChart as PieIcon,
+} from 'lucide-react'
 
 interface Portal { id: string; token: string; pin: string; active: boolean; created_at: string }
 interface RoadmapWeek { id?: string; week: number; title: string; items: string[] }
@@ -19,6 +25,7 @@ interface Scorecard {
 interface ClientInvoice {
   id: string; invoice_number: string; amount: number; status: string
   description: string | null; due_date: string | null; paid_at: string | null
+  created_at: string
   paid_amount?: number
 }
 
@@ -32,10 +39,25 @@ interface ClientData {
   automations: Array<{ id: string; name: string; status: string; trigger_type: string }>
 }
 
-const SECTION = {
-  background: 'var(--surface-1)',
-  border: '1px solid var(--border)',
-  borderRadius: 16,
+const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+const PROJECT_COLOR: Record<string, string> = {
+  active: '#10b981', planning: '#3b82f6', completed: '#616161', paused: '#f59e0b',
+}
+const PROJECT_LABEL: Record<string, string> = {
+  active: 'Activos', planning: 'Planning', completed: 'Completados', paused: 'Pausados',
+}
+
+function TooltipChart({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-xl px-3 py-2 text-xs shadow-2xl" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.15)' }}>
+      <p className="mb-1 font-semibold text-white">{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color }} className="font-medium">{p.name}: ${Number(p.value).toLocaleString('es-AR')}</p>
+      ))}
+    </div>
+  )
 }
 
 export default function ClientDetailPage() {
@@ -172,6 +194,40 @@ export default function ClientDetailPage() {
     router.push('/clients')
   }
 
+  // ── Datos para gráficos ──────────────────────────────────
+  const invoiceStats = useMemo(() => {
+    const cobrado = clientInvoices.reduce((s, i) => s + (i.status === 'paid' ? Number(i.amount) : (i.paid_amount || 0)), 0)
+    const resta = (i: ClientInvoice) => Math.max(0, Number(i.amount) - (i.paid_amount || 0))
+    const pendiente = clientInvoices.filter(i => ['pending', 'partial'].includes(i.status)).reduce((s, i) => s + resta(i), 0)
+    const vencido = clientInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + resta(i), 0)
+    const total = clientInvoices.reduce((s, i) => s + Number(i.amount), 0)
+    return { cobrado, pendiente, vencido, total }
+  }, [clientInvoices])
+
+  const revenueByMonth = useMemo(() => {
+    const end = new Date()
+    const buckets = []
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(end.getFullYear(), end.getMonth() - i, 1)
+      const list = clientInvoices.filter(inv => {
+        const dd = new Date(inv.due_date || inv.created_at)
+        return dd.getFullYear() === d.getFullYear() && dd.getMonth() === d.getMonth()
+      })
+      buckets.push({
+        label: MONTHS_SHORT[d.getMonth()],
+        Cobrado: list.reduce((s, inv) => s + (inv.status === 'paid' ? Number(inv.amount) : (inv.paid_amount || 0)), 0),
+        Pendiente: list.filter(inv => inv.status !== 'paid').reduce((s, inv) => s + Math.max(0, Number(inv.amount) - (inv.paid_amount || 0)), 0),
+      })
+    }
+    return buckets
+  }, [clientInvoices])
+
+  const invoiceDonut = useMemo(() => [
+    { name: 'Cobrado', value: invoiceStats.cobrado, color: '#34d399' },
+    { name: 'Pendiente', value: invoiceStats.pendiente, color: '#fbbf24' },
+    { name: 'Vencido', value: invoiceStats.vencido, color: '#f87171' },
+  ].filter(d => d.value > 0), [invoiceStats])
+
   if (!data) return (
     <div className="flex-1 flex items-center justify-center">
       <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
@@ -180,6 +236,13 @@ export default function ClientDetailPage() {
   )
 
   const { client, projects, automations } = data
+
+  const projectDonut = Object.entries(
+    projects.reduce<Record<string, number>>((acc, p) => { acc[p.status] = (acc[p.status] || 0) + 1; return acc }, {})
+  ).map(([status, count]) => ({ name: PROJECT_LABEL[status] || status, value: count, color: PROJECT_COLOR[status] || '#444' }))
+
+  const diasComoCliente = Math.floor((Date.now() - new Date(client.created_at).getTime()) / 86400000)
+  const hasRevenueData = revenueByMonth.some(b => b.Cobrado > 0 || b.Pendiente > 0)
 
   return (
     <>
@@ -209,52 +272,72 @@ export default function ClientDetailPage() {
 
       <div className="flex-1 p-6 space-y-5 overflow-y-auto" style={{ background: 'var(--bg)' }}>
 
-        {/* Foto del cliente */}
-        <div className="p-5 rounded-2xl border animate-fade-up" style={SECTION}>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>
-            Foto / Logo del cliente
-          </p>
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
-              {photoUrl
-                ? <img src={photoUrl} alt="foto cliente" className="w-full h-full object-cover" />
-                : <span className="text-2xl">🏢</span>
-              }
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }}
-                />
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                  uploadingPhoto ? 'opacity-40 cursor-not-allowed' : ''
-                }`}
-                  style={{ borderColor: 'rgba(249,115,22,0.3)', color: '#f97316', background: 'rgba(249,115,22,0.08)' }}>
-                  {uploadingPhoto ? '⏳ Subiendo...' : '📷 Subir foto'}
-                </span>
+        {/* ── HERO ── */}
+        <div className="panel-neon p-6 animate-fade-up relative overflow-hidden">
+          <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05), transparent 70%)' }} />
+
+          <div className="flex flex-col md:flex-row md:items-center gap-6 relative">
+            {/* Foto */}
+            <div className="flex items-center gap-4 shrink-0">
+              <label className="cursor-pointer group relative">
+                <input type="file" accept="image/*" className="sr-only"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }} />
+                <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center"
+                  style={{ background: 'var(--surface-0)', border: '2px solid rgba(255,255,255,0.15)', boxShadow: '0 0 20px rgba(255,255,255,0.06)' }}>
+                  {uploadingPhoto
+                    ? <Loader2 size={18} className="animate-spin" style={{ color: 'var(--amber)' }} />
+                    : photoUrl
+                      ? <img src={photoUrl} alt="foto cliente" className="w-full h-full object-cover" />
+                      : <span className="text-[26px] font-bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-display)' }}>{client.name.charAt(0).toUpperCase()}</span>
+                  }
+                </div>
+                <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: 'rgba(0,0,0,0.6)' }}>
+                  <span className="text-[10px] font-bold text-white">📷 Cambiar</span>
+                </div>
               </label>
-              {photoUrl && (
-                <button onClick={deletePhoto} className="text-[11px] text-left transition-colors"
-                  style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f87171'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}>
-                  Eliminar foto
-                </button>
-              )}
-              <p className="text-[10px] leading-tight" style={{ color: 'var(--text-4)' }}>
-                Se usa como fondo sutil en los videos generados y para extraer colores de marca.
-              </p>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-[24px] font-bold neon-text leading-none" style={{ fontFamily: 'var(--font-display)' }}>{client.name}</h2>
+                  <StatusBadge status={client.status}/>
+                </div>
+                <p className="text-[12px] mt-1.5" style={{ color: 'var(--text-3)' }}>
+                  {client.industry || 'Sin industria'}{client.contact_person ? ` · ${client.contact_person}` : ''}
+                </p>
+                <p className="text-[11px] mt-0.5 flex items-center gap-1" style={{ color: 'var(--text-4)' }}>
+                  <CalendarDays size={10}/> Cliente hace {diasComoCliente} días
+                  {photoUrl && (
+                    <button onClick={deletePhoto} className="ml-2 underline underline-offset-2" style={{ color: 'var(--text-4)' }}>quitar foto</button>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick stats */}
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3 md:justify-end">
+              {[
+                { label: 'Proyectos', value: projects.length, sub: `${projects.filter(p => p.status === 'active').length} activos`, color: '#a78bfa', icon: <FolderKanban size={13}/> },
+                { label: 'Automatizaciones', value: automations.length, sub: `${automations.filter(a => a.status === 'active').length} activas`, color: '#60a5fa', icon: <Zap size={13}/> },
+                { label: 'Cobrado', value: `$${invoiceStats.cobrado.toLocaleString('es-AR')}`, sub: 'histórico', color: '#34d399', icon: <DollarSign size={13}/> },
+                { label: 'Por cobrar', value: `$${(invoiceStats.pendiente + invoiceStats.vencido).toLocaleString('es-AR')}`, sub: invoiceStats.vencido > 0 ? 'incluye vencido' : 'pendiente', color: '#fbbf24', icon: <Clock size={13}/> },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3.5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                  <div className="flex items-center gap-1.5 mb-1.5" style={{ color: s.color }}>
+                    {s.icon}
+                    <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: 'var(--text-3)' }}>{s.label}</p>
+                  </div>
+                  <p className="text-[17px] font-bold leading-none truncate" style={{ color: s.color, fontFamily: 'var(--font-display)', textShadow: `0 0 12px ${s.color}40` }}>{s.value}</p>
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-4)' }}>{s.sub}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Scorecard IA */}
+        {/* ── Scorecard IA ── */}
         {scorecard && (
-          <div className="rounded-2xl border p-5 animate-fade-up stagger-1" style={SECTION}>
+          <div className="panel-neon p-5 animate-fade-up stagger-1">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className={cn(
@@ -298,9 +381,98 @@ export default function ClientDetailPage() {
           </div>
         )}
 
+        {/* ── GRÁFICOS ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up stagger-2">
+
+          {/* Facturación 8 meses */}
+          <div className="lg:col-span-2 panel-neon p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 size={13} style={{ color: 'var(--text-3)' }}/>
+                <p className="text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Facturación del cliente — 8 meses</p>
+              </div>
+              <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>
+                Total: <span className="font-bold neon-text">${invoiceStats.total.toLocaleString('es-AR')}</span>
+              </p>
+            </div>
+            {hasRevenueData ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={revenueByMonth} barSize={26} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                  <XAxis dataKey="label" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false}/>
+                  <YAxis hide/>
+                  <Tooltip content={<TooltipChart/>} cursor={{ fill: 'rgba(255,255,255,0.03)' }}/>
+                  <Bar dataKey="Cobrado" stackId="a" fill="#34d399"/>
+                  <Bar dataKey="Pendiente" stackId="a" radius={[5,5,0,0]} fill="rgba(251,191,36,0.6)"/>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[160px]">
+                <p className="text-[12px]" style={{ color: 'var(--text-4)' }}>Sin facturación registrada todavía</p>
+              </div>
+            )}
+          </div>
+
+          {/* Donuts: facturas + proyectos */}
+          <div className="panel-neon p-5 flex flex-col gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <PieIcon size={13} style={{ color: 'var(--text-3)' }}/>
+                <p className="text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Estado de cobro</p>
+              </div>
+              {invoiceDonut.length > 0 ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-[92px] h-[92px] shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={invoiceDonut} dataKey="value" nameKey="name" innerRadius={30} outerRadius={44} paddingAngle={3} stroke="rgba(0,0,0,0.4)" strokeWidth={2}>
+                          {invoiceDonut.map((d, i) => <Cell key={i} fill={d.color}/>)}
+                        </Pie>
+                        <Tooltip content={<TooltipChart/>}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold neon-text pointer-events-none" style={{ fontFamily: 'var(--font-display)' }}>
+                      {invoiceStats.total > 0 ? `${Math.round((invoiceStats.cobrado / invoiceStats.total) * 100)}%` : '—'}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    {invoiceDonut.map(d => (
+                      <div key={d.name} className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color, boxShadow: `0 0 5px ${d.color}90` }}/>
+                        <p className="text-[11px] flex-1 truncate" style={{ color: 'var(--text-2)' }}>{d.name}</p>
+                        <span className="text-[11px] font-bold text-white shrink-0">${d.value.toLocaleString('es-AR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[12px] py-4 text-center" style={{ color: 'var(--text-4)' }}>Sin facturas</p>
+              )}
+            </div>
+
+            <hr className="neon-divider"/>
+
+            <div>
+              <p className="text-[11px] uppercase tracking-widest mb-2" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Proyectos por estado</p>
+              {projectDonut.length > 0 ? (
+                <div className="space-y-1.5">
+                  {projectDonut.map(d => (
+                    <div key={d.name} className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color, boxShadow: `0 0 5px ${d.color}90` }}/>
+                      <p className="text-[11px] flex-1" style={{ color: 'var(--text-2)' }}>{d.name}</p>
+                      <span className="text-[11px] font-bold text-white">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[12px] py-2 text-center" style={{ color: 'var(--text-4)' }}>Sin proyectos</p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Info principal */}
-          <div className="lg:col-span-2 rounded-2xl border p-5 animate-fade-up stagger-2" style={SECTION}>
+          <div className="lg:col-span-2 panel-neon p-5 animate-fade-up stagger-3">
             <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Información</h3>
             {editing ? (
               <div className="space-y-4">
@@ -342,38 +514,92 @@ export default function ClientDetailPage() {
             )}
           </div>
 
-          {/* Stats */}
-          <div className="space-y-4 animate-fade-up stagger-3">
-            {[
-              { label: 'Proyectos', value: projects.length, sub: `${projects.filter(p => p.status === 'active').length} activos` },
-              { label: 'Automatizaciones', value: automations.length, sub: `${automations.filter(a => a.status === 'active').length} activas` },
-            ].map(s => (
-              <div key={s.label} className="rounded-2xl border p-5" style={SECTION}>
-                <p className="text-xs mb-1" style={{ color: 'var(--text-3)' }}>{s.label}</p>
-                <p className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>{s.value}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{s.sub}</p>
+          {/* Portal del cliente */}
+          <div className="panel-neon p-5 animate-fade-up stagger-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Globe size={14} style={{ color: '#f97316' }} />
+                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Portal del cliente</h3>
               </div>
-            ))}
+              {portal && (
+                <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
+                  className="text-[11px] font-semibold transition-opacity hover:opacity-70" style={{ color: '#f97316' }}>
+                  Ver portal →
+                </a>
+              )}
+            </div>
+
+            {portal === undefined && (
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>Cargando...</p>
+            )}
+
+            {portal === null && (
+              <div className="flex flex-col items-center justify-center py-6 gap-3">
+                <p className="text-sm text-center" style={{ color: 'var(--text-3)' }}>Este cliente todavía no tiene portal.</p>
+                <button
+                  onClick={createPortal}
+                  disabled={creatingPortal}
+                  className="flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)', boxShadow: '0 0 20px rgba(249,115,22,0.3)' }}>
+                  {creatingPortal ? <Loader2 size={12} className="animate-spin" /> : <Globe size={12} />}
+                  {creatingPortal ? 'Creando...' : 'Crear portal'}
+                </button>
+              </div>
+            )}
+
+            {portal && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                  <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
+                    className="flex-1 text-xs truncate transition-colors"
+                    style={{ color: 'var(--text-2)' }}>
+                    /portal/{portal.token.slice(0, 16)}…
+                  </a>
+                  <button onClick={copyPortalUrl} className="shrink-0 transition-colors" style={{ color: 'var(--text-3)' }}>
+                    {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.18)' }}>
+                  <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>PIN de acceso</span>
+                  <span className="text-white font-mono font-bold text-[16px] tracking-[0.3em]" style={{ textShadow: '0 0 10px rgba(255,255,255,0.4)' }}>{portal.pin}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${portal.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                    {portal.active ? '● Activo' : '● Inactivo'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/portal/${portal.token}/instalar`)
+                      setCopied(true); setTimeout(() => setCopied(false), 2000)
+                    }}
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all"
+                    style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', color: '#f97316' }}>
+                    {copied ? '✓ Copiado' : 'Copiar link cliente'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Proyectos */}
         {projects.length > 0 && (
-          <div className="rounded-2xl border p-5 animate-fade-up stagger-4" style={SECTION}>
+          <div className="panel-neon p-5 animate-fade-up stagger-5">
             <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Proyectos</h3>
             <div className="space-y-2">
               {projects.map(p => (
                 <div key={p.id} onClick={() => router.push(`/projects/${p.id}`)}
-                  className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-3 pl-4 rounded-xl cursor-pointer transition-all relative overflow-hidden"
                   style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hi)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}>
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `${PROJECT_COLOR[p.status] || '#444'}50`; el.style.boxShadow = `0 0 16px ${PROJECT_COLOR[p.status] || '#444'}15` }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.boxShadow = 'none' }}>
+                  <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: PROJECT_COLOR[p.status] || '#444', boxShadow: `0 0 6px ${PROJECT_COLOR[p.status] || '#444'}80` }}/>
                   <div>
                     <p className="text-sm font-semibold text-white">{p.name}</p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{formatDate(p.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {p.budget && <span className="text-sm font-bold" style={{ color: 'var(--amber)' }}>${p.budget.toLocaleString()}</span>}
+                    {p.budget && <span className="text-sm font-bold neon-amber" style={{ fontFamily: 'var(--font-display)' }}>${p.budget.toLocaleString()}</span>}
                     <StatusBadge status={p.status} />
                   </div>
                 </div>
@@ -384,15 +610,21 @@ export default function ClientDetailPage() {
 
         {/* Automatizaciones */}
         {automations.length > 0 && (
-          <div className="rounded-2xl border p-5 animate-fade-up stagger-5" style={SECTION}>
+          <div className="panel-neon p-5 animate-fade-up stagger-6">
             <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>Automatizaciones</h3>
             <div className="space-y-2">
               {automations.map(a => (
                 <div key={a.id} className="flex items-center justify-between p-3 rounded-xl"
                   style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
-                  <div>
-                    <p className="text-sm font-semibold text-white">{a.name}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Trigger: {a.trigger_type}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)' }}>
+                      <Zap size={13} style={{ color: '#60a5fa' }}/>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{a.name}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Trigger: {a.trigger_type}</p>
+                    </div>
                   </div>
                   <StatusBadge status={a.status} />
                 </div>
@@ -401,76 +633,56 @@ export default function ClientDetailPage() {
           </div>
         )}
 
-        {/* Facturación del cliente */}
-        {clientInvoices.length > 0 && (() => {
-          const cobrado   = clientInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-          const porCobrar = clientInvoices.filter(i => ['pending','partial'].includes(i.status)).reduce((s, i) => s + Number(i.amount) - (i.paid_amount || 0), 0)
-          const total     = clientInvoices.reduce((s, i) => s + Number(i.amount), 0)
-          return (
-            <div className="rounded-2xl border p-5 animate-fade-up stagger-6" style={SECTION}>
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Facturación</h3>
-                <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>
-                  {clientInvoices.length} factura{clientInvoices.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[
-                  { label: 'Cobrado',    value: cobrado,   color: '#10b981' },
-                  { label: 'Por cobrar', value: porCobrar, color: 'var(--amber)' },
-                  { label: 'Total',      value: total,     color: 'var(--text)' },
-                ].map(s => (
-                  <div key={s.label} className="rounded-xl p-3 text-center"
-                    style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
-                    <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-3)' }}>{s.label}</p>
-                    <p className="text-lg font-black" style={{ color: s.color, fontFamily: 'var(--font-display)' }}>
-                      ${s.value.toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2">
-                {clientInvoices.slice(0, 5).map(inv => {
-                  const resta = Math.max(0, Number(inv.amount) - (inv.paid_amount || 0))
-                  return (
-                    <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                      style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>
-                          {inv.invoice_number}
-                        </span>
-                        <span className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
-                          {inv.description || 'Sin descripción'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {inv.status !== 'paid' && resta > 0 && (
-                          <span className="text-[11px] font-semibold text-amber-400">Resta ${resta.toLocaleString()}</span>
-                        )}
-                        <span className="text-sm font-bold text-white">${Number(inv.amount).toLocaleString()}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          inv.status === 'paid'    ? 'bg-emerald-500/10 text-emerald-400' :
-                          inv.status === 'overdue' ? 'bg-red-500/10 text-red-400' :
-                          'bg-amber-400/10 text-amber-400'
-                        }`}>
-                          {inv.status === 'paid' ? 'Pagada' : inv.status === 'overdue' ? 'Vencida' : inv.status === 'partial' ? 'Parcial' : 'Pendiente'}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              {clientInvoices.length > 5 && (
-                <p className="text-center text-[11px] mt-3" style={{ color: 'var(--text-4)' }}>
-                  +{clientInvoices.length - 5} facturas más · Ver en Facturación
-                </p>
-              )}
+        {/* Facturas del cliente */}
+        {clientInvoices.length > 0 && (
+          <div className="panel-neon p-5 animate-fade-up stagger-7">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Facturas</h3>
+              <span className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                {clientInvoices.length} factura{clientInvoices.length !== 1 ? 's' : ''}
+              </span>
             </div>
-          )
-        })()}
+            <div className="space-y-2">
+              {clientInvoices.slice(0, 6).map(inv => {
+                const resta = Math.max(0, Number(inv.amount) - (inv.paid_amount || 0))
+                return (
+                  <div key={inv.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                    style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>
+                        {inv.invoice_number}
+                      </span>
+                      <span className="text-xs truncate" style={{ color: 'var(--text-3)' }}>
+                        {inv.description || 'Sin descripción'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {inv.status !== 'paid' && resta > 0 && (
+                        <span className="text-[11px] font-semibold text-amber-400">Resta ${resta.toLocaleString()}</span>
+                      )}
+                      <span className="text-sm font-bold text-white">${Number(inv.amount).toLocaleString()}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        inv.status === 'paid'    ? 'bg-emerald-500/10 text-emerald-400' :
+                        inv.status === 'overdue' ? 'bg-red-500/10 text-red-400' :
+                        'bg-amber-400/10 text-amber-400'
+                      }`}>
+                        {inv.status === 'paid' ? 'Pagada' : inv.status === 'overdue' ? 'Vencida' : inv.status === 'partial' ? 'Parcial' : 'Pendiente'}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {clientInvoices.length > 6 && (
+              <p className="text-center text-[11px] mt-3" style={{ color: 'var(--text-4)' }}>
+                +{clientInvoices.length - 6} facturas más · Ver en Facturación
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Roadmap del mes */}
-        <div className="rounded-2xl border p-5 animate-fade-up stagger-7" style={SECTION}>
+        <div className="panel-neon p-5 animate-fade-up stagger-8">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Roadmap del mes</h3>
@@ -515,74 +727,11 @@ export default function ClientDetailPage() {
             onClick={saveRoadmap}
             disabled={savingRoadmap}
             className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ background: roadmapSaved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg, #f97316, #fb923c)' }}>
+            style={{ background: roadmapSaved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg, #f97316, #fb923c)', boxShadow: roadmapSaved ? 'none' : '0 0 20px rgba(249,115,22,0.25)' }}>
             {roadmapSaved ? (
               <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>Guardado</>
             ) : savingRoadmap ? 'Guardando...' : 'Guardar roadmap'}
           </button>
-        </div>
-
-        {/* Portal del cliente */}
-        <div className="rounded-2xl border p-5 animate-fade-up stagger-8" style={SECTION}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Globe size={14} style={{ color: '#f97316' }} />
-              <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Portal del cliente</h3>
-            </div>
-            {portal && (
-              <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
-                className="text-[11px] transition-colors"
-                style={{ color: '#f97316' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.7'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}>
-                Ver portal →
-              </a>
-            )}
-          </div>
-
-          {portal === undefined && (
-            <p className="text-xs" style={{ color: 'var(--text-3)' }}>Cargando...</p>
-          )}
-
-          {portal === null && (
-            <div className="flex flex-col items-center justify-center py-6 gap-3">
-              <p className="text-sm" style={{ color: 'var(--text-3)' }}>Este cliente todavía no tiene portal.</p>
-              <button
-                onClick={createPortal}
-                disabled={creatingPortal}
-                className="flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #f97316, #fb923c)' }}>
-                {creatingPortal ? <Loader2 size={12} className="animate-spin" /> : <Globe size={12} />}
-                {creatingPortal ? 'Creando...' : 'Crear portal'}
-              </button>
-            </div>
-          )}
-
-          {portal && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
-                <a href={`/portal/${portal.token}`} target="_blank" rel="noreferrer"
-                  className="flex-1 text-xs truncate transition-colors"
-                  style={{ color: 'var(--text-2)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f97316'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'}>
-                  {typeof window !== 'undefined' ? window.location.origin : ''}/portal/{portal.token}
-                </a>
-                <button onClick={copyPortalUrl} className="shrink-0 transition-colors"
-                  style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}>
-                  {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                </button>
-              </div>
-              <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text-3)' }}>
-                <span>PIN: <span className="text-white font-mono font-bold text-sm tracking-widest">{portal.pin}</span></span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${portal.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                  {portal.active ? 'Activo' : 'Inactivo'}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
       </div>

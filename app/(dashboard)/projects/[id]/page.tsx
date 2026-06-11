@@ -30,12 +30,6 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; bo
 
 const SUB_EMPTY = { name: '', status: 'planning', description: '', budget: '', add_to_budget: true }
 
-const PANEL = {
-  background: 'var(--surface-1)',
-  border: '1px solid var(--border)',
-  borderRadius: 16,
-}
-
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -190,9 +184,70 @@ export default function ProjectDetailPage() {
 
       <div className="flex-1 p-6 space-y-5 overflow-y-auto" style={{ background: 'var(--bg)' }}>
 
+        {/* ── HERO ── */}
+        {(() => {
+          const completedSubs = subs.filter(s => s.status === 'completed').length
+          const progressPct   = subs.length > 0
+            ? Math.round((completedSubs / subs.length) * 100)
+            : project.status === 'completed' ? 100 : 0
+          const r = 15.9
+          return (
+            <div className="panel-neon p-6 animate-fade-up relative overflow-hidden">
+              <div className="absolute -top-24 -right-16 w-72 h-72 rounded-full pointer-events-none"
+                style={{ background: `radial-gradient(circle, ${st.color}12, transparent 70%)` }} />
+              <div className="flex flex-col md:flex-row md:items-center gap-6 relative">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-[24px] font-black"
+                    style={{ background: `${st.color}14`, border: `1.5px solid ${st.color}40`, color: st.color, boxShadow: `0 0 20px ${st.color}25`, fontFamily: 'var(--font-display)' }}>
+                    {project.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h2 className="text-[22px] font-bold neon-text leading-none truncate" style={{ fontFamily: 'var(--font-display)' }}>{project.name}</h2>
+                      <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border shrink-0"
+                        style={{ color: st.color, background: st.bg, borderColor: st.border }}>
+                        {st.label}
+                      </span>
+                    </div>
+                    <p className="text-[12px] mt-1.5" style={{ color: 'var(--text-3)' }}>
+                      {project.clients?.name || 'Sin cliente'} · creado {formatDate(project.created_at)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 shrink-0">
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>Presupuesto total</p>
+                    <p className="text-[24px] font-bold neon-amber leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                      ${totalBudget.toLocaleString('es-AR')}
+                    </p>
+                    {subsBudget > 0 && (
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--text-4)' }}>base ${baseBudget.toLocaleString('es-AR')} + etapas ${subsBudget.toLocaleString('es-AR')}</p>
+                    )}
+                  </div>
+                  <div className="relative w-20 h-20 shrink-0">
+                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                      <circle cx="18" cy="18" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5"/>
+                      <circle cx="18" cy="18" r={r} fill="none" stroke={st.color} strokeWidth="3.5"
+                        strokeDasharray={`${progressPct} 100`} strokeLinecap="round"
+                        style={{ filter: `drop-shadow(0 0 5px ${st.color}90)` }}/>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-[15px] font-800 text-white leading-none" style={{ fontFamily: 'var(--font-display)' }}>{progressPct}%</span>
+                      <span className="text-[8px] uppercase tracking-wider mt-0.5" style={{ color: 'var(--text-3)' }}>
+                        {subs.length > 0 ? `${completedSubs}/${subs.length} etapas` : 'avance'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Info del proyecto */}
-          <div className="lg:col-span-2 rounded-2xl p-5 animate-fade-up" style={PANEL}>
+          <div className="lg:col-span-2 panel-neon p-5 animate-fade-up stagger-2">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Información</h3>
               {!editing && (
@@ -245,7 +300,7 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Cliente + Portal */}
-          <div className="rounded-2xl p-5 space-y-4 animate-fade-up stagger-2" style={PANEL}>
+          <div className="panel-neon p-5 space-y-4 animate-fade-up stagger-3">
             <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Cliente</h3>
             {project.clients ? (
               <dl className="space-y-3">
@@ -327,7 +382,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Subproyectos */}
-        <div className="rounded-2xl overflow-hidden animate-fade-up stagger-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+        <div className="panel-neon overflow-hidden animate-fade-up stagger-4">
           <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="flex items-center gap-2">
               <FolderKanban size={13} style={{ color: '#f97316' }} />
@@ -375,14 +430,16 @@ export default function ProjectDetailPage() {
                   const sst = STATUS_META[s.status] ?? STATUS_META.planning
                   return (
                     <div key={s.id}
-                      className="rounded-xl p-4 group transition-all animate-fade-up"
+                      className="rounded-xl p-4 pl-5 group transition-all animate-fade-up relative overflow-hidden"
                       style={{
                         background: 'var(--surface-0)',
                         border: '1px solid var(--border)',
                         animationDelay: `${0.1 + idx * 0.05}s`,
                       }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(249,115,22,0.2)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}>
+                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `${sst.color}45`; el.style.boxShadow = `0 0 16px ${sst.color}12` }}
+                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.boxShadow = 'none' }}>
+                      <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full"
+                        style={{ background: sst.color, boxShadow: `0 0 6px ${sst.color}80` }} />
                       <div className="flex items-center justify-between mb-2.5">
                         <span className="text-[9px] font-black tracking-[0.15em] uppercase px-2 py-0.5 rounded-full"
                           style={{ color: 'rgba(249,115,22,0.7)', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.15)' }}>
@@ -458,6 +515,34 @@ export default function ProjectDetailPage() {
                       Resumen presupuesto
                     </span>
                   </div>
+
+                  {/* Barra apilada: base + cada etapa */}
+                  {totalBudget > 0 && (
+                    <div className="mb-4">
+                      <div className="h-2.5 rounded-full overflow-hidden flex gap-px" style={{ background: 'var(--surface-2)' }}>
+                        {baseBudget > 0 && (
+                          <div className="h-full" title={`Base $${baseBudget.toLocaleString('es-AR')}`}
+                            style={{ width: `${(baseBudget / totalBudget) * 100}%`, background: '#f97316', boxShadow: '0 0 8px rgba(249,115,22,0.6)' }}/>
+                        )}
+                        {subs.filter(s => s.budget && s.add_to_budget).map((s, i) => (
+                          <div key={s.id} className="h-full" title={`${s.name} $${Number(s.budget).toLocaleString('es-AR')}`}
+                            style={{ width: `${(Number(s.budget) / totalBudget) * 100}%`, background: ['#fb923c','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6'][i % 6], opacity: 0.85 }}/>
+                        ))}
+                      </div>
+                      <div className="flex gap-3 mt-2 flex-wrap text-[10px]" style={{ color: 'var(--text-3)' }}>
+                        {baseBudget > 0 && (
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#f97316' }}/>Base</span>
+                        )}
+                        {subs.filter(s => s.budget && s.add_to_budget).map((s, i) => (
+                          <span key={s.id} className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full inline-block" style={{ background: ['#fb923c','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6'][i % 6] }}/>
+                            {s.name.length > 18 ? `${s.name.slice(0, 18)}…` : s.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     {baseBudget > 0 && (
                       <div className="flex items-center justify-between text-xs">

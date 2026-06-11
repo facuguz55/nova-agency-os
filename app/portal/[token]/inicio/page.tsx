@@ -50,6 +50,33 @@ const MSG_CONFIG: Record<MsgType, { label: string; placeholder: string; color: s
   note:        { label: 'Dejar una nota',    placeholder: 'Escribí tu nota o comentario',       color: '#60a5fa' },
 }
 
+const INVEST_COLORS = ['#f97316', '#fb923c', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa']
+
+function DonutSVG({ segments, size = 110, stroke = 13 }: { segments: Array<{ value: number; color: string }>; size?: number; stroke?: number }) {
+  const total = segments.reduce((s, x) => s + x.value, 0)
+  const r = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  let offset = 0
+  return (
+    <svg width={size} height={size} className="-rotate-90">
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke}/>
+      {segments.map((s, i) => {
+        const frac = total > 0 ? s.value / total : 0
+        const dash = frac * circ
+        const el = (
+          <circle key={i} cx={size/2} cy={size/2} r={r} fill="none"
+            stroke={s.color} strokeWidth={stroke}
+            strokeDasharray={`${Math.max(0, dash - 1.5)} ${circ}`}
+            strokeDashoffset={-offset}
+            style={{ transition: 'stroke-dasharray .8s ease' }}/>
+        )
+        offset += dash
+        return el
+      })}
+    </svg>
+  )
+}
+
 function Ring({ pct, color = '#f97316', size = 56 }: { pct: number; color?: string; size?: number }) {
   const r = (size - 8) / 2
   const circ = 2 * Math.PI * r
@@ -350,10 +377,12 @@ export default function PortalInicio() {
         <div className="max-w-xl mx-auto px-5 pt-8 pb-28 space-y-7 relative">
 
           {/* Saludo */}
-          <div className="fs-1">
-            <p className="text-white/35 text-sm font-medium tracking-wide mb-0.5">{greeting},</p>
-            <h1 style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic' }}
-              className="text-[34px] text-white leading-none mb-1">
+          <div className="fs-1 relative">
+            <div className="absolute -top-10 -left-6 w-48 h-48 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.10), transparent 70%)', filter: 'blur(8px)' }} />
+            <p className="text-white/35 text-sm font-medium tracking-wide mb-0.5 relative">{greeting},</p>
+            <h1 style={{ fontFamily: 'Instrument Serif, serif', fontStyle: 'italic', textShadow: '0 0 24px rgba(249,115,22,0.25)' }}
+              className="text-[34px] text-white leading-none mb-1 relative">
               {first}
             </h1>
             {client.industry && (
@@ -490,6 +519,42 @@ export default function PortalInicio() {
             </div>
           </div>
 
+          {/* Tu inversión — distribución por proyecto */}
+          {(() => {
+            const investSegments = projects
+              .map((p, i) => {
+                const subsB = (p.subprojects || []).reduce((a, s) => a + (Number(s.budget) || 0), 0)
+                return { name: p.name, value: (Number(p.budget) || 0) + subsB, color: INVEST_COLORS[i % INVEST_COLORS.length] }
+              })
+              .filter(s => s.value > 0)
+            const totalInvest = investSegments.reduce((s, x) => s + x.value, 0)
+            if (totalInvest <= 0) return null
+            return (
+              <div className="fs-3 card-glass rounded-3xl p-5">
+                <p className="text-[10px] font-bold text-white/25 uppercase tracking-[.16em] mb-4">Tu inversión</p>
+                <div className="flex items-center gap-5">
+                  <div className="relative shrink-0">
+                    <DonutSVG segments={investSegments} size={110} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-[15px] font-black text-white leading-none">${(totalInvest >= 1000000 ? `${(totalInvest/1000000).toFixed(1)}M` : totalInvest.toLocaleString('es-AR'))}</span>
+                      <span className="text-[8px] text-white/30 uppercase tracking-wider mt-1">total ARS</span>
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2 min-w-0">
+                    {investSegments.map(s => (
+                      <div key={s.name} className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color, boxShadow: `0 0 6px ${s.color}90` }} />
+                        <p className="text-[12px] text-white/55 flex-1 truncate">{s.name}</p>
+                        <span className="text-[11px] font-bold text-white/80 shrink-0">${s.value.toLocaleString('es-AR')}</span>
+                        <span className="text-[10px] text-white/25 w-8 text-right shrink-0">{Math.round((s.value / totalInvest) * 100)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Proyectos + feedback */}
           {projects.length > 0 && (
             <div className="fs-3">
@@ -531,9 +596,23 @@ export default function PortalInicio() {
                             {p.subprojects?.length > 0 ? `${p.subprojects.length} etapa${p.subprojects.length !== 1 ? 's' : ''}` : 'Sin etapas'}
                             {totalBudget > 0 && ` · $${Number(totalBudget).toLocaleString('es-AR')}`}
                           </p>
-                          <p className="text-[10px] text-white/20 mt-0.5">
-                            {new Date(p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </p>
+                          {(p.subprojects?.length ?? 0) > 0 ? (() => {
+                            const doneSubs = p.subprojects.filter(s => s.status === 'completed').length
+                            const subPct   = Math.round((doneSubs / p.subprojects.length) * 100)
+                            return (
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <div className="flex-1 h-1 rounded-full overflow-hidden max-w-[140px]" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                                  <div className="h-full rounded-full transition-all duration-700"
+                                    style={{ width: `${subPct}%`, background: subPct >= 100 ? '#34d399' : 'linear-gradient(90deg, #f97316, #fb923c)', boxShadow: subPct > 0 ? '0 0 6px rgba(249,115,22,0.5)' : 'none' }}/>
+                                </div>
+                                <span className="text-[9px] font-bold" style={{ color: subPct >= 100 ? '#34d399' : 'rgba(249,115,22,0.8)' }}>{subPct}%</span>
+                              </div>
+                            )
+                          })() : (
+                            <p className="text-[10px] text-white/20 mt-0.5">
+                              {new Date(p.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
+                          )}
                         </div>
                         <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BG[p.status] || 'bg-white/5 text-white/30'}`}>
                           {STATUS_LABEL[p.status] || p.status}
