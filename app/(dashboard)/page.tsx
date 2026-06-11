@@ -204,10 +204,10 @@ export default function DashboardPage() {
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
 
         {/* ─── HERO BANNER ─────────────────────────────────── */}
-        <div className="animate-fade-up panel p-6 flex items-center justify-between overflow-hidden relative" style={{ borderTop: '2px solid var(--amber)' }}>
+        <div className="animate-fade-up panel-neon animate-neon-breathe p-6 flex items-center justify-between overflow-hidden relative" style={{ borderTop: '2px solid var(--amber)' }}>
           {/* Glows */}
           <div className="absolute -top-20 -left-10 w-56 h-56 rounded-full bg-[rgba(245,158,11,0.07)] blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 right-24 w-56 h-56 rounded-full bg-[rgba(59,130,246,0.04)] blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 right-24 w-56 h-56 rounded-full bg-[rgba(255,255,255,0.04)] blur-3xl pointer-events-none" />
           {/* Subtle grid texture */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.015]" style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 24px,rgba(255,255,255,1) 24px,rgba(255,255,255,1) 25px),repeating-linear-gradient(90deg,transparent,transparent 24px,rgba(255,255,255,1) 24px,rgba(255,255,255,1) 25px)' }} />
 
@@ -215,7 +215,7 @@ export default function DashboardPage() {
             <p className="text-[12px] text-[var(--text-3)] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
               {todayLabel().charAt(0).toUpperCase() + todayLabel().slice(1)}
             </p>
-            <h2 className="text-[28px] font-800 text-white leading-none mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+            <h2 className="text-[28px] font-800 neon-text leading-none mb-1" style={{ fontFamily: 'var(--font-display)' }}>
               {greeting()}, {userName}
             </h2>
             <p className="text-[13px] text-[var(--amber)] font-medium mt-1">
@@ -273,10 +273,10 @@ export default function DashboardPage() {
               </div>
               <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>Cobrado este mes</p>
             </div>
-            <p className="text-[26px] font-bold text-white leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+            <p className="text-[26px] font-bold neon-green leading-none" style={{ fontFamily: 'var(--font-display)' }}>
               ${revThisMonth.toLocaleString('es-AR')}
             </p>
-            <p className="text-[11px] text-[var(--text-3)] mt-1.5">Facturas pagadas en junio</p>
+            <p className="text-[11px] text-[var(--text-3)] mt-1.5">Facturas pagadas este mes</p>
           </div>
 
           <div className="panel p-5 col-span-2 xl:col-span-1" style={{ borderColor: 'rgba(245,158,11,0.25)' }}>
@@ -286,7 +286,7 @@ export default function DashboardPage() {
               </div>
               <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>Pendiente de cobro</p>
             </div>
-            <p className="text-[26px] font-bold text-[var(--amber)] leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+            <p className="text-[26px] font-bold neon-amber leading-none" style={{ fontFamily: 'var(--font-display)' }}>
               ${revPending.toLocaleString('es-AR')}
             </p>
             <p className="text-[11px] text-[var(--text-3)] mt-1.5">Facturas emitidas sin cobrar</p>
@@ -316,11 +316,11 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up stagger-4">
 
           {/* Revenue bars */}
-          <div className="lg:col-span-2 panel p-5">
+          <div className="lg:col-span-2 panel-neon p-5">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-display)' }}>Facturación mensual</p>
-                <p className="text-[22px] font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                <p className="text-[22px] font-bold neon-text" style={{ fontFamily: 'var(--font-display)' }}>
                   ${(revenue?.total6m ?? 0).toLocaleString('es-AR')}
                 </p>
                 <p className="text-[11px] text-[var(--text-3)]">Cobrado en 6 meses</p>
@@ -342,7 +342,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Radar */}
-          <div className="panel p-5 flex flex-col">
+          <div className="panel-neon p-5 flex flex-col">
             <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Rendimiento general</p>
             <div className="flex-1 flex items-center justify-center">
               <ResponsiveContainer width="100%" height={160}>
@@ -359,32 +359,72 @@ export default function DashboardPage() {
         {/* ─── MINI CHARTS ROW ─────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up stagger-5">
 
-          {/* Proyectos por estado */}
+          {/* Proyectos por estado — donut */}
           <div className="panel p-4">
-            <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Proyectos</p>
-            <div className="space-y-2">
-              {(projectsChart || []).map(p => (
-                <div key={p.status} className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PROJECT_COLOR[p.status] ?? '#333' }} />
-                  <p className="text-[12px] text-[var(--text-3)] flex-1">{PROJECT_LABEL[p.status] || p.status}</p>
-                  <span className="text-[12px] font-bold text-white">{p.count}</span>
+            <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-display)' }}>Proyectos</p>
+            {(projectsChart || []).length === 0 ? (
+              <p className="text-[12px] text-[var(--text-4)] py-6 text-center">Sin proyectos</p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="relative w-[88px] h-[88px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={projectsChart} dataKey="count" nameKey="status" innerRadius={28} outerRadius={42} paddingAngle={3} stroke="rgba(0,0,0,0.4)" strokeWidth={2}>
+                        {projectsChart.map((p, i) => (
+                          <Cell key={i} fill={PROJECT_COLOR[p.status] ?? '#333'} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <span className="absolute inset-0 flex items-center justify-center text-[15px] font-800 neon-text pointer-events-none" style={{ fontFamily: 'var(--font-display)' }}>
+                    {projectsChart.reduce((s, p) => s + p.count, 0)}
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  {projectsChart.map(p => (
+                    <div key={p.status} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PROJECT_COLOR[p.status] ?? '#333', boxShadow: `0 0 5px ${PROJECT_COLOR[p.status] ?? '#333'}90` }} />
+                      <p className="text-[11px] text-[var(--text-3)] flex-1 truncate">{PROJECT_LABEL[p.status] || p.status}</p>
+                      <span className="text-[11px] font-bold text-white">{p.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Tareas por prioridad */}
+          {/* Tareas por prioridad — donut */}
           <div className="panel p-4">
-            <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-3" style={{ fontFamily: 'var(--font-display)' }}>Tareas pendientes</p>
-            <div className="space-y-2">
-              {(tasksChart || []).map(t => (
-                <div key={t.priority} className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PRIORITY_COLOR_BAR[t.priority] }} />
-                  <p className="text-[12px] text-[var(--text-3)] flex-1">{PRIORITY_LABEL_SHORT[t.priority] || t.priority}</p>
-                  <span className="text-[12px] font-bold text-white">{t.count}</span>
+            <p className="text-[11px] text-[var(--text-3)] uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--font-display)' }}>Tareas pendientes</p>
+            {(tasksChart || []).length === 0 ? (
+              <p className="text-[12px] text-[var(--text-4)] py-6 text-center">Sin tareas</p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="relative w-[88px] h-[88px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={tasksChart} dataKey="count" nameKey="priority" innerRadius={28} outerRadius={42} paddingAngle={3} stroke="rgba(0,0,0,0.4)" strokeWidth={2}>
+                        {tasksChart.map((t, i) => (
+                          <Cell key={i} fill={PRIORITY_COLOR_BAR[t.priority] ?? '#333'} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <span className="absolute inset-0 flex items-center justify-center text-[15px] font-800 neon-text pointer-events-none" style={{ fontFamily: 'var(--font-display)' }}>
+                    {totalTasks}
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  {tasksChart.map(t => (
+                    <div key={t.priority} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PRIORITY_COLOR_BAR[t.priority], boxShadow: `0 0 5px ${PRIORITY_COLOR_BAR[t.priority]}90` }} />
+                      <p className="text-[11px] text-[var(--text-3)] flex-1 truncate">{PRIORITY_LABEL_SHORT[t.priority] || t.priority}</p>
+                      <span className="text-[11px] font-bold text-white">{t.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actividad semanal (mock) */}

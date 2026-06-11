@@ -209,3 +209,52 @@ body {
 /* ─── DISPLAY FONT USAGE ────────────────────────────────── */
 .font-display { font-family: var(--font-display); }
 .font-mono    { font-family: var(--font-mono); }
+
+/* ─── NEON SYSTEM ──────────────────────────────────────── */
+.neon-text {
+  color: #fff;
+  text-shadow: 0 0 8px rgba(255,255,255,0.55), 0 0 28px rgba(255,255,255,0.22);
+}
+.neon-amber {
+  color: var(--amber-hi);
+  text-shadow: 0 0 10px rgba(245,158,11,0.65), 0 0 32px rgba(245,158,11,0.3);
+}
+.neon-green {
+  color: #34d399;
+  text-shadow: 0 0 10px rgba(16,185,129,0.6), 0 0 30px rgba(16,185,129,0.28);
+}
+
+.panel-neon {
+  background: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 40%), var(--surface-1);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 16px;
+  box-shadow: 0 0 24px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.panel-neon:hover {
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: 0 0 36px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.neon-divider {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+}
+.neon-divider-amber {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.6), transparent);
+}
+
+@keyframes neon-breathe {
+  0%, 100% { box-shadow: 0 0 18px rgba(255,255,255,0.05); }
+  50%       { box-shadow: 0 0 34px rgba(255,255,255,0.12); }
+}
+.animate-neon-breathe { animation: neon-breathe 4s ease-in-out infinite; }
+
+.neon-dot {
+  width: 6px; height: 6px; border-radius: 99px;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 18px rgba(255,255,255,0.4);
+}

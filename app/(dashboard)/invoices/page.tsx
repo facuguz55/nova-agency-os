@@ -8,9 +8,13 @@ import { Button, Input, Select, Textarea } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { formatDate, formatNumber } from '@/lib/utils'
 import {
-  Plus, DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie,
+} from 'recharts'
+import {
+  Plus, DollarSign, Clock, AlertTriangle, TrendingUp, TrendingDown, CheckCircle2,
   CreditCard, ChevronLeft, ChevronRight, Calendar, Split, FileText,
-  Trash2, Pencil, BadgeDollarSign,
+  Trash2, Pencil, BadgeDollarSign, History, PieChart as PieIcon, BarChart3,
 } from 'lucide-react'
 
 interface Payment {
@@ -29,6 +33,7 @@ interface Client { id: string; name: string }
 interface Project { id: string; name: string; budget: number | null; client_id: string }
 
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 const EMPTY = {
   client_id: '', project_id: '', amount: '', status: 'pending',
@@ -36,6 +41,33 @@ const EMPTY = {
 }
 
 const BTN_GHOST = 'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors'
+
+const DONUT_COLORS = ['#f59e0b', '#34d399', '#60a5fa', '#a78bfa', '#f472b6', '#e5e5e5']
+
+function invoiceMonthDate(inv: Invoice) {
+  return new Date(inv.due_date || inv.created_at)
+}
+function invoiceCobrado(inv: Invoice) {
+  return inv.status === 'paid' ? Number(inv.amount) : (inv.paid_amount || 0)
+}
+function invoiceResta(inv: Invoice) {
+  return inv.status === 'paid' ? 0 : Math.max(0, Number(inv.amount) - (inv.paid_amount || 0))
+}
+function isUnpaid(inv: Invoice) {
+  return ['pending', 'partial', 'overdue'].includes(inv.status) && invoiceResta(inv) > 0
+}
+
+function TooltipYear({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-xl px-3 py-2 text-xs shadow-2xl" style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.15)' }}>
+      <p className="mb-1 font-semibold text-white">{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color }} className="font-medium">{p.name}: ${Number(p.value).toLocaleString('es-AR')}</p>
+      ))}
+    </div>
+  )
+}
 
 export default function InvoicesPage() {
   usePageTitle('Facturación')
@@ -52,6 +84,7 @@ export default function InvoicesPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showSplit, setShowSplit] = useState(false)
   const [showAllMonths, setShowAllMonths] = useState(false)
+  const [showCarryOver, setShowCarryOver] = useState(false)
 
   const now = new Date()
   const [selYear, setSelYear]   = useState(now.getFullYear())
@@ -104,22 +137,107 @@ export default function InvoicesPage() {
     if (selMonth === 11) { setSelMonth(0); setSelYear(y => y + 1) }
     else setSelMonth(m => m + 1)
   }
+  function goToCurrentMonth() {
+    setSelYear(now.getFullYear()); setSelMonth(now.getMonth())
+  }
 
-  const monthInvoices = useMemo(() => invoices.filter(inv => {
-    const raw = inv.due_date || inv.created_at
-    const d   = new Date(raw)
-    return d.getFullYear() === selYear && d.getMonth() === selMonth
-  }), [invoices, selYear, selMonth])
+  const isCurrentMonth = selYear === now.getFullYear() && selMonth === now.getMonth()
 
-  const monthStats = useMemo(() => {
-    const cobrado   = monthInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-                    + monthInvoices.filter(i => i.status !== 'paid').reduce((s, i) => s + (i.paid_amount || 0), 0)
-    const pendiente = monthInvoices.filter(i => ['pending', 'partial'].includes(i.status))
-                      .reduce((s, i) => s + Math.max(0, Number(i.amount) - (i.paid_amount || 0)), 0)
-    const vencido   = monthInvoices.filter(i => i.status === 'overdue')
-                      .reduce((s, i) => s + Number(i.amount), 0)
-    const total     = monthInvoices.reduce((s, i) => s + Number(i.amount), 0)
-    return { cobrado, pendiente, vencido, total, count: monthInvoices.length }
+  function handleBarClick(d: unknown) {
+    const item = d as { year?: number; month?: number; payload?: { year: number; month: number } }
+    const p = item.payload ?? item
+    if (p.year !== undefined && p.month !== undefined) { setSelYear(p.year); setSelMonth(p.month) }
+  }
+
+  function monthInvoicesOf(year: number, month: number) {
+    return invoices.filter(inv => {
+      const d = invoiceMonthDate(inv)
+      return d.getFullYear() === year && d.getMonth() === month
+    })
+  }
+
+  const monthInvoices = useMemo(
+    () => monthInvoicesOf(selYear, selMonth),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [invoices, selYear, selMonth],
+  )
+
+  function statsOf(list: Invoice[]) {
+    const cobrado   = list.reduce((s, i) => s + invoiceCobrado(i), 0)
+    const pendiente = list.filter(i => ['pending', 'partial'].includes(i.status)).reduce((s, i) => s + invoiceResta(i), 0)
+    const vencido   = list.filter(i => i.status === 'overdue').reduce((s, i) => s + invoiceResta(i), 0)
+    const total     = list.reduce((s, i) => s + Number(i.amount), 0)
+    return { cobrado, pendiente, vencido, total, count: list.length }
+  }
+
+  const monthStats = useMemo(() => statsOf(monthInvoices), [monthInvoices])
+
+  // Mes anterior — para comparativa
+  const prevMonthStats = useMemo(() => {
+    const y = selMonth === 0 ? selYear - 1 : selYear
+    const m = selMonth === 0 ? 11 : selMonth - 1
+    return statsOf(monthInvoicesOf(y, m))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, selYear, selMonth])
+
+  const deltaPct = prevMonthStats.cobrado > 0
+    ? Math.round(((monthStats.cobrado - prevMonthStats.cobrado) / prevMonthStats.cobrado) * 100)
+    : null
+
+  // Arrastre: facturas impagas de meses ANTERIORES al seleccionado
+  const carryOver = useMemo(() => {
+    const cutoff = new Date(selYear, selMonth, 1)
+    return invoices
+      .filter(inv => isUnpaid(inv) && invoiceMonthDate(inv) < cutoff)
+      .sort((a, b) => invoiceMonthDate(a).getTime() - invoiceMonthDate(b).getTime())
+  }, [invoices, selYear, selMonth])
+
+  const carryOverTotal = useMemo(() => carryOver.reduce((s, i) => s + invoiceResta(i), 0), [carryOver])
+
+  // Gráfico anual: últimos 12 meses terminando en el mes seleccionado (o el actual si es futuro)
+  const yearChart = useMemo(() => {
+    const end = new Date(selYear, selMonth, 1)
+    const buckets = []
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(end.getFullYear(), end.getMonth() - i, 1)
+      const list = monthInvoicesOf(d.getFullYear(), d.getMonth())
+      const s = statsOf(list)
+      buckets.push({
+        label: `${MONTHS_SHORT[d.getMonth()]}${d.getMonth() === 0 ? ` ${String(d.getFullYear()).slice(2)}` : ''}`,
+        fullLabel: `${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`,
+        year: d.getFullYear(), month: d.getMonth(),
+        Cobrado: s.cobrado, Pendiente: s.pendiente, Vencido: s.vencido,
+        selected: d.getFullYear() === selYear && d.getMonth() === selMonth,
+      })
+    }
+    return buckets
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, selYear, selMonth])
+
+  const bestMonth = useMemo(() => {
+    const withRevenue = yearChart.filter(b => b.Cobrado > 0)
+    if (!withRevenue.length) return null
+    return withRevenue.reduce((best, b) => b.Cobrado > best.Cobrado ? b : best)
+  }, [yearChart])
+
+  const avgMonthly = useMemo(() => {
+    const withRevenue = yearChart.filter(b => b.Cobrado > 0)
+    if (!withRevenue.length) return 0
+    return Math.round(withRevenue.reduce((s, b) => s + b.Cobrado, 0) / withRevenue.length)
+  }, [yearChart])
+
+  // Desglose por cliente del mes seleccionado (sobre el total facturado)
+  const clientBreakdown = useMemo(() => {
+    const byClient: Record<string, number> = {}
+    for (const inv of monthInvoices) {
+      const name = inv.clients?.name || 'Sin cliente'
+      byClient[name] = (byClient[name] || 0) + Number(inv.amount)
+    }
+    const sorted = Object.entries(byClient).sort((a, b) => b[1] - a[1])
+    const top = sorted.slice(0, 5).map(([name, value]) => ({ name, value }))
+    const rest = sorted.slice(5).reduce((s, [, v]) => s + v, 0)
+    if (rest > 0) top.push({ name: 'Otros', value: rest })
+    return top
   }, [monthInvoices])
 
   const displayInvoices = useMemo(() => {
@@ -273,6 +391,7 @@ export default function InvoicesPage() {
 
   const remaining  = paymentInvoice ? Math.max(0, Number(paymentInvoice.amount) - paymentTotalPaid) : 0
   const monthPct   = monthStats.total > 0 ? Math.round((monthStats.cobrado / monthStats.total) * 100) : 0
+  const breakdownTotal = clientBreakdown.reduce((s, c) => s + c.value, 0)
 
   return (
     <>
@@ -295,85 +414,277 @@ export default function InvoicesPage() {
 
       <div className="flex-1 p-6 space-y-5 overflow-y-auto">
 
-        {/* ── Stats globales ── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 animate-fade-up">
-          <StatCard label="Total cobrado"  value={`$${formatNumber(stats.cobrado ?? stats.paid)}`} sub="incl. parciales"    icon={<CheckCircle2 size={14}/>} color="green"  animDelay="0.05s" />
-          <StatCard label="Por cobrar"     value={`$${formatNumber(stats.pending)}`}               sub="facturas pendientes" icon={<Clock size={14}/>}        color="blue"   animDelay="0.10s" />
-          <StatCard label="Vencido"        value={`$${formatNumber(stats.overdue)}`}               sub="requiere atención"   icon={<AlertTriangle size={14}/>} color="red"    animDelay="0.15s" />
-          <StatCard label="MRR (30 días)"  value={`$${formatNumber(stats.mrr)}`}                   sub="cobrado este mes"    icon={<TrendingUp size={14}/>}   color="amber"  animDelay="0.20s" />
-        </div>
+        {/* ── HERO: Mes seleccionado ── */}
+        <div className="panel-neon overflow-hidden animate-fade-up relative">
+          {/* Glow decorativo */}
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 rounded-full pointer-events-none" style={{ background: 'radial-gradient(ellipse, rgba(255,255,255,0.06), transparent 70%)' }} />
 
-        {/* ── Navegador de mes ── */}
-        <div className="panel overflow-hidden animate-fade-up stagger-2">
-          <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between px-6 py-5 relative">
             <button
               onClick={prevMonth}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
               style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#fff'; el.style.borderColor = 'rgba(255,255,255,0.3)' }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text-3)'; el.style.borderColor = 'var(--border)' }}
             >
-              <ChevronLeft size={15}/>
+              <ChevronLeft size={16}/>
             </button>
 
             <div className="text-center">
-              <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>
-                {MONTHS_ES[selMonth]} {selYear}
-              </h2>
-              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>
-                {monthStats.count} {monthStats.count === 1 ? 'factura' : 'facturas'} · ${formatNumber(monthStats.total)} total
+              <div className="flex items-center justify-center gap-2.5">
+                <h2 className="text-[26px] font-bold neon-text leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                  {MONTHS_ES[selMonth]} {selYear}
+                </h2>
+                {deltaPct !== null && monthStats.cobrado > 0 && (
+                  <span
+                    className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                    style={deltaPct >= 0
+                      ? { background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }
+                      : { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+                    }
+                  >
+                    {deltaPct >= 0 ? <TrendingUp size={11}/> : <TrendingDown size={11}/>}
+                    {deltaPct >= 0 ? '+' : ''}{deltaPct}% vs {MONTHS_SHORT[selMonth === 0 ? 11 : selMonth - 1]}
+                  </span>
+                )}
+              </div>
+              <p className="text-[12px] mt-1.5" style={{ color: 'var(--text-3)' }}>
+                {monthStats.count} {monthStats.count === 1 ? 'factura' : 'facturas'} · ${formatNumber(monthStats.total)} facturado
+                {!isCurrentMonth && (
+                  <button onClick={goToCurrentMonth} className="ml-2 underline underline-offset-2 transition-colors" style={{ color: 'var(--amber)' }}>
+                    volver a hoy
+                  </button>
+                )}
               </p>
             </div>
 
             <button
               onClick={nextMonth}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
               style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'var(--text)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#fff'; el.style.borderColor = 'rgba(255,255,255,0.3)' }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text-3)'; el.style.borderColor = 'var(--border)' }}
             >
-              <ChevronRight size={15}/>
+              <ChevronRight size={16}/>
             </button>
           </div>
 
+          <hr className="neon-divider mx-6" />
+
           {/* Stats del mes */}
-          <div className="grid grid-cols-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'Cobrado',    value: monthStats.cobrado,   color: '#10b981', sub: `${monthPct}% del total` },
-              { label: 'Pendiente',  value: monthStats.pendiente, color: 'var(--amber)', sub: 'por cobrar' },
-              { label: 'Proyección', value: monthStats.cobrado + monthStats.pendiente, color: 'var(--text)', sub: 'si cobrás todo' },
+              { label: 'Cobrado',    value: monthStats.cobrado,   className: 'neon-green', sub: `${monthPct}% del facturado` },
+              { label: 'Pendiente',  value: monthStats.pendiente, className: 'neon-amber', sub: 'por cobrar este mes' },
+              { label: 'Vencido',    value: monthStats.vencido,   className: '', color: monthStats.vencido > 0 ? '#f87171' : 'var(--text-4)', sub: monthStats.vencido > 0 ? 'requiere atención' : 'nada vencido' },
+              { label: 'Proyección', value: monthStats.cobrado + monthStats.pendiente + monthStats.vencido, className: 'neon-text', sub: 'si cobrás todo' },
             ].map((s, i) => (
-              <div key={s.label} className="px-6 py-4" style={i < 2 ? { borderRight: '1px solid var(--border)' } : {}}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>{s.label}</p>
-                <p className="text-[20px] font-bold leading-none" style={{ color: s.color, fontFamily: 'var(--font-display)' }}>${formatNumber(s.value)}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-4)' }}>{s.sub}</p>
+              <div key={s.label} className="px-6 py-5" style={i < 3 ? { borderRight: '1px solid var(--border)' } : {}}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>{s.label}</p>
+                <p className={`text-[24px] font-bold leading-none ${s.className}`} style={{ fontFamily: 'var(--font-display)', ...(s.color ? { color: s.color } : {}) }}>
+                  ${formatNumber(s.value)}
+                </p>
+                <p className="text-[11px] mt-1" style={{ color: 'var(--text-4)' }}>{s.sub}</p>
               </div>
             ))}
           </div>
 
           {/* Barra de progreso del mes */}
           {monthStats.total > 0 && (
-            <div className="px-6 py-4">
-              <div className="h-1.5 rounded-full overflow-hidden flex" style={{ background: 'var(--surface-2)' }}>
-                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(monthStats.cobrado / monthStats.total) * 100}%` }}/>
-                <div className="h-full bg-amber-400 transition-all duration-500"   style={{ width: `${(monthStats.pendiente / monthStats.total) * 100}%` }}/>
-                <div className="h-full bg-red-400 transition-all duration-500"     style={{ width: `${(monthStats.vencido / monthStats.total) * 100}%` }}/>
+            <div className="px-6 pb-5 pt-1">
+              <div className="h-2 rounded-full overflow-hidden flex" style={{ background: 'var(--surface-2)', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' }}>
+                <div className="h-full transition-all duration-700" style={{ width: `${(monthStats.cobrado / monthStats.total) * 100}%`, background: '#34d399', boxShadow: '0 0 10px rgba(16,185,129,0.6)' }}/>
+                <div className="h-full transition-all duration-700" style={{ width: `${(monthStats.pendiente / monthStats.total) * 100}%`, background: '#fbbf24', boxShadow: '0 0 10px rgba(245,158,11,0.5)' }}/>
+                <div className="h-full transition-all duration-700" style={{ width: `${(monthStats.vencido / monthStats.total) * 100}%`, background: '#f87171', boxShadow: '0 0 10px rgba(239,68,68,0.5)' }}/>
               </div>
-              <div className="flex gap-4 mt-2 text-[10px]" style={{ color: 'var(--text-3)' }}>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/>Cobrado</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Pendiente</span>
-                {monthStats.vencido > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"/>Vencido</span>}
+              <div className="flex gap-4 mt-2.5 text-[10px]" style={{ color: 'var(--text-3)' }}>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#34d399', boxShadow: '0 0 6px rgba(16,185,129,0.7)' }}/>Cobrado</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#fbbf24', boxShadow: '0 0 6px rgba(245,158,11,0.7)' }}/>Pendiente</span>
+                {monthStats.vencido > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#f87171', boxShadow: '0 0 6px rgba(239,68,68,0.7)' }}/>Vencido</span>}
               </div>
             </div>
           )}
 
           {monthStats.count === 0 && !loading && (
-            <div className="px-6 pb-4 text-center text-[13px]" style={{ color: 'var(--text-4)' }}>Sin facturas este mes</div>
+            <div className="px-6 pb-5 text-center text-[13px]" style={{ color: 'var(--text-4)' }}>Sin facturas este mes</div>
           )}
         </div>
 
+        {/* ── ARRASTRE de meses anteriores ── */}
+        {carryOver.length > 0 && (
+          <div className="rounded-2xl overflow-hidden animate-fade-up stagger-1" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <button onClick={() => setShowCarryOver(v => !v)} className="w-full flex items-center gap-3 px-5 py-4 text-left">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <History size={15} style={{ color: 'var(--amber)' }}/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold" style={{ color: 'var(--amber)' }}>
+                  Arrastrás ${formatNumber(carryOverTotal)} de meses anteriores
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                  {carryOver.length} {carryOver.length === 1 ? 'factura impaga' : 'facturas impagas'} de antes de {MONTHS_ES[selMonth]} — tocá para {showCarryOver ? 'ocultar' : 'ver'}
+                </p>
+              </div>
+              <ChevronRight size={15} className="shrink-0 transition-transform" style={{ color: 'var(--amber)', transform: showCarryOver ? 'rotate(90deg)' : 'none' }}/>
+            </button>
+
+            {showCarryOver && (
+              <div className="px-5 pb-4 space-y-2">
+                {carryOver.map(inv => {
+                  const d = invoiceMonthDate(inv)
+                  return (
+                    <div key={inv.id} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-[13px] font-semibold text-white truncate">{inv.clients?.name || '—'}</p>
+                          <StatusBadge status={inv.status}/>
+                        </div>
+                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>
+                          {inv.invoice_number} · {MONTHS_ES[d.getMonth()]} {d.getFullYear()}
+                          {inv.description ? ` · ${inv.description}` : ''}
+                        </p>
+                      </div>
+                      <p className="text-[15px] font-bold shrink-0" style={{ color: 'var(--amber)', fontFamily: 'var(--font-display)' }}>
+                        ${invoiceResta(inv).toLocaleString()}
+                      </p>
+                      <button
+                        onClick={() => openPaymentModal(inv)}
+                        className={`${BTN_GHOST} bg-amber-400/10 text-amber-300 border border-amber-400/20 hover:bg-amber-400/20 shrink-0`}
+                      >
+                        <CreditCard size={11}/> Cobrar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── GRÁFICOS: año + desglose por cliente ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up stagger-2">
+
+          {/* Últimos 12 meses */}
+          <div className="lg:col-span-2 panel-neon p-5">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 size={13} style={{ color: 'var(--text-3)' }}/>
+                  <p className="text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>Últimos 12 meses</p>
+                </div>
+                <p className="text-[12px]" style={{ color: 'var(--text-4)' }}>Tocá una barra para ir a ese mes</p>
+              </div>
+              <div className="text-right space-y-1">
+                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                  Promedio mensual: <span className="font-bold text-white">${formatNumber(avgMonthly)}</span>
+                </p>
+                {bestMonth && (
+                  <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>
+                    Mejor mes: <span className="font-bold neon-green">{bestMonth.fullLabel} · ${formatNumber(bestMonth.Cobrado)}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={190}>
+              <BarChart data={yearChart} barSize={22} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                <XAxis dataKey="label" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false}/>
+                <YAxis hide/>
+                <Tooltip content={<TooltipYear/>} cursor={{ fill: 'rgba(255,255,255,0.03)' }}/>
+                <Bar
+                  dataKey="Cobrado" stackId="a" fill="#34d399"
+                  onClick={handleBarClick}
+                  className="cursor-pointer"
+                >
+                  {yearChart.map((b, i) => (
+                    <Cell key={i} fill={b.selected ? '#34d399' : 'rgba(52,211,153,0.55)'} style={b.selected ? { filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.7))' } : {}}/>
+                  ))}
+                </Bar>
+                <Bar
+                  dataKey="Pendiente" stackId="a" fill="#fbbf24"
+                  onClick={handleBarClick}
+                  className="cursor-pointer"
+                >
+                  {yearChart.map((b, i) => (
+                    <Cell key={i} fill={b.selected ? '#fbbf24' : 'rgba(251,191,36,0.45)'}/>
+                  ))}
+                </Bar>
+                <Bar
+                  dataKey="Vencido" stackId="a" radius={[5,5,0,0]} fill="#f87171"
+                  onClick={handleBarClick}
+                  className="cursor-pointer"
+                >
+                  {yearChart.map((b, i) => (
+                    <Cell key={i} fill={b.selected ? '#f87171' : 'rgba(248,113,113,0.45)'}/>
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Desglose por cliente */}
+          <div className="panel-neon p-5 flex flex-col">
+            <div className="flex items-center gap-2 mb-3">
+              <PieIcon size={13} style={{ color: 'var(--text-3)' }}/>
+              <p className="text-[11px] uppercase tracking-widest" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>
+                Por cliente — {MONTHS_SHORT[selMonth]}
+              </p>
+            </div>
+
+            {clientBreakdown.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-[12px]" style={{ color: 'var(--text-4)' }}>Sin datos este mes</p>
+              </div>
+            ) : (
+              <>
+                <div className="relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height={140}>
+                    <PieChart>
+                      <Pie
+                        data={clientBreakdown} dataKey="value" nameKey="name"
+                        innerRadius={42} outerRadius={62} paddingAngle={3}
+                        stroke="rgba(0,0,0,0.4)" strokeWidth={2}
+                      >
+                        {clientBreakdown.map((_, i) => (
+                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]}/>
+                        ))}
+                      </Pie>
+                      <Tooltip content={<TooltipYear/>}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-[15px] font-bold neon-text leading-none" style={{ fontFamily: 'var(--font-display)' }}>${formatNumber(breakdownTotal)}</p>
+                    <p className="text-[9px] uppercase tracking-wider mt-1" style={{ color: 'var(--text-4)' }}>facturado</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 mt-2">
+                  {clientBreakdown.map((c, i) => (
+                    <div key={c.name} className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length], boxShadow: `0 0 5px ${DONUT_COLORS[i % DONUT_COLORS.length]}90` }}/>
+                      <p className="text-[12px] flex-1 truncate" style={{ color: 'var(--text-2)' }}>{c.name}</p>
+                      <span className="text-[11px] font-bold text-white shrink-0">${formatNumber(c.value)}</span>
+                      <span className="text-[10px] w-9 text-right shrink-0" style={{ color: 'var(--text-4)' }}>
+                        {breakdownTotal > 0 ? Math.round((c.value / breakdownTotal) * 100) : 0}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Stats globales ── */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 animate-fade-up stagger-3">
+          <StatCard label="Total cobrado"  value={`$${formatNumber(stats.cobrado ?? stats.paid)}`} sub="histórico, incl. parciales" icon={<CheckCircle2 size={14}/>} color="green"  animDelay="0.05s" />
+          <StatCard label="Por cobrar"     value={`$${formatNumber(stats.pending)}`}               sub="facturas pendientes"        icon={<Clock size={14}/>}        color="blue"   animDelay="0.10s" />
+          <StatCard label="Vencido"        value={`$${formatNumber(stats.overdue)}`}               sub="requiere atención"          icon={<AlertTriangle size={14}/>} color="red"    animDelay="0.15s" />
+          <StatCard label="MRR (30 días)"  value={`$${formatNumber(stats.mrr)}`}                   sub="cobrado este mes"           icon={<TrendingUp size={14}/>}   color="amber"  animDelay="0.20s" />
+        </div>
+
         {/* ── Lista de facturas ── */}
-        <div className="space-y-3 animate-fade-up stagger-3">
+        <div className="space-y-3 animate-fade-up stagger-4">
           <div className="flex items-center justify-between">
             <select
               value={statusFilter}
@@ -429,8 +740,8 @@ export default function InvoicesPage() {
                     key={inv.id}
                     className="rounded-xl p-5 transition-all duration-200 animate-fade-up"
                     style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hi)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'rgba(255,255,255,0.25)'; el.style.boxShadow = '0 0 20px rgba(255,255,255,0.04)' }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.boxShadow = 'none' }}
                   >
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex-1 min-w-0">
@@ -455,7 +766,7 @@ export default function InvoicesPage() {
                       <div className="text-right shrink-0">
                         <p className="text-[22px] font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>${Number(inv.amount).toLocaleString()}</p>
                         {inv.status === 'paid' && (
-                          <p className="text-[12px] text-emerald-400 font-semibold mt-0.5">✓ Pagado</p>
+                          <p className="text-[12px] neon-green font-semibold mt-0.5">✓ Pagado</p>
                         )}
                         {hasPartial && (
                           <div className="mt-0.5">
@@ -476,7 +787,7 @@ export default function InvoicesPage() {
                           <span className="font-bold text-amber-400">{pct}%</span>
                         </div>
                         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-                          <div className="h-full rounded-full bg-amber-400 transition-all duration-500" style={{ width: `${pct}%` }}/>
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: '#fbbf24', boxShadow: '0 0 8px rgba(245,158,11,0.6)' }}/>
                         </div>
                       </div>
                     )}
