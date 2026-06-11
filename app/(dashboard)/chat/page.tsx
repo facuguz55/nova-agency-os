@@ -67,11 +67,31 @@ function parseMarkdown(text: string): string {
     .replace(/<p><\/p>/g, '')
 }
 
-const SUGGESTIONS = [
-  'Creá un cliente nuevo llamado Marca X',
-  'Creá una tarea urgente: revisar propuesta mañana',
-  '¿Cuántos proyectos activos tenemos?',
-  'Creá una factura de $50.000 para el cliente actual',
+const QUICK_ACTIONS: Array<{ category: string; color: string; items: string[] }> = [
+  {
+    category: 'Clientes', color: '#60a5fa',
+    items: ['Creá un cliente llamado...', '¿Qué clientes tenemos activos?'],
+  },
+  {
+    category: 'Proyectos', color: '#a78bfa',
+    items: ['Creá un proyecto para el cliente...', '¿Cuántos proyectos activos hay?'],
+  },
+  {
+    category: 'Tareas', color: '#f87171',
+    items: ['Creá una tarea urgente: ...', '¿Qué tareas vencen esta semana?'],
+  },
+  {
+    category: 'Calendario', color: '#34d399',
+    items: ['Agendá una reunión el viernes con...', '¿Qué tengo agendado los próximos días?'],
+  },
+  {
+    category: 'Facturación', color: '#f59e0b',
+    items: ['Creá una factura de $... para...', 'Registrá un pago de $... en la factura de...', '¿Cómo viene la facturación de este mes?'],
+  },
+  {
+    category: 'Notas', color: '#f472b6',
+    items: ['Anotá esto: ...', 'Buscá mis notas sobre...'],
+  },
 ]
 
 export default function ChatPage() {
@@ -285,7 +305,7 @@ export default function ChatPage() {
               </div>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-6 max-w-lg mx-auto animate-fade-up">
+            <div className="flex flex-col items-center justify-center min-h-full gap-6 max-w-2xl mx-auto animate-fade-up py-6">
               <div className="relative">
                 <div className="w-16 h-16 rounded-2xl bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center animate-float">
                   <Sparkles size={24} className="text-[var(--amber)]" />
@@ -293,9 +313,9 @@ export default function ChatPage() {
                 <div className="absolute inset-0 rounded-2xl bg-[rgba(245,158,11,0.15)] blur-xl -z-10 animate-glow" />
               </div>
               <div className="text-center">
-                <p className="text-white font-bold text-[18px] mb-1" style={{ fontFamily: 'var(--font-display)' }}>Nova IA</p>
+                <p className="neon-text font-bold text-[20px] mb-1" style={{ fontFamily: 'var(--font-display)' }}>Nova IA</p>
                 <p className="text-[var(--text-3)] text-[13px] leading-relaxed">
-                  Asistente consultivo. Preguntame sobre clientes, proyectos, métricas o automatizaciones.
+                  Tu asistente operativo. Crea y gestiona clientes, proyectos, tareas, calendario, facturación y notas — escribilo y lo hago.
                 </p>
                 {voiceSupported && (
                   <p className="text-[var(--text-4)] text-[11px] mt-2 flex items-center justify-center gap-1">
@@ -303,15 +323,31 @@ export default function ChatPage() {
                   </p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 w-full">
-                {SUGGESTIONS.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { setInput(s); textRef.current?.focus() }}
-                    className="px-4 py-3 text-[12px] text-left bg-white/[.03] border border-[rgba(255,255,255,0.07)] rounded-xl text-[var(--text-3)] hover:border-[rgba(245,158,11,0.25)] hover:text-[var(--text-2)] hover:bg-white/[.05] transition-all"
-                  >
-                    {s}
-                  </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                {QUICK_ACTIONS.map(group => (
+                  <div key={group.category} className="panel-neon p-3.5">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="w-2 h-2 rounded-full" style={{ background: group.color, boxShadow: `0 0 6px ${group.color}` }} />
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: group.color, fontFamily: 'var(--font-display)' }}>
+                        {group.category}
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {group.items.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => { setInput(s); textRef.current?.focus() }}
+                          className="w-full px-3 py-2 text-[12px] text-left rounded-lg text-[var(--text-3)] hover:text-white transition-all"
+                          style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${group.color}50` }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)' }}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

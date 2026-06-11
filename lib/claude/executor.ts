@@ -523,6 +523,140 @@ export async function executeTool(name: string, input: Record<string, unknown>):
         return `👁️ Observación guardada: "${data.title}" (${data.type}, severidad: ${data.severity})`
       }
 
+      // ── CLIENTES (gestión avanzada) ───────────────────────
+      case 'update_client': {
+        const { data: clients } = await supabase.from('clients').select('id, name').ilike('name', `%${input.client_name}%`).limit(1)
+        if (!clients?.length) return `No encontré un cliente llamado "${input.client_name}".`
+        const updates: Record<string, unknown> = {}
+        if (input.email)          updates.email          = input.email
+        if (input.industry)       updates.industry       = input.industry
+        if (input.contact_person) updates.contact_person = input.contact_person
+        if (input.status)         updates.status         = input.status
+        if (input.notes)          updates.notes          = input.notes
+        if (!Object.keys(updates).length) return 'No indicaste qué campo actualizar.'
+        const { error } = await supabase.from('clients').update(updates).eq('id', clients[0].id)
+        if (error) return `Error al actualizar cliente: ${error.message}`
+        await logAction(supabase, `Cliente actualizado via IA: ${clients[0].name}`)
+        return `✅ Cliente "${clients[0].name}" actualizado (${Object.keys(updates).join(', ')}).`
+      }
+
+      case 'delete_client': {
+        const { data: clients } = await supabase.from('clients').select('id, name').ilike('name', `%${input.client_name}%`).limit(1)
+        if (!clients?.length) return `No encontré un cliente llamado "${input.client_name}".`
+        const { error } = await supabase.from('clients').delete().eq('id', clients[0].id)
+        if (error) return `Error al eliminar cliente: ${error.message}`
+        await logAction(supabase, `Cliente eliminado via IA: ${clients[0].name}`)
+        return `✅ Cliente "${clients[0].name}" eliminado.`
+      }
+
+      // ── PROYECTOS (gestión avanzada) ──────────────────────
+      case 'delete_project': {
+        const { data: projects } = await supabase.from('projects').select('id, name').ilike('name', `%${input.project_name}%`).limit(1)
+        if (!projects?.length) return `No encontré un proyecto llamado "${input.project_name}".`
+        const { error } = await supabase.from('projects').delete().eq('id', projects[0].id)
+        if (error) return `Error al eliminar proyecto: ${error.message}`
+        await logAction(supabase, `Proyecto eliminado via IA: ${projects[0].name}`)
+        return `✅ Proyecto "${projects[0].name}" eliminado.`
+      }
+
+      // ── CALENDARIO ────────────────────────────────────────
+      case 'list_calendar_events': {
+        const from = (input.from_date as string) || new Date().toISOString().split('T')[0]
+        const to   = (input.to_date as string) || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('title, status, priority, due_date, assigned_to, clients(name), projects(name)')
+          .gte('due_date', from)
+          .lte('due_date', `${to}T23:59:59`)
+          .order('due_date', { ascending: true })
+          .limit(40)
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No hay eventos entre ${from} y ${to}.`
+        return `Eventos del ${from} al ${to}:\n${JSON.stringify(data, null, 2)}`
+      }
+
+      // ── FACTURACIÓN (gestión avanzada) ────────────────────
+      case 'register_invoice_payment': {
+        const ref = (input.invoice_number as string)
+        let invoice: { id: string; invoice_number: string; amount: number } | null = null
+
+        const { data: byNum } = await supabase.from('invoices').select('id, invoice_number, amount').ilike('invoice_number', `%${ref}%`).limit(1)
+        if (byNum?.length) invoice = byNum[0]
+        else {
+          const { data: clients } = await supabase.from('clients').select('id').ilike('name', `%${ref}%`).limit(1)
+          if (clients?.length) {
+            const { data: inv } = await supabase.from('invoices').select('id, invoice_number, amount').eq('client_id', clients[0].id).neq('status', 'paid').order('created_at', { ascending: false }).limit(1)
+            if (inv?.length) invoice = inv[0]
+          }
+        }
+        if (!invoice) return `No encontré una factura para "${ref}".`
+
+        const { error: payError } = await supabase.from('invoice_payments').insert({
+          invoice_id: invoice.id,
+          amount:     input.amount as number,
+          paid_at:    (input.paid_at as string) || new Date().toISOString().split('T')[0],
+          note:       (input.note as string) || null,
+        })
+        if (payError) return `Error al registrar pago: ${payError.message}`
+
+        // Calcular total pagado y actualizar estado
+        const { data: pays } = await supabase.from('invoice_payments').select('amount').eq('invoice_id', invoice.id)
+        const totalPaid = (pays || []).reduce((s, p) => s + Number(p.amount), 0)
+        const newStatus = totalPaid >= Number(invoice.amount) ? 'paid' : 'partial'
+        const statusUpdate: Record<string, unknown> = { status: newStatus }
+        if (newStatus === 'paid') statusUpdate.paid_at = new Date().toISOString()
+        await supabase.from('invoices').update(statusUpdate).eq('id', invoice.id)
+
+        await logAction(supabase, `Pago de $${input.amount} registrado via IA en ${invoice.invoice_number}`)
+        const resta = Math.max(0, Number(invoice.amount) - totalPaid)
+        return newStatus === 'paid'
+          ? `✅ Pago de $${Number(input.amount).toLocaleString()} registrado — Factura ${invoice.invoice_number} COMPLETAMENTE PAGADA.`
+          : `✅ Pago de $${Number(input.amount).toLocaleString()} registrado en ${invoice.invoice_number}. Pagado: $${totalPaid.toLocaleString()} / Resta: $${resta.toLocaleString()}.`
+      }
+
+      case 'delete_invoice': {
+        const { data: invs } = await supabase.from('invoices').select('id, invoice_number').ilike('invoice_number', `%${input.invoice_number}%`).limit(1)
+        if (!invs?.length) return `No encontré la factura "${input.invoice_number}".`
+        const { error } = await supabase.from('invoices').delete().eq('id', invs[0].id)
+        if (error) return `Error al eliminar factura: ${error.message}`
+        await logAction(supabase, `Factura ${invs[0].invoice_number} eliminada via IA`)
+        return `✅ Factura ${invs[0].invoice_number} eliminada.`
+      }
+
+      case 'get_revenue_summary': {
+        const now   = new Date()
+        const month = (input.month as number) || (now.getMonth() + 1)
+        const year  = (input.year as number) || now.getFullYear()
+
+        const { data: all, error } = await supabase.from('invoices').select('id, amount, status, due_date, created_at, clients(name)')
+        if (error) return `Error: ${error.message}`
+        const { data: pays } = await supabase.from('invoice_payments').select('invoice_id, amount')
+        const paidSums: Record<string, number> = {}
+        for (const p of pays || []) paidSums[p.invoice_id] = (paidSums[p.invoice_id] || 0) + Number(p.amount)
+
+        function summary(m: number, y: number) {
+          const list = (all || []).filter(i => {
+            const d = new Date(i.due_date || i.created_at)
+            return d.getFullYear() === y && d.getMonth() + 1 === m
+          })
+          const cobrado = list.reduce((s, i) => s + (i.status === 'paid' ? Number(i.amount) : (paidSums[i.id] || 0)), 0)
+          const resta   = (i: { id: string; amount: number; status: string }) => Math.max(0, Number(i.amount) - (paidSums[i.id] || 0))
+          const pendiente = list.filter(i => ['pending', 'partial'].includes(i.status)).reduce((s, i) => s + resta(i), 0)
+          const vencido   = list.filter(i => i.status === 'overdue').reduce((s, i) => s + resta(i), 0)
+          return { cobrado, pendiente, vencido, facturas: list.length, total: list.reduce((s, i) => s + Number(i.amount), 0) }
+        }
+
+        const cur  = summary(month, year)
+        const prev = summary(month === 1 ? 12 : month - 1, month === 1 ? year - 1 : year)
+        const delta = prev.cobrado > 0 ? Math.round(((cur.cobrado - prev.cobrado) / prev.cobrado) * 100) : null
+        return JSON.stringify({
+          mes: `${month}/${year}`,
+          ...cur,
+          mes_anterior: prev,
+          variacion_cobrado: delta !== null ? `${delta >= 0 ? '+' : ''}${delta}%` : 'sin datos del mes anterior',
+        }, null, 2)
+      }
+
       default:
         return `Tool "${name}" no implementada.`
     }

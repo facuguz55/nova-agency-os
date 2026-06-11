@@ -151,14 +151,14 @@ export default function ProjectsPage() {
                 className="p-4 rounded-2xl border text-left transition-all animate-fade-up"
                 style={{
                   animationDelay: `${i * 0.06}s`,
-                  background: isActive ? `${sf.color}12` : 'var(--surface-0)',
-                  borderColor: isActive ? `${sf.color}35` : 'var(--border)',
-                  boxShadow: isActive ? `0 0 20px ${sf.color}08` : 'none',
+                  background: isActive ? `${sf.color}12` : 'var(--surface-1)',
+                  borderColor: isActive ? `${sf.color}50` : 'rgba(255,255,255,0.14)',
+                  boxShadow: isActive ? `0 0 24px ${sf.color}20, inset 0 1px 0 rgba(255,255,255,0.06)` : 'inset 0 1px 0 rgba(255,255,255,0.05)',
                 }}
               >
-                <p className="text-[24px] font-bold leading-none mb-1"
-                  style={{ color: sf.color, fontFamily: 'var(--font-display)' }}>{count}</p>
-                <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{sf.label}</p>
+                <p className="text-[26px] font-bold leading-none mb-1"
+                  style={{ color: sf.color, fontFamily: 'var(--font-display)', textShadow: isActive ? `0 0 16px ${sf.color}80` : `0 0 10px ${sf.color}30` }}>{count}</p>
+                <p className="text-[11px]" style={{ color: isActive ? sf.color : 'var(--text-3)' }}>{sf.label}</p>
               </button>
             )
           })}
@@ -218,28 +218,33 @@ export default function ProjectsPage() {
                       <div
                         key={p.id}
                         onClick={() => router.push(`/projects/${p.id}`)}
-                        className="group relative rounded-2xl p-4 cursor-pointer transition-all animate-fade-up"
+                        className="group relative rounded-2xl p-4 pl-5 cursor-pointer transition-all animate-fade-up overflow-hidden"
                         style={{
-                          background: 'var(--surface-0)',
+                          background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 40%), var(--surface-1)',
                           border: isFeatured
-                            ? '1px solid rgba(245,158,11,0.3)'
-                            : '1px solid var(--border)',
-                          boxShadow: isFeatured ? '0 0 24px rgba(245,158,11,0.06)' : 'none',
+                            ? '1px solid rgba(245,158,11,0.35)'
+                            : '1px solid rgba(255,255,255,0.13)',
+                          boxShadow: isFeatured ? '0 0 28px rgba(245,158,11,0.1)' : 'inset 0 1px 0 rgba(255,255,255,0.05)',
                           animationDelay: `${0.2 + idx * 0.05}s`,
                         }}
                         onMouseEnter={e => {
-                          (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)'
-                          if (!isFeatured) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hi)'
+                          const el = e.currentTarget as HTMLElement
+                          el.style.borderColor = isFeatured ? 'rgba(245,158,11,0.55)' : `${st.color}50`
+                          el.style.boxShadow = `0 0 26px ${isFeatured ? 'rgba(245,158,11,0.16)' : `${st.color}18`}`
                         }}
                         onMouseLeave={e => {
-                          (e.currentTarget as HTMLElement).style.background = 'var(--surface-0)'
-                          if (!isFeatured) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+                          const el = e.currentTarget as HTMLElement
+                          el.style.borderColor = isFeatured ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.13)'
+                          el.style.boxShadow = isFeatured ? '0 0 28px rgba(245,158,11,0.1)' : 'inset 0 1px 0 rgba(255,255,255,0.05)'
                         }}
                       >
+                        {/* Barra de acento por estado */}
+                        <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full"
+                          style={{ background: st.color, boxShadow: `0 0 8px ${st.color}90` }} />
                         {/* Amber glow top bar for featured */}
                         {isFeatured && (
                           <div className="absolute top-0 left-4 right-4 h-px"
-                            style={{ background: 'linear-gradient(to right, transparent, rgba(245,158,11,0.5), transparent)' }} />
+                            style={{ background: 'linear-gradient(to right, transparent, rgba(245,158,11,0.6), transparent)' }} />
                         )}
 
                         {/* Header */}
@@ -279,7 +284,7 @@ export default function ProjectsPage() {
                           style={{ borderTop: '1px solid var(--border)' }}>
                           <div className="flex items-center gap-1.5">
                             {p.budget && (
-                              <span className="text-xs font-bold" style={{ color: 'var(--amber)', fontFamily: 'var(--font-display)' }}>
+                              <span className="text-[13px] font-bold neon-amber" style={{ fontFamily: 'var(--font-display)' }}>
                                 ${p.budget.toLocaleString()}
                               </span>
                             )}

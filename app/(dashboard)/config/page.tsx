@@ -7,7 +7,10 @@ import Header from '@/components/layout/Header'
 import { StatusBadge } from '@/components/ui/Badge'
 import { Button, Input, Select } from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
-import { GripVertical, Building2, Save, Upload, Sun, Moon } from 'lucide-react'
+import {
+  GripVertical, Building2, Save, Upload, Sun, Moon,
+  Users, PanelLeft, Plug, KeyRound, Palette, Pencil, Trash2, Power,
+} from 'lucide-react'
 import {
   getCachedItems, getDefaultItems, mergeConfig, setCacheItems,
   type SidebarItem, type StoredItem,
@@ -27,19 +30,33 @@ const INTEGRATIONS = [
   { name: 'TikTok API',        status: 'not_configured' },
 ] as const
 
-const INT_STYLE = {
-  connected:      'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  disconnected:   'bg-red-500/10 text-red-400 border-red-500/20',
-  not_configured: 'bg-white/5 text-[var(--text-3)] border-[var(--border)]',
-}
-const INT_LABEL = {
-  connected:      'Conectado',
-  disconnected:   'Desconectado',
-  not_configured: 'Sin configurar',
+const INT_META = {
+  connected:      { label: 'Conectado',      color: '#34d399' },
+  disconnected:   { label: 'Desconectado',   color: '#f87171' },
+  not_configured: { label: 'Sin configurar', color: '#616161' },
 }
 
-const SECTION = { background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12 }
-const ROW = { background: 'var(--surface-0)', border: '1px solid var(--border)', borderRadius: 8 }
+const ROW = { background: 'var(--surface-0)', border: '1px solid var(--border)', borderRadius: 10 }
+
+function SectionHeader({ icon, title, sub, color = '#f59e0b', actions }: {
+  icon: React.ReactNode; title: string; sub?: string; color?: string; actions?: React.ReactNode
+}) {
+  return (
+    <div className="px-5 py-4 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: `${color}14`, border: `1px solid ${color}30`, color, boxShadow: `0 0 14px ${color}18` }}>
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-[14px] font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>{title}</h3>
+          {sub && <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{sub}</p>}
+        </div>
+      </div>
+      {actions && <div className="shrink-0">{actions}</div>}
+    </div>
+  )
+}
 
 export default function ConfigPage() {
   usePageTitle('Configuración')
@@ -192,232 +209,269 @@ export default function ConfigPage() {
   }
 
   const inputCls = 'w-full px-3.5 py-2.5 rounded-xl text-sm text-white focus:outline-none transition-colors'
-  const inputStyle = { background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }
+  const inputStyle = { background: 'var(--surface-0)', border: '1px solid var(--border)', color: 'var(--text)' }
+
+  const visibleCount = items.filter(i => i.visible).length
 
   return (
     <>
-      <Header title="Configuración" subtitle="Sidebar, equipo, integraciones y credenciales" />
+      <Header title="Configuración" subtitle="Identidad, sidebar, equipo e integraciones" />
 
-      <div className="flex-1 p-6 space-y-5 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start">
 
-        {/* ── Perfil de la Agencia ── */}
-        <section ref={profileRef} className="overflow-hidden rounded-xl" style={SECTION}>
-          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="flex items-center gap-2">
-              <Building2 size={14} className="text-[var(--amber)]" />
-              <div>
-                <h3 className="text-sm font-semibold text-white">Perfil de la Agencia</h3>
-                <p className="text-xs text-[var(--text-3)] mt-0.5">Nombre, logo e identidad que aparecen en el header y el portal</p>
+          {/* ════ Columna principal ════ */}
+          <div className="xl:col-span-3 space-y-5">
+
+            {/* ── Perfil de la Agencia ── */}
+            <section ref={profileRef} className="panel-neon overflow-hidden animate-fade-up">
+              <SectionHeader
+                icon={<Building2 size={15}/>}
+                title="Perfil de la Agencia"
+                sub="Nombre, logo e identidad que aparecen en el header y el portal"
+                actions={
+                  <Button size="sm" onClick={saveProfile} disabled={savingProfile}>
+                    {savedProfile ? '✓ Guardado' : savingProfile ? 'Guardando...' : <><Save size={12}/> Guardar</>}
+                  </Button>
+                }
+              />
+
+              <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center relative group"
+                    style={{ background: 'var(--surface-0)', border: '2px solid var(--border)', boxShadow: '0 0 20px rgba(255,255,255,0.04)' }}>
+                    {profile.agency_logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profile.agency_logo} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 text-[var(--text-4)]">
+                        <Upload size={20} />
+                        <span className="text-[9px] font-bold tracking-wider uppercase">Sin logo</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-full p-3 rounded-xl text-center" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                    <p className="text-[9px] text-[var(--text-4)] uppercase tracking-widest mb-1">Usuario activo</p>
+                    <p className="text-xs text-[var(--text-3)] truncate">{userEmail || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--text-3)]">Nombre de la agencia</label>
+                    <input value={profile.agency_name} onChange={e => setProfile(p => ({ ...p, agency_name: e.target.value }))}
+                      placeholder="Nova Agency" className={inputCls} style={inputStyle} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--text-3)]">Tagline / descripción corta</label>
+                    <input value={profile.agency_tagline} onChange={e => setProfile(p => ({ ...p, agency_tagline: e.target.value }))}
+                      placeholder="Marketing digital · Automatización · Resultados" className={inputCls} style={inputStyle} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-[var(--text-3)]">URL del logo</label>
+                    <input value={profile.agency_logo} onChange={e => setProfile(p => ({ ...p, agency_logo: e.target.value }))}
+                      placeholder="https://..." className={`${inputCls} font-mono text-xs`} style={inputStyle} />
+                    <p className="text-[10px] text-[var(--text-4)]">Subí tu logo a imgur.com o cualquier hosting de imágenes y pegá la URL directa</p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <Button size="sm" onClick={saveProfile} disabled={savingProfile}>
-              {savedProfile ? '✓ Guardado' : savingProfile ? 'Guardando...' : <><Save size={12}/> Guardar</>}
-            </Button>
-          </div>
+            </section>
 
-          <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center relative group"
-                style={{ background: 'var(--bg)', border: '2px solid var(--border)' }}>
-                {profile.agency_logo ? (
-                  <img src={profile.agency_logo} alt="Logo" className="w-full h-full object-cover" />
+            {/* ── Sidebar ── */}
+            <section className="panel-neon overflow-hidden animate-fade-up stagger-2">
+              <SectionHeader
+                icon={<PanelLeft size={15}/>}
+                title="Sidebar"
+                sub={`${visibleCount} de ${items.length} secciones visibles · arrastrá para reordenar`}
+                color="#60a5fa"
+                actions={
+                  <div className="flex items-center gap-2">
+                    <button onClick={resetConfig}
+                      className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors px-3 py-1.5 rounded-lg hover:bg-white/[.03]">
+                      Restaurar
+                    </button>
+                    <Button size="sm" onClick={saveConfig} disabled={savingBar}>
+                      {saved ? '✓ Guardado' : savingBar ? 'Guardando...' : 'Guardar'}
+                    </Button>
+                  </div>
+                }
+              />
+
+              <div className="p-4 space-y-1">
+                {items.map((item, idx) => {
+                  const isDragging = dragging === idx
+                  const isDropZone = dropAt === idx && dragging !== null && dragging !== idx
+                  const isConfig   = item.href === '/config'
+                  return (
+                    <div key={item.href} draggable
+                      onDragStart={e => onDragStart(e, idx)} onDragOver={e => onDragOver(e, idx)}
+                      onDrop={onDrop} onDragEnd={onDragEnd}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all duration-100 cursor-default select-none"
+                      style={isDragging
+                        ? { opacity: 0.4, background: 'var(--surface-2)', border: '1px solid var(--border)' }
+                        : isDropZone
+                          ? { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 0 14px rgba(255,255,255,0.08)' }
+                          : { background: 'var(--surface-0)', border: '1px solid var(--border)' }}
+                    >
+                      <GripVertical size={14} className="text-[var(--text-4)] shrink-0 cursor-grab active:cursor-grabbing" />
+                      <item.Icon size={14} style={{ color: item.visible ? 'var(--text-3)' : 'var(--text-4)' }} />
+                      <span className="text-sm font-medium flex-1" style={{ color: item.visible ? 'var(--text-2)' : 'var(--text-4)' }}>
+                        {item.label}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-4)] mr-2">{item.group}</span>
+                      <button onClick={() => toggleVisible(item.href)} disabled={isConfig}
+                        title={isConfig ? 'Siempre visible' : undefined}
+                        className="relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0"
+                        style={{
+                          background: isConfig || item.visible ? 'var(--amber)' : 'var(--surface-2)',
+                          boxShadow: (isConfig || item.visible) ? '0 0 10px rgba(245,158,11,0.4)' : 'none',
+                          opacity: isConfig ? 0.4 : 1,
+                          cursor: isConfig ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${item.visible ? 'left-[18px]' : 'left-0.5'}`} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+
+            {/* ── Equipo ── */}
+            <section className="panel-neon overflow-hidden animate-fade-up stagger-3">
+              <SectionHeader
+                icon={<Users size={15}/>}
+                title="Equipo"
+                sub={`${team.length} ${team.length === 1 ? 'miembro' : 'miembros'} registrados`}
+                color="#a78bfa"
+                actions={<Button size="sm" onClick={openAdd}>+ Agregar</Button>}
+              />
+              <div className="p-4">
+                {loadingTeam ? (
+                  <p className="text-sm text-[var(--text-3)] px-1 py-2">Cargando...</p>
+                ) : team.length === 0 ? (
+                  <p className="text-sm text-[var(--text-3)] px-1 py-2">Sin miembros todavía.</p>
                 ) : (
-                  <div className="flex flex-col items-center gap-1.5 text-[var(--text-4)]">
-                    <Upload size={20} />
-                    <span className="text-[9px] font-bold tracking-wider uppercase">Sin logo</span>
+                  <div className="space-y-2">
+                    {team.map(m => (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-xl transition-all"
+                        style={ROW}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.22)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+                            style={{ background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa', boxShadow: '0 0 12px rgba(167,139,250,0.15)' }}>
+                            {m.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{m.name}</p>
+                            <p className="text-xs text-[var(--text-3)] truncate">
+                              {m.email}{m.role ? ` · ${m.role}` : ''}
+                              {m.whatsapp && <span className="text-emerald-500/60"> · WA: {m.whatsapp}</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <StatusBadge status={m.status} />
+                          <button onClick={() => openEdit(m)} title="Editar"
+                            className="p-1.5 rounded-lg transition-colors text-[var(--text-3)] hover:text-white hover:bg-white/[.06]">
+                            <Pencil size={13}/>
+                          </button>
+                          <button onClick={() => toggleStatus(m)} title={m.status === 'active' ? 'Desactivar' : 'Activar'}
+                            className="p-1.5 rounded-lg transition-colors text-[var(--text-3)] hover:text-amber-400 hover:bg-amber-400/10">
+                            <Power size={13}/>
+                          </button>
+                          <button onClick={() => deleteMember(m)} title="Eliminar"
+                            className="p-1.5 rounded-lg transition-colors text-[var(--text-3)] hover:text-red-400 hover:bg-red-500/10">
+                            <Trash2 size={13}/>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              <p className="text-[10px] text-[var(--text-3)] text-center">Pegá la URL del logo abajo</p>
-              <div className="w-full p-3 rounded-xl text-center" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                <p className="text-[9px] text-[var(--text-4)] uppercase tracking-widest mb-1">Usuario activo</p>
-                <p className="text-xs text-[var(--text-3)] truncate">{userEmail || '—'}</p>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--text-3)]">Nombre de la agencia</label>
-                <input value={profile.agency_name} onChange={e => setProfile(p => ({ ...p, agency_name: e.target.value }))}
-                  placeholder="Nova Agency" className={inputCls} style={inputStyle} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--text-3)]">Tagline / descripción corta</label>
-                <input value={profile.agency_tagline} onChange={e => setProfile(p => ({ ...p, agency_tagline: e.target.value }))}
-                  placeholder="Marketing digital · Automatización · Resultados" className={inputCls} style={inputStyle} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--text-3)]">URL del logo</label>
-                <input value={profile.agency_logo} onChange={e => setProfile(p => ({ ...p, agency_logo: e.target.value }))}
-                  placeholder="https://..." className={`${inputCls} font-mono text-xs`} style={inputStyle} />
-                <p className="text-[10px] text-[var(--text-4)]">Subí tu logo a imgur.com o cualquier hosting de imágenes y pegá la URL directa</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Apariencia ── */}
-        <section className="rounded-xl p-5" style={SECTION}>
-          <h3 className="text-sm font-semibold text-white mb-1">Apariencia</h3>
-          <p className="text-xs text-[var(--text-3)] mb-4">Cambiá entre modo oscuro y claro</p>
-          <div className="flex items-center gap-3">
-            <button onClick={toggleTheme}
-              className={`relative flex items-center gap-3 px-4 py-3 rounded-xl border transition-all w-full ${
-                theme === 'light' ? 'bg-white/10 border-white/20 text-white' : 'text-[var(--text-3)] hover:border-white/10'
-              }`}
-              style={theme === 'light' ? {} : { border: '1px solid var(--border)', background: 'var(--bg)' }}
-            >
-              <div className="w-10 h-6 rounded-full transition-colors relative"
-                style={{ background: theme === 'light' ? 'var(--amber)' : 'var(--surface-2)' }}>
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${theme === 'light' ? 'left-5' : 'left-1'}`} />
-              </div>
-              <div className="flex items-center gap-2">
-                {theme === 'light'
-                  ? <Sun size={14} className="text-[var(--amber)]" />
-                  : <Moon size={14} />}
-                <span className="text-sm font-medium">{theme === 'light' ? 'Modo claro' : 'Modo oscuro'}</span>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        {/* ── Sidebar ── */}
-        <section className="overflow-hidden rounded-xl" style={SECTION}>
-          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Sidebar</h3>
-              <p className="text-xs text-[var(--text-3)] mt-0.5">Arrastrá para reordenar · Toggle para mostrar/ocultar</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={resetConfig}
-                className="text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors px-3 py-1.5 rounded-lg hover:bg-white/[.03]">
-                Restaurar
-              </button>
-              <Button size="sm" onClick={saveConfig} disabled={savingBar}>
-                {saved ? '✓ Guardado' : savingBar ? 'Guardando...' : 'Guardar'}
-              </Button>
-            </div>
+            </section>
           </div>
 
-          <div className="p-4 space-y-1">
-            {items.map((item, idx) => {
-              const isDragging = dragging === idx
-              const isDropZone = dropAt === idx && dragging !== null && dragging !== idx
-              const isConfig   = item.href === '/config'
-              return (
-                <div key={item.href} draggable
-                  onDragStart={e => onDragStart(e, idx)} onDragOver={e => onDragOver(e, idx)}
-                  onDrop={onDrop} onDragEnd={onDragEnd}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all duration-100 cursor-default select-none"
-                  style={isDragging
-                    ? { opacity: 0.4, background: 'var(--surface-2)', border: '1px solid var(--border)' }
-                    : isDropZone
-                      ? { background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.3)' }
-                      : { background: 'var(--bg)', border: '1px solid var(--border)' }}
+          {/* ════ Columna lateral ════ */}
+          <div className="xl:col-span-2 space-y-5">
+
+            {/* ── Apariencia ── */}
+            <section className="panel-neon overflow-hidden animate-fade-up stagger-1">
+              <SectionHeader icon={<Palette size={15}/>} title="Apariencia" sub="Tema del dashboard" color="#f472b6" />
+              <div className="p-4">
+                <button onClick={toggleTheme}
+                  className="relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full"
+                  style={{ border: '1px solid var(--border)', background: 'var(--surface-0)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.25)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
                 >
-                  <GripVertical size={14} className="text-[var(--text-4)] shrink-0 cursor-grab active:cursor-grabbing" />
-                  <item.Icon size={14} style={{ color: item.visible ? 'var(--text-3)' : 'var(--text-4)' }} />
-                  <span className="text-sm font-medium flex-1" style={{ color: item.visible ? 'var(--text-2)' : 'var(--text-4)' }}>
-                    {item.label}
-                  </span>
-                  <span className="text-[10px] text-[var(--text-4)] mr-2">{item.group}</span>
-                  <button onClick={() => toggleVisible(item.href)} disabled={isConfig}
-                    title={isConfig ? 'Siempre visible' : undefined}
-                    className="relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0"
-                    style={{
-                      background: isConfig || item.visible ? 'var(--amber)' : 'var(--surface-2)',
-                      opacity: isConfig ? 0.4 : 1,
-                      cursor: isConfig ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${item.visible ? 'left-[18px]' : 'left-0.5'}`} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* ── Equipo ── */}
-        <section className="rounded-xl p-5" style={SECTION}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white">Equipo</h3>
-            <Button size="sm" onClick={openAdd}>+ Agregar</Button>
-          </div>
-          {loadingTeam ? (
-            <p className="text-sm text-[var(--text-3)]">Cargando...</p>
-          ) : (
-            <div className="space-y-2">
-              {team.map(m => (
-                <div key={m.id} className="flex items-center justify-between p-3 rounded-lg" style={ROW}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                      style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', color: 'var(--amber)' }}>
-                      {m.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">{m.name}</p>
-                      <p className="text-xs text-[var(--text-3)]">
-                        {m.email}{m.role ? ` · ${m.role}` : ''}
-                        {m.whatsapp && <span className="text-emerald-500/60"> · WA: {m.whatsapp}</span>}
-                      </p>
-                    </div>
+                  <div className="w-10 h-6 rounded-full transition-colors relative"
+                    style={{ background: theme === 'light' ? 'var(--amber)' : 'var(--surface-2)', boxShadow: theme === 'light' ? '0 0 12px rgba(245,158,11,0.4)' : 'none' }}>
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${theme === 'light' ? 'left-5' : 'left-1'}`} />
                   </div>
                   <div className="flex items-center gap-2">
-                    <StatusBadge status={m.status} />
-                    <button onClick={() => openEdit(m)}
-                      className="text-xs px-2.5 py-1 text-[var(--text-2)] hover:text-white rounded-lg transition-colors hover:bg-white/[.07]"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                      Editar
-                    </button>
-                    <button onClick={() => toggleStatus(m)}
-                      className="text-xs px-2.5 py-1 text-[var(--text-2)] hover:text-white rounded-lg transition-colors hover:bg-white/[.07]"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                      {m.status === 'active' ? 'Desactivar' : 'Activar'}
-                    </button>
-                    <button onClick={() => deleteMember(m)}
-                      className="text-xs px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 rounded-lg transition-colors">
-                      Eliminar
-                    </button>
+                    {theme === 'light'
+                      ? <Sun size={14} className="text-[var(--amber)]" />
+                      : <Moon size={14} className="text-[var(--text-3)]" />}
+                    <span className="text-sm font-medium text-[var(--text-2)]">{theme === 'light' ? 'Modo claro' : 'Modo oscuro'}</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ── Integraciones ── */}
-        <section className="rounded-xl p-5" style={SECTION}>
-          <h3 className="text-sm font-semibold text-white mb-4">Integraciones</h3>
-          <div className="space-y-2">
-            {INTEGRATIONS.map(i => (
-              <div key={i.name} className="flex items-center justify-between p-3 rounded-lg" style={ROW}>
-                <span className="text-sm text-[var(--text-2)]">{i.name}</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${INT_STYLE[i.status]}`}>
-                  {INT_LABEL[i.status]}
-                </span>
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
 
-        {/* ── Vault de credenciales ── */}
-        <section className="rounded-xl p-5" style={SECTION}>
-          <h3 className="text-sm font-semibold text-white mb-1">Vault de credenciales</h3>
-          <p className="text-xs text-[var(--text-3)] mb-4">Las API keys están en variables de entorno de Vercel. Los valores nunca se muestran.</p>
-          <div className="space-y-1.5">
-            {[
-              'ANTHROPIC_API_KEY', 'N8N_API_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-              'GMAIL_CLIENT_SECRET', 'INSTAGRAM_ACCESS_TOKEN', 'YOUTUBE_API_KEY', 'TIKTOK_ACCESS_TOKEN',
-            ].map(key => (
-              <div key={key} className="flex items-center justify-between p-3 rounded-lg" style={ROW}>
-                <span className="text-xs font-mono text-[var(--text-3)]">{key}</span>
-                <span className="text-xs text-[var(--text-4)] font-mono tracking-widest">••••••••</span>
+            {/* ── Integraciones ── */}
+            <section className="panel-neon overflow-hidden animate-fade-up stagger-2">
+              <SectionHeader
+                icon={<Plug size={15}/>}
+                title="Integraciones"
+                sub={`${INTEGRATIONS.filter(i => i.status === 'connected').length} de ${INTEGRATIONS.length} conectadas`}
+                color="#34d399"
+              />
+              <div className="p-4 space-y-2">
+                {INTEGRATIONS.map(i => {
+                  const meta = INT_META[i.status]
+                  return (
+                    <div key={i.name} className="flex items-center justify-between p-3 rounded-xl" style={ROW}>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: meta.color, boxShadow: i.status === 'connected' ? `0 0 8px ${meta.color}` : 'none' }} />
+                        <span className="text-sm text-[var(--text-2)] truncate">{i.name}</span>
+                      </div>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0"
+                        style={{ background: `${meta.color}14`, border: `1px solid ${meta.color}30`, color: meta.color }}>
+                        {meta.label}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
 
+            {/* ── Credenciales ── */}
+            <section className="panel-neon overflow-hidden animate-fade-up stagger-3">
+              <SectionHeader
+                icon={<KeyRound size={15}/>}
+                title="Credenciales"
+                sub="API keys en variables de entorno de Vercel — nunca se muestran"
+                color="#f87171"
+              />
+              <div className="p-4 space-y-1.5">
+                {[
+                  'ANTHROPIC_API_KEY', 'N8N_API_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+                  'GMAIL_CLIENT_SECRET', 'INSTAGRAM_ACCESS_TOKEN', 'YOUTUBE_API_KEY', 'TIKTOK_ACCESS_TOKEN',
+                ].map(key => (
+                  <div key={key} className="flex items-center justify-between p-3 rounded-xl" style={ROW}>
+                    <span className="text-xs font-mono text-[var(--text-3)] truncate">{key}</span>
+                    <span className="text-xs text-[var(--text-4)] font-mono tracking-widest shrink-0">••••••••</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editMember ? 'Editar miembro' : 'Agregar miembro'}>

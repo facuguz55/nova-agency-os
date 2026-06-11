@@ -133,22 +133,18 @@ export default function ClientsPage() {
         <div className="grid grid-cols-3 gap-4 animate-fade-up">
           {[
             { icon: <Users size={16}/>, label: 'Clientes activos', value: activeCount, color: '#34d399' },
-            { icon: <TrendingUp size={16}/>, label: 'Prospectos', value: prospectCount, color: 'var(--amber)' },
+            { icon: <TrendingUp size={16}/>, label: 'Prospectos', value: prospectCount, color: '#f59e0b' },
             { icon: <Star size={16}/>, label: 'Satisfacción global', value: satisfaction?.globalAvg != null ? `${satisfaction.globalAvg}/10` : '—', color: '#818cf8' },
           ].map((s, i) => (
-            <div key={i} className="p-4 rounded-2xl border flex items-center gap-3 animate-fade-up"
-              style={{
-                background: 'var(--surface-1)',
-                borderColor: 'var(--border)',
-                animationDelay: `${i * 0.07}s`,
-              }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${s.color}15`, border: `1px solid ${s.color}25`, color: s.color }}>
+            <div key={i} className="panel-neon p-4 flex items-center gap-3 animate-fade-up"
+              style={{ animationDelay: `${i * 0.07}s` }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `${s.color}15`, border: `1px solid ${s.color}30`, color: s.color, boxShadow: `0 0 14px ${s.color}20` }}>
                 {s.icon}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--text-3)' }}>{s.label}</p>
-                <p className="text-xl font-bold mt-0.5" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{s.value}</p>
+                <p className="text-[22px] font-bold mt-0.5 leading-none" style={{ color: s.color, fontFamily: 'var(--font-display)', textShadow: `0 0 14px ${s.color}50` }}>{s.value}</p>
               </div>
             </div>
           ))}
@@ -156,8 +152,7 @@ export default function ClientsPage() {
 
         {/* Satisfacción global */}
         {satisfaction && satisfaction.totalCount > 0 && (
-          <div className="flex items-center gap-4 px-5 py-4 rounded-2xl border animate-fade-up stagger-3"
-            style={{ background: 'var(--surface-1)', borderColor: 'var(--border)' }}>
+          <div className="panel-neon flex items-center gap-4 px-5 py-4 animate-fade-up stagger-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
               style={{ background: `${ratingColor(satisfaction.globalAvg!)}15`, border: `1px solid ${ratingColor(satisfaction.globalAvg!)}25` }}>
               <Star size={15} style={{ color: ratingColor(satisfaction.globalAvg!) }} />
@@ -234,9 +229,8 @@ export default function ClientsPage() {
             <Button onClick={() => setShowModal(true)} size="sm">Agregar cliente</Button>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden border animate-fade-up stagger-5"
-            style={{ background: 'var(--surface-0)', borderColor: 'var(--border)' }}>
-            <div className="h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(245,158,11,0.2), transparent)' }} />
+          <div className="panel-neon overflow-hidden animate-fade-up stagger-5">
+            <hr className="neon-divider" />
             <table className="w-full">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>

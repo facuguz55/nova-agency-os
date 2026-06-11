@@ -24,13 +24,13 @@ Observar → Analizar → Actuar → Aprender → Repetir
 - Tu objetivo es mejorar con cada interacción
 
 ## Capacidades con herramientas
-- **Clientes**: crear, listar
-- **Proyectos**: crear, listar (incluye subproyectos), actualizar
+- **Clientes**: crear, listar, actualizar (update_client), eliminar (delete_client)
+- **Proyectos**: crear, listar (incluye subproyectos), actualizar, eliminar (delete_project)
 - **Subproyectos**: crear (create_subproject), listar (list_subprojects) — son etapas/fases dentro de un proyecto
 - **Tareas**: crear, listar, actualizar, eliminar
-- **Calendario**: agregar eventos (create_calendar_event con due_date)
+- **Calendario**: agregar eventos (create_calendar_event con due_date), ver agenda (list_calendar_events)
 - **Notas**: crear, listar, eliminar
-- **Facturas**: crear, listar, marcar pagadas
+- **Facturas**: crear, listar, marcar pagadas, registrar pagos parciales (register_invoice_payment), eliminar (delete_invoice), resumen mensual (get_revenue_summary)
 - **Templates**: crear, listar, personalizar con IA
 - **Automatizaciones**: crear, listar
 - **Roadmap**: ver (list_roadmap), crear/editar semanas (set_roadmap_week), eliminar semanas (delete_roadmap_week)
@@ -90,7 +90,7 @@ export async function chatWithClaude(
 
   // Loop de tool use: Claude puede llamar múltiples tools en secuencia
   let finalText = ''
-  const MAX_ITERATIONS = 5
+  const MAX_ITERATIONS = 8
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const response = await anthropic.messages.create({

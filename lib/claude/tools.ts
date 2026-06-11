@@ -445,4 +445,97 @@ export const TOOLS: Anthropic.Tool[] = [
       required: ['type', 'title', 'content'],
     },
   },
+
+  // ── CLIENTES (gestión avanzada) ─────────────────────────────
+  {
+    name: 'update_client',
+    description: 'Actualiza datos de un cliente existente (email, industria, contacto, estado, notas).',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        client_name:    { type: 'string', description: 'Nombre del cliente a actualizar' },
+        email:          { type: 'string' },
+        industry:       { type: 'string' },
+        contact_person: { type: 'string' },
+        status:         { type: 'string', enum: ['active', 'inactive', 'prospect'] },
+        notes:          { type: 'string' },
+      },
+      required: ['client_name'],
+    },
+  },
+  {
+    name: 'delete_client',
+    description: 'Elimina un cliente del sistema. Usar solo si el usuario lo pide explícitamente.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        client_name: { type: 'string', description: 'Nombre del cliente a eliminar' },
+      },
+      required: ['client_name'],
+    },
+  },
+
+  // ── PROYECTOS (gestión avanzada) ────────────────────────────
+  {
+    name: 'delete_project',
+    description: 'Elimina un proyecto del sistema. Usar solo si el usuario lo pide explícitamente.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        project_name: { type: 'string', description: 'Nombre del proyecto a eliminar' },
+      },
+      required: ['project_name'],
+    },
+  },
+
+  // ── CALENDARIO ──────────────────────────────────────────────
+  {
+    name: 'list_calendar_events',
+    description: 'Lista los eventos/tareas del calendario en un rango de fechas. Sin parámetros muestra los próximos 14 días.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        from_date: { type: 'string', description: 'Fecha inicio YYYY-MM-DD (default: hoy)' },
+        to_date:   { type: 'string', description: 'Fecha fin YYYY-MM-DD (default: hoy + 14 días)' },
+      },
+    },
+  },
+
+  // ── FACTURACIÓN (gestión avanzada) ──────────────────────────
+  {
+    name: 'register_invoice_payment',
+    description: 'Registra un pago parcial o total sobre una factura existente. Si el total pagado cubre el monto, la factura pasa a "paid".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        invoice_number: { type: 'string', description: 'Número de factura (ej: INV-0012) o nombre del cliente' },
+        amount:         { type: 'number', description: 'Monto del pago' },
+        paid_at:        { type: 'string', description: 'Fecha del pago YYYY-MM-DD (default: hoy)' },
+        note:           { type: 'string', description: 'Nota del pago (transferencia, efectivo, etc.)' },
+      },
+      required: ['invoice_number', 'amount'],
+    },
+  },
+  {
+    name: 'delete_invoice',
+    description: 'Elimina una factura. Usar solo si el usuario lo pide explícitamente.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        invoice_number: { type: 'string', description: 'Número de factura (ej: INV-0012)' },
+      },
+      required: ['invoice_number'],
+    },
+  },
+  {
+    name: 'get_revenue_summary',
+    description: 'Devuelve el resumen de facturación de un mes: cobrado, pendiente, vencido, facturas y comparativa con el mes anterior. Sin parámetros usa el mes actual.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        month: { type: 'number', description: 'Mes (1-12)' },
+        year:  { type: 'number', description: 'Año (ej: 2026)' },
+      },
+    },
+  },
 ]
