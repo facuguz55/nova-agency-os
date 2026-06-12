@@ -1,6 +1,6 @@
 'use client'
 import { usePageTitle } from '@/lib/usePageTitle'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Header from '@/components/layout/Header'
 import { StatCard } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/Badge'
@@ -15,7 +15,10 @@ import {
   Plus, DollarSign, Clock, AlertTriangle, TrendingUp, TrendingDown, CheckCircle2,
   CreditCard, ChevronLeft, ChevronRight, Calendar, Split, FileText,
   Trash2, Pencil, BadgeDollarSign, History, PieChart as PieIcon, BarChart3,
+  Repeat, Wallet, Database,
 } from 'lucide-react'
+import RecurringTab from '@/components/billing/RecurringTab'
+import ExpensesTab, { type Expense } from '@/components/billing/ExpensesTab'
 
 interface Payment {
   id: string; invoice_id: string; amount: number; paid_at: string; note: string | null; created_at: string
@@ -86,6 +89,12 @@ export default function InvoicesPage() {
   const [showAllMonths, setShowAllMonths] = useState(false)
   const [showCarryOver, setShowCarryOver] = useState(false)
 
+  const [tab, setTab] = useState<'invoices' | 'recurring' | 'expenses'>('invoices')
+  const [expenses, setExpenses]             = useState<Expense[]>([])
+  const [expensesTotal, setExpensesTotal]   = useState(0)
+  const [expensesLoading, setExpensesLoading] = useState(true)
+  const [billingMissing, setBillingMissing] = useState(false)
+
   const now = new Date()
   const [selYear, setSelYear]   = useState(now.getFullYear())
   const [selMonth, setSelMonth] = useState(now.getMonth())
@@ -128,6 +137,24 @@ export default function InvoicesPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  const loadExpenses = useCallback(async () => {
+    setExpensesLoading(true)
+    try {
+      const res  = await fetch(`/api/expenses?month=${selMonth + 1}&year=${selYear}`)
+      const data = await res.json()
+      if (data.code === 'PGRST205') { setBillingMissing(true) }
+      else {
+        setExpenses(data.expenses || [])
+        setExpensesTotal(data.total || 0)
+      }
+    } catch { /* non-critical */ }
+    finally { setExpensesLoading(false) }
+  }, [selMonth, selYear])
+
+  useEffect(() => { loadExpenses() }, [loadExpenses])
+
+  const onBillingMissing = useCallback(() => setBillingMissing(true), [])
 
   function prevMonth() {
     if (selMonth === 0) { setSelMonth(11); setSelYear(y => y - 1) }
@@ -561,6 +588,93 @@ export default function InvoicesPage() {
           </div>
         )}
 
+        {/* ── RESULTADO NETO DEL MES ── */}
+        {!billingMissing && (() => {
+          const neto    = monthStats.cobrado - expensesTotal
+          const netoPos = neto >= 0
+          return (
+            <div className="panel-neon px-6 py-4 animate-fade-up stagger-1 flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center gap-5 flex-wrap flex-1">
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest font-semibold mb-1" style={{ color: 'var(--text-3)' }}>Cobrado</p>
+                  <p className="text-[18px] font-bold neon-green leading-none" style={{ fontFamily: 'var(--font-display)' }}>${formatNumber(monthStats.cobrado)}</p>
+                </div>
+                <span className="text-[18px]" style={{ color: 'var(--text-4)' }}>−</span>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest font-semibold mb-1" style={{ color: 'var(--text-3)' }}>Gastos</p>
+                  <p className="text-[18px] font-bold leading-none" style={{ color: '#f87171', fontFamily: 'var(--font-display)', textShadow: '0 0 12px rgba(248,113,113,0.35)' }}>
+                    ${formatNumber(expensesTotal)}
+                  </p>
+                </div>
+                <span className="text-[18px]" style={{ color: 'var(--text-4)' }}>=</span>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest font-semibold mb-1" style={{ color: 'var(--text-3)' }}>Neto de {MONTHS_ES[selMonth]}</p>
+                  <p className={`text-[22px] font-bold leading-none ${netoPos ? 'neon-text' : ''}`}
+                    style={{ fontFamily: 'var(--font-display)', ...(netoPos ? {} : { color: '#f87171' }) }}>
+                    ${formatNumber(neto)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl shrink-0"
+                style={{ background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <Split size={14} style={{ color: 'var(--amber)' }}/>
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: 'var(--text-3)' }}>Cada socio (50%)</p>
+                  <p className="text-[17px] font-bold neon-amber leading-none mt-0.5" style={{ fontFamily: 'var(--font-display)' }}>
+                    ${formatNumber(neto / 2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── Aviso migración pendiente ── */}
+        {billingMissing && (
+          <div className="rounded-2xl px-5 py-4 flex items-center gap-3 animate-fade-up"
+            style={{ background: 'rgba(96,165,250,0.05)', border: '1px solid rgba(96,165,250,0.25)' }}>
+            <Database size={16} style={{ color: '#60a5fa' }} className="shrink-0"/>
+            <p className="text-[12px]" style={{ color: 'var(--text-2)' }}>
+              <span className="font-bold" style={{ color: '#60a5fa' }}>Falta un paso:</span> para activar Recurrentes, Gastos y el neto mensual, ejecutá <span className="font-mono text-[11px]">supabase/billing-upgrade.sql</span> en el SQL Editor de Supabase.
+            </p>
+          </div>
+        )}
+
+        {/* ── TABS ── */}
+        <div className="flex gap-2 animate-fade-up stagger-1">
+          {([
+            { key: 'invoices',  label: 'Facturas',    icon: <FileText size={13}/> },
+            { key: 'recurring', label: 'Recurrentes', icon: <Repeat size={13}/> },
+            { key: 'expenses',  label: 'Gastos',      icon: <Wallet size={13}/> },
+          ] as const).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all"
+              style={tab === t.key
+                ? { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', boxShadow: '0 0 16px rgba(255,255,255,0.06)' }
+                : { background: 'var(--surface-1)', border: '1px solid var(--border)', color: 'var(--text-3)' }}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ══ TAB: RECURRENTES ══ */}
+        {tab === 'recurring' && !billingMissing && (
+          <RecurringTab
+            selMonth={selMonth} selYear={selYear} clients={clients}
+            onGenerated={load} onTablesMissing={onBillingMissing}
+          />
+        )}
+
+        {/* ══ TAB: GASTOS ══ */}
+        {tab === 'expenses' && !billingMissing && (
+          <ExpensesTab
+            expenses={expenses} total={expensesTotal} loading={expensesLoading}
+            monthLabel={`${MONTHS_ES[selMonth]} ${selYear}`} onReload={loadExpenses}
+          />
+        )}
+
+        {/* ══ TAB: FACTURAS ══ */}
+        {tab === 'invoices' && (<>
         {/* ── GRÁFICOS: año + desglose por cliente ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up stagger-2">
 
@@ -840,6 +954,7 @@ export default function InvoicesPage() {
             </div>
           )}
         </div>
+        </>)}
       </div>
 
       {/* ── Modal Nueva / Editar Factura ── */}
@@ -1089,14 +1204,45 @@ export default function InvoicesPage() {
       {/* ── Modal Split 50/50 ── */}
       <Modal open={showSplit} onClose={() => setShowSplit(false)} title="Split 50/50 — Facundo & Mauricio">
         <div className="space-y-4">
-          <p className="text-[12px]" style={{ color: 'var(--text-3)' }}>División equitativa del revenue</p>
+          {/* Mes seleccionado: split sobre el NETO */}
+          {(() => {
+            const neto = monthStats.cobrado - expensesTotal
+            return (
+              <div className="rounded-xl p-4" style={{ background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'var(--amber)', fontFamily: 'var(--font-display)' }}>
+                  {MONTHS_ES[selMonth]} {selYear} · sobre el neto real
+                </p>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {[
+                    { label: 'Cobrado', value: monthStats.cobrado, color: '#34d399' },
+                    { label: 'Gastos',  value: -expensesTotal,     color: '#f87171' },
+                    { label: 'Neto',    value: neto,               color: '#fff' },
+                  ].map(s => (
+                    <div key={s.label} className="text-center">
+                      <p className="text-[9px] uppercase tracking-wide mb-1" style={{ color: 'var(--text-3)' }}>{s.label}</p>
+                      <p className="text-[14px] font-bold" style={{ color: s.color }}>
+                        {s.value < 0 ? '−' : ''}${formatNumber(Math.abs(s.value))}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-center pt-3" style={{ borderTop: '1px solid rgba(245,158,11,0.2)' }}>
+                  <p className="text-[10px] mb-1" style={{ color: 'var(--text-3)' }}>Cada socio se lleva</p>
+                  <p className="text-[30px] font-bold neon-amber leading-none" style={{ fontFamily: 'var(--font-display)' }}>
+                    ${formatNumber(neto / 2)}
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Histórico (bruto, referencia) */}
+          <p className="text-[10px] uppercase tracking-widest pt-1" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Histórico · bruto de referencia</p>
           {[
-            { label: 'Cobrado',         sub: 'incl. parciales',    value: stats.cobrado ?? stats.paid, color: '#22c55e' },
-            { label: 'Por cobrar',      sub: 'facturas pendientes', value: stats.pending,              color: '#60a5fa' },
-            { label: 'Vencido',         sub: 'facturas vencidas',   value: stats.overdue,              color: '#f87171' },
-            { label: 'Total potencial', sub: 'si cobrás todo',      value: (stats.cobrado ?? stats.paid) + stats.pending + stats.overdue, color: 'var(--amber)', bold: true },
+            { label: 'Cobrado total',  sub: 'incl. parciales',     value: stats.cobrado ?? stats.paid, color: '#22c55e' },
+            { label: 'Por cobrar',     sub: 'pendiente + vencido', value: stats.pending + stats.overdue, color: '#60a5fa' },
           ].map(row => (
-            <div key={row.label} className="rounded-xl p-4" style={row.bold ? { background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.25)' } : { background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+            <div key={row.label} className="rounded-xl p-4" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
               <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}>{row.label} · {row.sub}</p>
               <div className="flex items-end justify-between gap-4">
                 <div>
@@ -1105,7 +1251,7 @@ export default function InvoicesPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] mb-0.5" style={{ color: 'var(--text-3)' }}>Cada uno</p>
-                  <p className="text-[22px] font-bold" style={{ color: row.color, fontFamily: 'var(--font-display)' }}>${formatNumber(row.value / 2)}</p>
+                  <p className="text-[20px] font-bold" style={{ color: row.color, fontFamily: 'var(--font-display)' }}>${formatNumber(row.value / 2)}</p>
                 </div>
               </div>
             </div>
