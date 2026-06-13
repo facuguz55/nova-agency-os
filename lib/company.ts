@@ -12,19 +12,22 @@ export const COMPANY = {
   /** Nombre comercial / de fantasía */
   tradeName: 'Nova Agency',
   /** Razón social = Apellido, Nombre del titular monotributista */
-  legalName: 'COMPLETAR — Apellido, Nombre',
-  /** CUIT del titular, formato XX-XXXXXXXX-X */
-  cuit: 'XX-XXXXXXXX-X',
+  legalName: 'Mauricio Kinkela',
+  /** CUIT del titular, formato XX-XXXXXXXX-X
+   *  ⚠️ VERIFICAR en ARCA: el dígito verificador no cierra. Si el DNI es
+   *  45.637.200 el CUIT correcto sería 20-45637200-8 (no -2). */
+  cuit: '20-45637200-2',
   /** Condición frente al IVA del emisor */
   taxCondition: 'Responsable Monotributo',
-  /** Ingresos Brutos (N° de inscripción o "Exento" / "Convenio Multilateral") */
-  grossIncome: 'COMPLETAR',
-  /** Domicilio comercial */
-  address: 'COMPLETAR — Calle 123',
+  /** Ingresos Brutos. Santa Fe: si está en Monotributo Unificado, IIBB va
+   *  incluido. Confirmá con el contador (puede ser el CUIT o "Exento"). */
+  grossIncome: 'Monotributo Unificado',
+  /** Domicilio comercial (agregar calle y número si querés que figure) */
+  address: 'Santa Fe Capital',
   /** Localidad, Provincia */
-  city: 'COMPLETAR — Ciudad, Provincia',
+  city: 'Santa Fe, Argentina',
   /** Fecha de inicio de actividades (YYYY-MM-DD) */
-  startDate: '',
+  startDate: '2026-02-11',
   /** Punto de venta por defecto (5 dígitos) */
   pointOfSale: '00001',
   /** Contacto */
