@@ -26,6 +26,7 @@ export async function GET() {
     { data: recentInvoices },
     { data: pendingInvoices },
     { data: thisMonthInvoices },
+    { data: allPayments },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('projects').select('*', { count: 'exact', head: true }).in('status', ['active', 'planning']),
@@ -50,15 +51,20 @@ export async function GET() {
       .select('amount, status, paid_at, updated_at, created_at')
       .eq('status', 'paid')
       .gte('created_at', sixMonthsAgo.toISOString()),
-    // Facturas pendientes de cobro (cualquier mes)
+    // Facturas pendientes de cobro (cualquier mes). EXCLUIMOS 'draft': un
+    // borrador no es una factura emitida, no corresponde a "facturas emitidas
+    // sin cobrar". Traemos el id para descontarle los pagos parciales.
     supabase.from('invoices')
-      .select('amount, status, created_at, due_date')
-      .in('status', ['sent', 'pending', 'draft'])
+      .select('id, amount, status, created_at, due_date')
+      .in('status', ['sent', 'pending'])
       .not('amount', 'is', null),
     // Todas las facturas pagadas para calcular "este mes" en código
     supabase.from('invoices')
       .select('amount, paid_at, updated_at, created_at')
       .eq('status', 'paid'),
+    // Pagos parciales — una factura 'pending' puede tener cobros parciales
+    // registrados; el saldo real es amount − Σ pagos, no el amount completo.
+    supabase.from('invoice_payments').select('invoice_id, amount'),
   ])
 
   const wfSuccess = workflowStats?.filter(w => w.status === 'success').length || 0
@@ -109,8 +115,17 @@ export async function GET() {
     return d >= thisMonthStart_d && d < nextMonthStart_d ? s + (Number(i.amount) || 0) : s
   }, 0)
 
-  // Pendiente de cobro (total facturas no pagadas de cualquier mes)
-  const pendingTotal = (pendingInvoices || []).reduce((s, i) => s + (Number(i.amount) || 0), 0)
+  // Pendiente de cobro = Σ (amount − pagos parciales) de las facturas no pagadas.
+  // Antes sumaba el amount completo e ignoraba los cobros parciales, inflando
+  // el total (p.ej. una factura de 500k con 315k ya cobrados contaba 500k).
+  const paidByInvoice: Record<string, number> = {}
+  for (const p of (allPayments || [])) {
+    paidByInvoice[p.invoice_id] = (paidByInvoice[p.invoice_id] || 0) + (Number(p.amount) || 0)
+  }
+  const pendingTotal = (pendingInvoices || []).reduce((s, i) => {
+    const saldo = (Number(i.amount) || 0) - (paidByInvoice[i.id] || 0)
+    return s + Math.max(0, saldo)  // nunca negativo si sobrepagaron
+  }, 0)
 
   // Proyectos por estado
   const projectStatusMap: Record<string, number> = { active: 0, planning: 0, completed: 0, paused: 0 }
