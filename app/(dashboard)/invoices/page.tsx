@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import RecurringTab from '@/components/billing/RecurringTab'
 import ExpensesTab, { type Expense } from '@/components/billing/ExpensesTab'
+import { COMPROBANTE_LABEL, formatComprobanteNumero } from '@/lib/company'
 
 interface Payment {
   id: string; invoice_id: string; amount: number; paid_at: string; note: string | null; created_at: string
@@ -27,12 +28,14 @@ interface Invoice {
   id: string; invoice_number: string; amount: number; status: string
   description: string | null; due_date: string | null; paid_at: string | null
   created_at: string
+  comprobante_tipo?: string | null; punto_venta?: string | null
+  cae?: string | null; cae_vto?: string | null
   clients: { name: string; email: string | null } | null
   projects: { id: string; name: string; budget: number | null } | null
   paid_amount?: number
 }
 interface Stats { paid: number; cobrado: number; pending: number; overdue: number; mrr: number }
-interface Client { id: string; name: string }
+interface Client { id: string; name: string; tax_id?: string | null; tax_condition?: string | null }
 interface Project { id: string; name: string; budget: number | null; client_id: string }
 
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -40,7 +43,7 @@ const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct
 
 const EMPTY = {
   client_id: '', project_id: '', amount: '', status: 'pending',
-  description: '', due_date: '', paid_at: '',
+  description: '', due_date: '', paid_at: '', cae: '', cae_vto: '',
 }
 
 const BTN_GHOST = 'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors'
@@ -321,6 +324,8 @@ export default function InvoicesPage() {
       description: inv.description || '',
       due_date:    inv.due_date  ? inv.due_date.split('T')[0]  : '',
       paid_at:     inv.paid_at   ? inv.paid_at.split('T')[0]   : '',
+      cae:         inv.cae || '',
+      cae_vto:     inv.cae_vto ? inv.cae_vto.split('T')[0] : '',
     })
     setShowModal(true)
   }
@@ -337,6 +342,9 @@ export default function InvoicesPage() {
   const projectsForClient = form.client_id
     ? projects.filter(p => p.client_id === form.client_id)
     : projects
+
+  const selectedClient = clients.find(c => c.id === form.client_id)
+  const clientNeedsFiscal = !!selectedClient && !selectedClient.tax_id
 
   function handleProjectSelect(projectId: string) {
     const project = projects.find(p => p.id === projectId)
@@ -358,6 +366,8 @@ export default function InvoicesPage() {
           description: form.description || null,
           due_date:    form.due_date    || null,
           project_id:  form.project_id  || null,
+          cae:         form.cae         || null,
+          cae_vto:     form.cae_vto     || null,
         }
         if (form.paid_at) body.paid_at = form.paid_at
         const res = await fetch(`/api/invoices/${editInvoice.id}`, {
@@ -860,8 +870,10 @@ export default function InvoicesPage() {
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>{inv.invoice_number}</span>
+                          <span className="inline-flex items-center justify-center text-[10px] font-bold rounded shrink-0" style={{ width: 16, height: 16, background: 'rgba(245,158,11,0.15)', color: 'var(--amber)', border: '1px solid rgba(245,158,11,0.3)' }} title={COMPROBANTE_LABEL[inv.comprobante_tipo || 'C']}>{inv.comprobante_tipo || 'C'}</span>
+                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-mono)' }}>{formatComprobanteNumero(inv.invoice_number, inv.punto_venta)}</span>
                           <StatusBadge status={inv.status}/>
+                          {inv.cae && <span className="text-[10px] font-semibold" style={{ color: '#34d399' }} title="CAE cargado">● CAE</span>}
                           {inv.due_date && (
                             <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-3)' }}>
                               <Calendar size={10}/>{formatDate(inv.due_date).split(' ')[0]}
@@ -1012,6 +1024,28 @@ export default function InvoicesPage() {
             rows={2}
             placeholder="Servicios de marketing digital — Junio 2026"
           />
+
+          {clientNeedsFiscal && (
+            <div className="rounded-xl px-4 py-3 flex items-start gap-2.5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)' }}>
+              <AlertTriangle size={14} style={{ color: 'var(--amber)' }} className="shrink-0 mt-0.5" />
+              <p className="text-[11px]" style={{ color: 'var(--text-2)' }}>
+                <span className="font-bold" style={{ color: 'var(--amber)' }}>{selectedClient?.name}</span> no tiene CUIT cargado.
+                La factura saldrá sin datos fiscales del receptor — completalos en la ficha del cliente.
+              </p>
+            </div>
+          )}
+
+          {/* Comprobante fiscal — CAE opcional */}
+          <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Comprobante · Factura C</p>
+              <span className="text-[10px]" style={{ color: 'var(--text-4)' }}>Monotributo · sin discriminar IVA</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="CAE (opcional)" value={form.cae} onChange={e => setForm(f => ({ ...f, cae: e.target.value }))} placeholder="75123456789014" />
+              <Input label="Vto. CAE (opcional)" value={form.cae_vto} onChange={e => setForm(f => ({ ...f, cae_vto: e.target.value }))} type="date" />
+            </div>
+          </div>
 
           {!editInvoice && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>

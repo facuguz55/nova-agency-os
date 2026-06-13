@@ -12,7 +12,8 @@ export default function PrintButtons({ invoiceId }: Props) {
   const [exporting,  setExporting]  = useState<ExportFormat | null>(null)
 
   async function captureInvoice() {
-    const html2canvas = (await import('html2canvas')).default
+    // html2canvas-pro: fork que soporta oklch()/lab()/color() de Tailwind v4
+    const html2canvas = (await import('html2canvas-pro')).default
     const element = document.querySelector('.invoice') as HTMLElement
     if (!element) throw new Error('invoice element not found')
 

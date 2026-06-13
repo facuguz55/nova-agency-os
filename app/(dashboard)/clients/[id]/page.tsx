@@ -33,6 +33,7 @@ interface ClientData {
   client: {
     id: string; name: string; email: string | null; industry: string | null
     status: string; contact_person: string | null; notes: string | null
+    legal_name: string | null; tax_id: string | null; tax_condition: string | null; fiscal_address: string | null
     created_at: string; updated_at: string
   }
   projects: Array<{ id: string; name: string; status: string; budget: number | null; created_at: string }>
@@ -486,6 +487,18 @@ export default function ClientDetailPage() {
                   <option value="prospect">Prospecto</option>
                 </Select>
                 <Textarea label="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={4} />
+
+                <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+                  <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Datos fiscales (para facturas)</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="CUIT / CUIL / DNI" value={form.tax_id || ''} onChange={e => setForm(f => ({ ...f, tax_id: e.target.value }))} placeholder="20-12345678-9" />
+                    <Select label="Condición IVA" value={form.tax_condition || 'Consumidor Final'} onChange={e => setForm(f => ({ ...f, tax_condition: e.target.value }))}>
+                      {['Consumidor Final', 'Monotributo', 'Responsable Inscripto', 'Exento', 'No Categorizado'].map(c => <option key={c} value={c}>{c}</option>)}
+                    </Select>
+                  </div>
+                  <Input label="Razón social (si difiere)" value={form.legal_name || ''} onChange={e => setForm(f => ({ ...f, legal_name: e.target.value }))} placeholder="Empresa S.A." />
+                  <Input label="Domicilio fiscal" value={form.fiscal_address || ''} onChange={e => setForm(f => ({ ...f, fiscal_address: e.target.value }))} placeholder="Av. Siempreviva 742, CABA" />
+                </div>
               </div>
             ) : (
               <dl className="grid grid-cols-2 gap-4">

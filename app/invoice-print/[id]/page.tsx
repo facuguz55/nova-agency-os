@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import PrintButtons from './PrintButtons'
+import { COMPANY, COMPROBANTE_LABEL, COMPROBANTE_CODIGO, formatComprobanteNumero } from '@/lib/company'
 
 export default async function InvoicePrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -8,34 +9,52 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
   const { data: inv } = await supabase
     .from('invoices')
-    .select('*, clients(name, email, industry, contact_person)')
+    .select('*, clients(name, legal_name, email, industry, contact_person, tax_id, tax_condition, fiscal_address)')
     .eq('id', id)
     .single()
 
   if (!inv) notFound()
 
-  const client = inv.clients as { name: string; email: string | null; industry: string | null; contact_person: string | null } | null
-  const issued = new Date(inv.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-  const due    = inv.due_date ? new Date(inv.due_date).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) : null
-  const paid   = inv.paid_at  ? new Date(inv.paid_at).toLocaleDateString('es-AR',  { day: '2-digit', month: 'long', year: 'numeric' }) : null
-  const amount = Number(inv.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })
+  const client = inv.clients as {
+    name: string; legal_name: string | null; email: string | null; industry: string | null
+    contact_person: string | null; tax_id: string | null; tax_condition: string | null; fiscal_address: string | null
+  } | null
+
+  const fmtDate = (d: string | null | undefined) =>
+    d ? new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
+  const fmtMoney = (n: number) =>
+    Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  const tipo        = inv.comprobante_tipo || 'C'
+  const comprobante = COMPROBANTE_LABEL[tipo] || 'FACTURA C'
+  const codigo      = COMPROBANTE_CODIGO[tipo] || '11'
+  const numero      = formatComprobanteNumero(inv.invoice_number, inv.punto_venta)
+  const issued      = fmtDate(inv.created_at)
+  const due         = inv.due_date ? fmtDate(inv.due_date) : null
+  const paid        = inv.paid_at  ? fmtDate(inv.paid_at)  : null
+  const total       = Number(inv.amount)
+  const caeVto      = inv.cae_vto ? fmtDate(inv.cae_vto) : null
+
+  const recName = client?.legal_name || client?.name || '—'
+  const recCond = client?.tax_condition || 'Consumidor Final'
 
   const statusLabel: Record<string, string> = {
-    draft: 'BORRADOR', pending: 'PENDIENTE', paid: 'PAGADA', overdue: 'VENCIDA', canceled: 'CANCELADA',
+    draft: 'BORRADOR', pending: 'PENDIENTE', paid: 'PAGADA', partial: 'PAGO PARCIAL', overdue: 'VENCIDA', canceled: 'ANULADA',
   }
   const statusColor: Record<string, { bg: string; text: string; ring: string }> = {
-    draft:    { bg: 'rgba(100,116,139,0.1)',  text: '#94a3b8', ring: 'rgba(100,116,139,0.2)' },
-    pending:  { bg: 'rgba(249,115,22,0.1)',   text: '#f97316', ring: 'rgba(249,115,22,0.2)' },
-    paid:     { bg: 'rgba(34,197,94,0.1)',    text: '#22c55e', ring: 'rgba(34,197,94,0.2)' },
-    overdue:  { bg: 'rgba(239,68,68,0.1)',    text: '#ef4444', ring: 'rgba(239,68,68,0.2)' },
-    canceled: { bg: 'rgba(148,163,184,0.08)', text: '#64748b', ring: 'rgba(148,163,184,0.15)' },
+    draft:    { bg: 'rgba(100,116,139,0.10)', text: '#64748b', ring: 'rgba(100,116,139,0.25)' },
+    pending:  { bg: 'rgba(245,158,11,0.10)',  text: '#b45309', ring: 'rgba(245,158,11,0.30)' },
+    partial:  { bg: 'rgba(245,158,11,0.10)',  text: '#b45309', ring: 'rgba(245,158,11,0.30)' },
+    paid:     { bg: 'rgba(22,163,74,0.10)',   text: '#15803d', ring: 'rgba(22,163,74,0.30)' },
+    overdue:  { bg: 'rgba(220,38,38,0.10)',   text: '#dc2626', ring: 'rgba(220,38,38,0.30)' },
+    canceled: { bg: 'rgba(100,116,139,0.10)', text: '#64748b', ring: 'rgba(100,116,139,0.25)' },
   }
   const sc = statusColor[inv.status] || statusColor.draft
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; }
@@ -44,141 +63,112 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           background: linear-gradient(160deg, #030810 0%, #08152a 50%, #060f1e 100%);
           min-height: 100vh;
           color: #1e293b;
+          -webkit-font-smoothing: antialiased;
         }
 
-        .wrapper {
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-          padding: 48px 20px;
-          min-height: 100vh;
-        }
+        .wrapper { display: flex; justify-content: center; align-items: flex-start; padding: 48px 20px; min-height: 100vh; }
 
         .invoice {
-          background: white;
-          width: 620px;
-          min-height: 877px;
-          border-radius: 0;
+          background: #ffffff;
+          width: 720px;
+          min-height: 1018px;
           overflow: hidden;
           box-shadow: 0 48px 96px rgba(0,0,0,0.7), 0 12px 32px rgba(0,0,0,0.4);
           display: flex;
           flex-direction: column;
-        }
-
-        /* Header dark */
-        .inv-header {
-          background: #060d18;
-          padding: 40px 48px 36px;
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
           position: relative;
-          overflow: hidden;
-        }
-        .inv-header::before {
-          content: '';
-          position: absolute;
-          top: -40px; right: -40px;
-          width: 200px; height: 200px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 70%);
         }
 
-        .agency-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 14px; }
-
-        .inv-number-area { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
-        .inv-label {
-          font-size: 10px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .12em; color: rgba(255,255,255,0.3); margin-bottom: 6px;
-        }
-        .inv-number {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 36px; font-weight: 700;
-          color: white; letter-spacing: -1px; line-height: 1;
-          margin-bottom: 10px;
-        }
-        .status-badge {
-          display: inline-flex; align-items: center; gap: 5px;
-          padding: 5px 12px; border-radius: 99px;
-          font-size: 10px; font-weight: 700; letter-spacing: .08em;
+        /* ── Banda superior: ORIGINAL ── */
+        .doc-top { display: flex; justify-content: space-between; align-items: center; padding: 10px 40px; background: #0b1220; }
+        .doc-top .copy { font-size: 9px; font-weight: 700; letter-spacing: .22em; color: rgba(255,255,255,0.45); text-transform: uppercase; }
+        .doc-top .status-badge {
+          display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 99px;
+          font-size: 9px; font-weight: 800; letter-spacing: .08em;
         }
         .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
-        /* Accent line */
-        .accent-line {
-          height: 3px;
-          background: linear-gradient(90deg, #f97316 0%, #fb923c 50%, #f97316 100%);
+        /* ── Header fiscal: emisor | letra | comprobante ── */
+        .fiscal-head { display: grid; grid-template-columns: 1fr 96px 1fr; align-items: stretch; border-bottom: 2px solid #0f172a; }
+        .emisor { padding: 26px 28px 22px 40px; }
+        .comp   { padding: 26px 40px 22px 28px; text-align: right; }
+
+        .brand-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .agency-logo { width: 46px; height: 46px; object-fit: contain; border-radius: 11px; }
+        .brand-name { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1; letter-spacing: -.5px; }
+        .brand-tag  { font-size: 9px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #f59e0b; margin-top: 3px; }
+
+        .em-line { font-size: 11px; color: #475569; line-height: 1.55; }
+        .em-line strong { color: #1e293b; font-weight: 600; }
+
+        /* Recuadro de la letra C (estilo AFIP) */
+        .letter-box {
+          align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center;
+          border-left: 2px solid #0f172a; border-right: 2px solid #0f172a; background: #fafafa;
         }
+        .letter { font-family: 'Cormorant Garamond', serif; font-size: 54px; font-weight: 700; color: #0f172a; line-height: .9; }
+        .letter-cod { font-size: 8px; font-weight: 700; letter-spacing: .1em; color: #64748b; margin-top: 2px; }
 
-        /* Body */
-        .inv-body { padding: 28px 48px 36px; flex: 1; }
+        .comp-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 700; color: #0f172a; letter-spacing: -.5px; line-height: 1; }
+        .comp-grid { margin-top: 14px; font-size: 11px; color: #475569; line-height: 1.7; }
+        .comp-grid .k { color: #94a3b8; font-weight: 600; }
+        .comp-grid .v { color: #1e293b; font-weight: 600; }
+        .comp-num { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: .02em; }
 
-        .billing-grid {
-          display: grid; grid-template-columns: 1fr 1fr;
-          gap: 40px; margin-bottom: 36px;
-        }
-        .field-label {
-          font-size: 9px; font-weight: 700; text-transform: uppercase;
-          letter-spacing: .12em; color: #94a3b8; margin-bottom: 6px;
-        }
-        .field-name {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 22px; font-weight: 600; color: #0f172a; line-height: 1.2;
-        }
-        .field-sub { font-size: 12px; color: #64748b; margin-top: 3px; }
+        /* ── Receptor ── */
+        .receptor { padding: 18px 40px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .rec-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px 32px; }
+        .field { font-size: 11px; line-height: 1.5; }
+        .field .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #94a3b8; }
+        .field .val { font-size: 12.5px; color: #0f172a; font-weight: 600; }
 
-        .dates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .date-item {}
-        .date-value { font-size: 13px; font-weight: 600; color: #1e293b; margin-top: 3px; }
-        .date-value-green { color: #16a34a; }
-        .date-value-red { color: #dc2626; }
+        /* ── Cuerpo / tabla ── */
+        .inv-body { padding: 22px 40px 0; flex: 1; }
+        .meta-row { display: flex; gap: 28px; margin-bottom: 18px; }
+        .meta-item .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #94a3b8; }
+        .meta-item .val { font-size: 12px; font-weight: 600; color: #1e293b; margin-top: 2px; }
+        .meta-item .val.red { color: #dc2626; }
+        .meta-item .val.green { color: #16a34a; }
 
-        .divider { border: none; border-top: 1px solid #f1f5f9; margin: 28px 0; }
-
-        /* Table */
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-        .items-table thead tr { border-bottom: 2px solid #f1f5f9; }
-        .th { padding: 8px 0; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #94a3b8; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table thead tr { background: #0b1220; }
+        .th { padding: 10px 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,0.85); text-align: left; }
         .th-r { text-align: right; }
-        .td { padding: 16px 0; font-size: 13px; color: #334155; border-bottom: 1px solid #f8fafc; vertical-align: top; }
-        .td-r { text-align: right; font-weight: 600; color: #1e293b; }
+        .td { padding: 15px 12px; font-size: 12.5px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .td-r { text-align: right; font-weight: 600; color: #1e293b; white-space: nowrap; }
+        .td-desc { font-weight: 500; color: #1e293b; }
 
-        /* Total */
-        .total-box {
-          display: flex; justify-content: flex-end;
+        /* ── Totales ── */
+        .totals { display: flex; justify-content: flex-end; padding: 20px 0 8px; }
+        .totals-inner { width: 280px; }
+        .tot-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; color: #475569; }
+        .tot-row .v { font-weight: 600; color: #1e293b; }
+        .tot-total {
+          display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px;
+          padding: 14px 18px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa;
         }
-        .total-inner {
-          text-align: right; padding: 20px 28px; border-radius: 16px;
-          background: #fff7ed; border: 1px solid #fed7aa; min-width: 220px;
-        }
-        .total-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #d97706; margin-bottom: 6px; }
-        .total-amount {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 40px; font-weight: 700; color: #f97316; letter-spacing: -1px;
-          line-height: 1;
-        }
+        .tot-total .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #b45309; }
+        .tot-total .amt { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 700; color: #f59e0b; letter-spacing: -.5px; line-height: 1; }
 
-        /* Footer */
-        .inv-footer {
-          background: #060d18;
-          padding: 20px 48px;
-          display: flex; align-items: center; justify-content: space-between;
-        }
-        .footer-text { font-size: 10px; color: rgba(255,255,255,0.25); }
-        .footer-ig { font-size: 10px; color: rgba(249,115,22,0.5); margin-top: 2px; }
+        /* ── Pie / CAE ── */
+        .cae-zone { margin: 14px 40px 0; padding: 14px 0; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+        .legend { font-size: 9.5px; color: #94a3b8; line-height: 1.5; max-width: 60%; }
+        .legend strong { color: #64748b; font-weight: 700; }
+        .cae-box { text-align: right; }
+        .cae-box .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #94a3b8; }
+        .cae-box .num { font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: .03em; }
+        .cae-box .vto { font-size: 10px; color: #64748b; margin-top: 2px; }
+        .cae-pending { font-size: 10px; color: #cbd5e1; font-style: italic; }
 
-        /* Buttons */
-        .no-print {
-          position: fixed; bottom: 24px; right: 24px;
-          display: flex; gap: 10px; z-index: 100;
-        }
+        .inv-footer { background: #0b1220; padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+        .footer-text { font-size: 10px; color: rgba(255,255,255,0.4); }
+        .footer-amber { font-size: 10px; color: #f59e0b; margin-top: 2px; font-weight: 600; }
 
         @media print {
-          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .wrapper { padding: 0; }
-          .invoice { box-shadow: none; border-radius: 0; width: 100%; }
-          .inv-header { background: #060d18 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .inv-footer { background: #060d18 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .invoice { box-shadow: none; width: 100%; }
+          .doc-top, .items-table thead tr, .inv-footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
         }
         @page { margin: 0; size: A4 portrait; }
@@ -187,89 +177,153 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       <div className="wrapper">
         <div className="invoice">
 
-          {/* Header */}
-          <div className="inv-header">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-nova-dark.png" alt="Nova Agency" className="agency-logo" />
-            <div className="inv-number-area">
-              <p className="inv-label">Factura</p>
-              <p className="inv-number">{inv.invoice_number}</p>
-              <div
-                className="status-badge"
-                style={{ background: sc.bg, color: sc.text, boxShadow: `0 0 0 1px ${sc.ring}` }}
-              >
-                <span className="status-dot" />
-                {statusLabel[inv.status] || inv.status.toUpperCase()}
+          {/* Banda superior */}
+          <div className="doc-top">
+            <span className="copy">Original</span>
+            <span className="status-badge" style={{ background: sc.bg, color: sc.text, boxShadow: `0 0 0 1px ${sc.ring}` }}>
+              <span className="status-dot" />{statusLabel[inv.status] || inv.status?.toUpperCase()}
+            </span>
+          </div>
+
+          {/* Header fiscal */}
+          <div className="fiscal-head">
+            {/* Emisor */}
+            <div className="emisor">
+              <div className="brand-row">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-nova-dark.png" alt="Nova Agency" className="agency-logo" />
+                <div>
+                  <div className="brand-name">{COMPANY.tradeName}</div>
+                  <div className="brand-tag">Agencia Digital</div>
+                </div>
+              </div>
+              <p className="em-line"><strong>{COMPANY.legalName}</strong></p>
+              <p className="em-line">{COMPANY.address}</p>
+              <p className="em-line">{COMPANY.city}</p>
+              <p className="em-line">IVA: <strong>{COMPANY.taxCondition}</strong></p>
+            </div>
+
+            {/* Letra del comprobante */}
+            <div className="letter-box">
+              <div className="letter">{tipo}</div>
+              <div className="letter-cod">COD. {codigo}</div>
+            </div>
+
+            {/* Comprobante */}
+            <div className="comp">
+              <div className="comp-title">{comprobante.startsWith('FACTURA') ? 'FACTURA' : comprobante}</div>
+              <div className="comp-grid">
+                <div className="comp-num">N° {numero}</div>
+                <div><span className="k">Fecha: </span><span className="v">{issued}</span></div>
+                <div><span className="k">CUIT: </span><span className="v">{COMPANY.cuit}</span></div>
+                <div><span className="k">Ingresos Brutos: </span><span className="v">{COMPANY.grossIncome}</span></div>
+                {COMPANY.startDate && (
+                  <div><span className="k">Inicio actividades: </span><span className="v">{fmtDate(COMPANY.startDate)}</span></div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="accent-line" />
-
-          {/* Body */}
-          <div className="inv-body">
-            <div className="billing-grid">
-              <div>
-                <p className="field-label">Facturado a</p>
-                <p className="field-name">{client?.name || '—'}</p>
-                {client?.contact_person && <p className="field-sub">{client.contact_person}</p>}
-                {client?.email && <p className="field-sub">{client.email}</p>}
-                {client?.industry && <p className="field-sub" style={{ color: '#94a3b8' }}>{client.industry}</p>}
+          {/* Receptor */}
+          <div className="receptor">
+            <div className="rec-grid">
+              <div className="field">
+                <div className="lbl">Cliente</div>
+                <div className="val">{recName}</div>
+                {client?.contact_person && <div style={{ fontSize: 11, color: '#64748b' }}>{client.contact_person}</div>}
               </div>
-              <div className="dates-grid">
-                <div>
-                  <p className="field-label">Emisión</p>
-                  <p className="date-value">{issued}</p>
-                </div>
-                {due && (
-                  <div>
-                    <p className="field-label">Vencimiento</p>
-                    <p className={`date-value ${inv.status === 'overdue' ? 'date-value-red' : ''}`}>{due}</p>
-                  </div>
-                )}
-                {paid && (
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <p className="field-label">Fecha de pago</p>
-                    <p className="date-value date-value-green">{paid}</p>
-                  </div>
-                )}
+              <div className="field">
+                <div className="lbl">CUIT / CUIL / DNI</div>
+                <div className="val">{client?.tax_id || '—'}</div>
+              </div>
+              <div className="field">
+                <div className="lbl">Domicilio</div>
+                <div className="val" style={{ fontWeight: 500, fontSize: 12 }}>{client?.fiscal_address || client?.email || '—'}</div>
+              </div>
+              <div className="field">
+                <div className="lbl">Condición frente al IVA</div>
+                <div className="val" style={{ fontWeight: 500, fontSize: 12 }}>{recCond}</div>
               </div>
             </div>
+          </div>
 
-            <hr className="divider" />
+          {/* Cuerpo */}
+          <div className="inv-body">
+            <div className="meta-row">
+              <div className="meta-item">
+                <div className="lbl">Condición de venta</div>
+                <div className="val">{paid ? 'Contado' : 'Cuenta corriente'}</div>
+              </div>
+              {due && (
+                <div className="meta-item">
+                  <div className="lbl">Vencimiento</div>
+                  <div className={`val ${inv.status === 'overdue' ? 'red' : ''}`}>{due}</div>
+                </div>
+              )}
+              {paid && (
+                <div className="meta-item">
+                  <div className="lbl">Fecha de pago</div>
+                  <div className="val green">{paid}</div>
+                </div>
+              )}
+            </div>
 
-            {/* Tabla */}
             <table className="items-table">
               <thead>
                 <tr>
-                  <th className="th" style={{ textAlign: 'left' }}>Descripción</th>
-                  <th className="th th-r">Monto</th>
+                  <th className="th">Descripción</th>
+                  <th className="th th-r" style={{ width: 90 }}>Cant.</th>
+                  <th className="th th-r" style={{ width: 150 }}>P. Unitario</th>
+                  <th className="th th-r" style={{ width: 150 }}>Subtotal</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="td" id="invoice-description">{inv.description || 'Servicios profesionales'}</td>
-                  <td className="td td-r">ARS $ {amount}</td>
+                  <td className="td td-desc" id="invoice-description">{inv.description || 'Servicios profesionales'}</td>
+                  <td className="td td-r">1</td>
+                  <td className="td td-r">$ {fmtMoney(total)}</td>
+                  <td className="td td-r">$ {fmtMoney(total)}</td>
                 </tr>
               </tbody>
             </table>
 
-            {/* Total */}
-            <div className="total-box">
-              <div className="total-inner">
-                <p className="total-label">Total ARS</p>
-                <p className="total-amount">$ {amount}</p>
+            {/* Totales */}
+            <div className="totals">
+              <div className="totals-inner">
+                <div className="tot-row"><span>Subtotal</span><span className="v">$ {fmtMoney(total)}</span></div>
+                <div className="tot-row"><span>Otros tributos</span><span className="v">$ 0,00</span></div>
+                <div className="tot-total">
+                  <span className="lbl">Total ARS</span>
+                  <span className="amt">$ {fmtMoney(total)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <hr className="divider" style={{ margin: '0 48px' }} />
+          {/* CAE / Leyendas */}
+          <div className="cae-zone">
+            <p className="legend">
+              <strong>Comprobante tipo {tipo} — Régimen de Monotributo.</strong> El monto no discrimina IVA.
+              {tipo === 'X' && ' Documento sin valor fiscal.'}
+            </p>
+            <div className="cae-box">
+              {inv.cae ? (
+                <>
+                  <div className="lbl">CAE N°</div>
+                  <div className="num">{inv.cae}</div>
+                  {caeVto && <div className="vto">Vto. CAE: {caeVto}</div>}
+                </>
+              ) : (
+                <span className="cae-pending">Sin CAE asignado</span>
+              )}
+            </div>
+          </div>
 
           {/* Footer */}
           <div className="inv-footer">
             <div>
-              <p className="footer-text">Nova Agency · Agencia Digital</p>
-              <p className="footer-ig">@novaagencytec</p>
+              <p className="footer-text">{COMPANY.tradeName} · {COMPANY.website}</p>
+              <p className="footer-amber">{COMPANY.instagram}</p>
             </div>
             <p className="footer-text">Generado el {new Date().toLocaleDateString('es-AR')}</p>
           </div>

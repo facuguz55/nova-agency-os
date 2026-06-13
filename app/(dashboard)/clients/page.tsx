@@ -23,7 +23,9 @@ interface SatisfactionData {
 
 interface QuickPortal { clientId: string; portal: { token: string; pin: string; active: boolean } | null; loading: boolean }
 
-const EMPTY = { name: '', email: '', industry: '', status: 'active', contact_person: '', notes: '' }
+const EMPTY = { name: '', email: '', industry: '', status: 'active', contact_person: '', notes: '', legal_name: '', tax_id: '', tax_condition: 'Consumidor Final', fiscal_address: '' }
+
+const TAX_CONDITIONS = ['Consumidor Final', 'Monotributo', 'Responsable Inscripto', 'Exento', 'No Categorizado']
 
 function ratingColor(n: number) {
   if (n >= 9) return '#f59e0b'
@@ -358,6 +360,19 @@ export default function ClientsPage() {
             <option value="prospect">Prospecto</option>
           </Select>
           <Textarea label="Notas" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Información adicional..." rows={3} />
+
+          <div className="rounded-xl p-4 space-y-3" style={{ background: 'var(--surface-0)', border: '1px solid var(--border)' }}>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-4)', fontFamily: 'var(--font-display)' }}>Datos fiscales (para facturas)</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="CUIT / CUIL / DNI" value={form.tax_id} onChange={e => setForm(f => ({ ...f, tax_id: e.target.value }))} placeholder="20-12345678-9" />
+              <Select label="Condición IVA" value={form.tax_condition} onChange={e => setForm(f => ({ ...f, tax_condition: e.target.value }))}>
+                {TAX_CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </div>
+            <Input label="Razón social (si difiere del nombre)" value={form.legal_name} onChange={e => setForm(f => ({ ...f, legal_name: e.target.value }))} placeholder="Empresa S.A." />
+            <Input label="Domicilio fiscal" value={form.fiscal_address} onChange={e => setForm(f => ({ ...f, fiscal_address: e.target.value }))} placeholder="Av. Siempreviva 742, CABA" />
+          </div>
+
           <div className="flex gap-3 pt-2">
             <Button onClick={save} disabled={saving || !form.name}>{saving ? 'Guardando...' : 'Crear cliente'}</Button>
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>

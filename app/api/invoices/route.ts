@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { COMPANY } from '@/lib/company'
 
 export async function GET(req: Request) {
   const supabase = await createClient()
@@ -72,13 +73,17 @@ export async function POST(req: Request) {
   const invoiceNumber = `INV-${String(lastNum + 1).padStart(4, '0')}`
 
   const { data, error } = await supabase.from('invoices').insert({
-    client_id:      body.client_id,
-    project_id:     body.project_id || null,
-    amount:         body.amount,
-    status:         body.status   || 'pending',
-    description:    body.description || null,
-    due_date:       body.due_date  || null,
-    invoice_number: invoiceNumber,
+    client_id:        body.client_id,
+    project_id:       body.project_id || null,
+    amount:           body.amount,
+    status:           body.status   || 'pending',
+    description:      body.description || null,
+    due_date:         body.due_date  || null,
+    invoice_number:   invoiceNumber,
+    comprobante_tipo: body.comprobante_tipo || 'C',
+    punto_venta:      body.punto_venta || COMPANY.pointOfSale,
+    cae:              body.cae || null,
+    cae_vto:          body.cae_vto || null,
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
