@@ -133,16 +133,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
         /* ── Totales ── */
         .totals { margin-top: 26px; display: flex; flex-direction: column; align-items: flex-end; gap: 9px; }
-        .tot-line { display: flex; justify-content: space-between; width: 300px; font-size: 13px; }
+        .tot-line { display: flex; justify-content: space-between; width: 340px; font-size: 13px; }
         .tot-line .k { color: #94a3b8; }
         .tot-line .v { color: #1e293b; font-weight: 500; }
         .tot-grand {
-          display: flex; justify-content: space-between; align-items: center; width: 300px; margin-top: 12px;
-          padding: 16px 20px; border-radius: 14px;
+          display: flex; flex-direction: column; align-items: flex-start; gap: 7px; width: 340px; margin-top: 12px;
+          padding: 18px 22px; border-radius: 14px;
           background: linear-gradient(135deg, #0B1F3A 0%, #060d18 100%);
         }
         .tot-grand .k { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
-        .grand-amt { font-size: 30px; font-weight: 800; letter-spacing: -.5px; color: #ff8a3d; line-height: 1; font-family: 'Syne', sans-serif; }
+        .grand-amt { font-size: 27px; font-weight: 800; letter-spacing: -.3px; color: #ff8a3d; line-height: 1.05; font-family: 'Syne', sans-serif; white-space: nowrap; }
 
         /* ── Pie ── */
         .foot { margin-top: 36px; padding: 22px 0 30px; }
